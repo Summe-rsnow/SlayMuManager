@@ -6,7 +6,7 @@ const NEXUS_API_BASE: &str = "https://api.nexusmods.com/v1";
 const NEXUS_GRAPHQL_URL: &str = "https://api.nexusmods.com/v2/graphql";
 const NEXUS_GAME_ID: &str = "8916";
 // NEXUS_GAME_DOMAIN = "slaythespire2" — 通过 game_slug 参数传入
-const PAGE_SIZE: u32 = 20;
+const PAGE_SIZE: u32 = 10;
 
 /// 将前端 sortBy 映射为 GraphQL sort 字段
 fn graphql_sort_clause(sort_by: &str) -> &str {

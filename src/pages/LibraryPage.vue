@@ -126,9 +126,12 @@ const activePresetId = ref<string | null>(null)
 const activePresetName = ref("")
 const presetSnapshot = ref<Set<string>>(new Set())
 
+/** 当前激活预设是否为原版（内置） */
+const isActivePresetBuiltin = computed(() => activePresetId.value === "__builtin__vanilla")
+
 /** 当前启用的 mod 是否偏离了激活预设 */
 const isPresetDirty = computed(() => {
-  if (!activePresetId.value) return false
+  if (!activePresetId.value || isActivePresetBuiltin.value) return false
   const currentIds = new Set(enabledMods.value.map(m => m.id))
   if (currentIds.size !== presetSnapshot.value.size) return true
   for (const id of currentIds) {
@@ -330,6 +333,16 @@ async function handleToggle(mod: InstalledMod) {
       )
     }
     await fetchMods()
+    // 自动同步激活预设的本地快照（后端已更新预设，前端同步避免脏标记）
+    if (activePresetId.value && !isActivePresetBuiltin.value) {
+      const next = new Set(presetSnapshot.value)
+      if (isEnabling) {
+        next.add(mod.id)
+      } else {
+        next.delete(mod.id)
+      }
+      presetSnapshot.value = next
+    }
   } catch (e: any) {
     message.error(t("library.error.operationFailed", { e }))
   } finally {
@@ -398,7 +411,7 @@ onMounted(async () => {
   // 恢复上次激活的预设状态
   try {
     const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
-    if (bootstrap.activeProfileName && bootstrap.activeProfileName !== "No active profile") {
+    if (bootstrap.activeProfileName) {
       const profiles = await invoke<ModProfile[]>("list_profiles")
       const active = profiles.find(p => p.name === bootstrap.activeProfileName)
       if (active) {
@@ -450,10 +463,10 @@ onUnmounted(() => {
         <NPopover v-if="isPresetDirty" trigger="hover" placement="bottom">
           <template #trigger>
             <NTag type="warning" size="tiny" :bordered="false" class="cursor-default">
-              {{ t("library.presetDirty") }}
+              {{ t("library.success.presetDirty") }}
             </NTag>
           </template>
-          <span class="text-xs">{{ t("library.presetDirtyTip", { name: activePresetName }) }}</span>
+          <span class="text-xs">{{ t("library.success.presetDirtyTip", { name: activePresetName }) }}</span>
         </NPopover>
         <NButton type="success" @click="handleLaunchGame" :loading="launchingGame">
           <template #icon><NIcon :size="16"><Play /></NIcon></template>
@@ -668,7 +681,7 @@ onUnmounted(() => {
                   </NPopconfirm>
                   <NSwitch
                     :value="true"
-                    :disabled="busyId !== null"
+                    :disabled="busyId !== null || isActivePresetBuiltin"
                     @update:value="() => handleToggle(mod)"
                   />
                 </div>
@@ -759,7 +772,7 @@ onUnmounted(() => {
                   </NPopconfirm>
                   <NSwitch
                     :value="false"
-                    :disabled="busyId !== null"
+                    :disabled="busyId !== null || isActivePresetBuiltin"
                     @update:value="() => handleToggle(mod)"
                   />
                 </div>

@@ -255,6 +255,25 @@ pub fn enable_mod(mod_id: String, state: State<AppState>) -> Result<ModToggleRes
     let result = mod_service::enable_mod(Path::new(game_root), &mod_id, &sync_pairs)
         .map_err(|e| e.to_string())?;
 
+    // 如果当前有激活的非内置预设，自动将 mod_id 加入其列表
+    let active_name = settings.active_profile_name.clone();
+    drop(settings);
+    if !active_name.is_empty() {
+        let profiles = profile_service::list_profiles();
+        if let Some(active_profile) = profiles.iter().find(|p| p.name == active_name) {
+            if !active_profile.builtin && !active_profile.mod_ids.contains(&mod_id) {
+                let mut new_ids = active_profile.mod_ids.clone();
+                new_ids.push(mod_id.clone());
+                let _ = profile_service::update_profile(
+                    active_profile.id.clone(),
+                    active_profile.name.clone(),
+                    active_profile.description.clone(),
+                    new_ids,
+                );
+            }
+        }
+    }
+
     // 记录活动日志
     let mut activity = state.recent_activity.write().unwrap();
     activity.push(ActivityLogEntry {
@@ -279,6 +298,29 @@ pub fn disable_mod(mod_id: String, state: State<AppState>) -> Result<ModToggleRe
     let sync_pairs = settings.save_sync_pairs.clone();
     let result = mod_service::disable_mod(Path::new(game_root), &mod_id, &sync_pairs)
         .map_err(|e| e.to_string())?;
+
+    // 如果当前有激活的非内置预设，自动将 mod_id 从其列表移除
+    let active_name = settings.active_profile_name.clone();
+    drop(settings);
+    if !active_name.is_empty() {
+        let profiles = profile_service::list_profiles();
+        if let Some(active_profile) = profiles.iter().find(|p| p.name == active_name) {
+            if !active_profile.builtin && active_profile.mod_ids.contains(&mod_id) {
+                let new_ids: Vec<String> = active_profile
+                    .mod_ids
+                    .iter()
+                    .filter(|id| *id != &mod_id)
+                    .cloned()
+                    .collect();
+                let _ = profile_service::update_profile(
+                    active_profile.id.clone(),
+                    active_profile.name.clone(),
+                    active_profile.description.clone(),
+                    new_ids,
+                );
+            }
+        }
+    }
 
     let mut activity = state.recent_activity.write().unwrap();
     activity.push(ActivityLogEntry {
@@ -322,7 +364,7 @@ pub fn open_mod_folder(mod_id: String, state: State<AppState>) -> Result<(), Str
         .as_ref()
         .ok_or("游戏目录未设置")?;
 
-    let plugins_dir = Path::new(game_root).join("mods").join("plugins");
+    let plugins_dir = Path::new(game_root).join("mods");
     let disabled_dir = Path::new(game_root).join("mods_disabled");
 
     let mod_folder = mod_service::find_mod_folder(&plugins_dir, &mod_id)
@@ -393,6 +435,12 @@ pub async fn pick_archive_files() -> Result<Vec<String>, String> {
 
 #[tauri::command]
 pub async fn pick_import_folder() -> Result<Option<String>, String> {
+    let folder = rfd::AsyncFileDialog::new().pick_folder().await;
+    Ok(folder.map(|f| f.path().to_string_lossy().to_string()))
+}
+
+#[tauri::command]
+pub async fn pick_game_folder() -> Result<Option<String>, String> {
     let folder = rfd::AsyncFileDialog::new().pick_folder().await;
     Ok(folder.map(|f| f.path().to_string_lossy().to_string()))
 }
@@ -597,6 +645,16 @@ pub fn update_profile(
 
 #[tauri::command]
 pub fn delete_profile(id: String, state: State<AppState>) -> Result<(), String> {
+    // 禁止删除当前激活的预设
+    let is_active = {
+        let settings = state.settings.read().unwrap();
+        let profiles = profile_service::list_profiles();
+        profiles.iter().any(|p| p.id == id && p.name == settings.active_profile_name)
+    };
+    if is_active {
+        return Err("当前激活的预设不能直接删除，请先切换到其他预设".to_string());
+    }
+
     profile_service::delete_profile(&id).map_err(|e| e.to_string())?;
 
     let mut activity = state.recent_activity.write().unwrap();
@@ -613,15 +671,25 @@ pub fn delete_profile(id: String, state: State<AppState>) -> Result<(), String> 
 
 #[tauri::command]
 pub fn apply_profile(id: String, state: State<AppState>) -> Result<ApplyProfileResult, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let (game_root, sync_pairs) = {
+        let settings = state.settings.read().unwrap();
+        let game_root = settings
+            .game_root_dir
+            .as_ref()
+            .ok_or("游戏目录未设置")?
+            .clone();
+        let sync_pairs = settings.save_sync_pairs.clone();
+        (game_root, sync_pairs)
+    };
 
-    let sync_pairs = settings.save_sync_pairs.clone();
-    let result = profile_service::apply_profile(&id, Path::new(game_root), &sync_pairs)
+    let result = profile_service::apply_profile(&id, Path::new(&game_root), &sync_pairs)
         .map_err(|e| e.to_string())?;
+
+    // 同步内存中的 active_profile_name，确保 get_app_bootstrap 返回最新值
+    {
+        let mut settings = state.settings.write().unwrap();
+        settings.active_profile_name = result.profile.name.clone();
+    }
 
     let mut activity = state.recent_activity.write().unwrap();
     activity.push(ActivityLogEntry {

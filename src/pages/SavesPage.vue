@@ -12,7 +12,7 @@ import {
   ShieldAlert,
 } from "lucide-vue-next"
 import type {
-  SaveSlot, SaveTransferPreview, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
+  SaveSlot, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
   CloudSaveStatus, CloudSaveDiffEntry, AppBootstrap,
 } from "../types"
 
@@ -21,11 +21,7 @@ const message = useMessage()
 
 // --- 状态 ---
 const slots = ref<SaveSlot[]>([])
-const showTransferDialog = ref(false)
 const showBackupsDialog = ref(false)
-const transferPreview = ref<SaveTransferPreview | null>(null)
-const transferSource = ref<SaveSlot | null>(null)
-const transferTarget = ref<SaveSlot | null>(null)
 const backups = ref<SaveBackupEntry[]>([])
 const autoSync = ref(false)
 const syncPairs = ref<SaveSyncPair[]>([])
@@ -91,39 +87,6 @@ async function deleteSaveSlot(slot: SaveSlot) {
   }
 }
 
-// --- 传输 ---
-function openTransfer(source: SaveSlot, target: SaveSlot) {
-  transferSource.value = source
-  transferTarget.value = target
-  transferPreview.value = {
-    source: { steamUserId: source.steamUserId, kind: source.kind, slotIndex: source.slotIndex },
-    target: { steamUserId: target.steamUserId, kind: target.kind, slotIndex: target.slotIndex },
-    sourceHasData: source.hasData,
-    targetHasData: target.hasData,
-    backupWillBeCreated: target.hasData,
-    summary: "",
-  }
-  showTransferDialog.value = true
-}
-
-async function doTransfer() {
-  if (!transferSource.value || !transferTarget.value) return
-  loading.value = true
-  try {
-    await invoke("transfer_save", {
-      source: { steamUserId: transferSource.value.steamUserId, kind: transferSource.value.kind, slotIndex: transferSource.value.slotIndex },
-      target: { steamUserId: transferTarget.value.steamUserId, kind: transferTarget.value.kind, slotIndex: transferTarget.value.slotIndex },
-    })
-    message.success(t("saves.success.transferDone"))
-    showTransferDialog.value = false
-    await loadSlots()
-  } catch (e: any) {
-    message.error(t("saves.error.transferFailed") + ": " + e)
-  } finally {
-    loading.value = false
-  }
-}
-
 // --- 全部历史备份（全局入口）---
 async function openAllBackups() {
   loading.value = true
@@ -138,17 +101,27 @@ async function openAllBackups() {
   }
 }
 
-async function createBackup(slot: SaveSlot) {
+async function createBackup(slot: SaveSlot): Promise<SaveBackupEntry | null> {
   try {
-    await invoke("create_save_backup", {
+    const entry = await invoke<SaveBackupEntry>("create_save_backup", {
       steamUserId: slot.steamUserId,
       kind: slot.kind,
       slotIndex: slot.slotIndex,
       reason: t("saves.backups.manualReason"),
     })
     message.success(t("saves.success.slotBackedUp", { i: slot.slotIndex }))
+    return entry
   } catch (e: any) {
     message.error(t("saves.error.backupFailed") + ": " + e)
+    return null
+  }
+}
+
+// 迁移：先备份当前槽位，再用「恢复到...」对话框选择目标
+async function migrateSlot(slot: SaveSlot) {
+  const backup = await createBackup(slot)
+  if (backup) {
+    openRestoreToSlot(backup)
   }
 }
 
@@ -419,25 +392,15 @@ onMounted(async () => {
                 {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("common.unknown") }}
               </div>
 
-              <!-- 操作按钮行（仅存档时显示） -->
-              <NSpace v-if="slot.hasData" :size="4">
+              <!-- 操作按钮行 -->
+              <div v-if="slot.hasData" class="flex items-center gap-1 flex-wrap">
                 <NButton size="tiny" secondary @click="createBackup(slot)">
                   {{ t("saves.backup") }}
                 </NButton>
-                <NButton
-                  v-for="ts in moddedSlots"
-                  :key="`t-${ts.slotIndex}`"
-                  size="tiny"
-                  secondary
-                  @click="openTransfer(slot, ts)"
-                >
+                <NButton size="tiny" secondary @click="migrateSlot(slot)">
                   <template #icon><NIcon :size="12"><Upload /></NIcon></template>
-                  {{ t("saves.transferToModded", { i: ts.slotIndex }) }}
+                  {{ t("saves.migrate") }}
                 </NButton>
-              </NSpace>
-
-              <!-- 删除存档（独立行，单独确认） -->
-              <div v-if="slot.hasData" class="mt-3 pt-2 border-t border-gray-100">
                 <NPopconfirm
                   @positive-click="() => deleteSaveSlot(slot)"
                 >
@@ -507,23 +470,14 @@ onMounted(async () => {
                 {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("common.unknown") }}
               </div>
 
-              <NSpace v-if="slot.hasData" :size="4">
+              <div v-if="slot.hasData" class="flex items-center gap-1 flex-wrap">
                 <NButton size="tiny" secondary @click="createBackup(slot)">
                   {{ t("saves.backup") }}
                 </NButton>
-                <NButton
-                  v-for="vs in vanillaSlots"
-                  :key="`t-${vs.slotIndex}`"
-                  size="tiny"
-                  secondary
-                  @click="openTransfer(slot, vs)"
-                >
+                <NButton size="tiny" secondary @click="migrateSlot(slot)">
                   <template #icon><NIcon :size="12"><Upload /></NIcon></template>
-                  {{ t("saves.transferToVanilla", { i: vs.slotIndex }) }}
+                  {{ t("saves.migrate") }}
                 </NButton>
-              </NSpace>
-
-              <div v-if="slot.hasData" class="mt-3 pt-2 border-t border-gray-100">
                 <NPopconfirm
                   @positive-click="() => deleteSaveSlot(slot)"
                 >
@@ -669,58 +623,6 @@ onMounted(async () => {
         </NSpace>
       </NCard>
     </template>
-
-    <!-- 传输确认对话框 -->
-    <NModal
-      :show="showTransferDialog"
-      @update:show="(v: boolean) => !v && (showTransferDialog = false)"
-    >
-      <NCard v-if="transferSource && transferTarget" style="width: 440px" :bordered="false" role="dialog">
-        <template #header>
-          <span class="text-lg font-semibold">{{ t("saves.transfer.title") }}</span>
-        </template>
-
-        <div class="text-sm text-gray-600 mb-3">
-          <div class="flex items-center gap-2 mb-2">
-            <NTag type="info" size="small" :bordered="false">{{ t("saves.transfer.source") }}</NTag>
-            <span>
-              {{ kindLabel(transferSource.kind) }}
-              {{ t("saves.slotIndex", { i: transferSource.slotIndex }) }}
-              （{{ transferSource.hasData ? t("saves.transfer.hasData") : t("saves.transfer.noData") }}）
-            </span>
-          </div>
-          <div class="flex items-center gap-2">
-            <NTag type="warning" size="small" :bordered="false">{{ t("saves.transfer.target") }}</NTag>
-            <span>
-              {{ kindLabel(transferTarget.kind) }}
-              {{ t("saves.slotIndex", { i: transferTarget.slotIndex }) }}
-              （{{ transferTarget.hasData ? t("saves.transfer.hasData") : t("saves.transfer.noData") }}）
-            </span>
-          </div>
-        </div>
-
-        <div
-          v-if="transferTarget.hasData"
-          class="p-2 rounded bg-amber-50 text-xs text-amber-700 mb-3"
-        >
-          {{ t("saves.transfer.autoBackupWarning") }}
-        </div>
-
-        <template #footer>
-          <NSpace justify="end">
-            <NButton @click="showTransferDialog = false">{{ t("common.cancel") }}</NButton>
-            <NButton
-              type="primary"
-              :loading="loading"
-              :disabled="!transferSource.hasData"
-              @click="doTransfer"
-            >
-              {{ t("saves.transfer.confirm") }}
-            </NButton>
-          </NSpace>
-        </template>
-      </NCard>
-    </NModal>
 
     <!-- 备份列表对话框 -->
     <NModal

@@ -42,6 +42,18 @@ async function loadSettings() {
 }
 
 // --- 游戏路径 ---
+async function browseGamePath() {
+  try {
+    const path = await invoke<string | null>("pick_game_folder")
+    if (path) {
+      gamePath.value = path
+      await saveGamePath()
+    }
+  } catch (e: any) {
+    message.error(`${t("settings.error.saveFailed")}: ${e}`)
+  }
+}
+
 async function detectGame() {
   loading.value = true
   try {
@@ -150,6 +162,7 @@ onMounted(loadSettings)
                 <NIcon :size="16"><FolderSearch /></NIcon>
               </template>
             </NInput>
+            <NButton secondary @click="browseGamePath">{{ t("settings.gamePath.browse") }}</NButton>
             <NButton secondary @click="saveGamePath">{{ t("common.save") }}</NButton>
           </div>
           <div class="flex items-center gap-2">

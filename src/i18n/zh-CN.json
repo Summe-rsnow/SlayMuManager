@@ -171,6 +171,7 @@
     "gamePath": {
       "title": "游戏路径",
       "placeholder": "游戏安装目录",
+      "browse": "浏览",
       "autoDetect": "自动检测",
       "valid": "✓ 路径有效",
       "invalid": "✗ 路径无效（未找到 SlayTheSpire2.exe）"
@@ -226,6 +227,7 @@
       "downloads": "下载最多"
     },
     "resultCount": "共 {total} 个结果",
+    "jumpTo": "跳至",
     "unknownAuthor": "未知",
     "details": "详情",
     "install": "安装",
@@ -258,6 +260,7 @@
     },
     "unknown": "未知",
     "backup": "备份",
+    "migrate": "迁移",
     "allHistoryBackups": "全部历史备份",
     "historyBackups": "历史备份",
     "deleteSlot": "删除存档",
@@ -388,8 +391,10 @@
     "importBundle": "导入整合包",
     "create": "新建预设",
     "builtin": "内置",
+    "active": "当前生效",
     "modCount": "{n} 个 Mod",
     "confirmDelete": "确定要删除「{name}」？",
+    "confirmDeleteActive": "「{name}」是当前生效的预设，删除后生效预设将重置为原版。确定删除？",
     "empty": {
       "noProfiles": "暂无预设",
       "noProfilesHint": "在模组库保存当前 Mod 组合，或点击上方新建"

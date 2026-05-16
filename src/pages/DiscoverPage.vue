@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
-  NCard, NButton, NInput, NIcon, NSpace, NSelect, NPagination, useMessage,
+  NCard, NButton, NInput, NIcon, NSpace, NSelect, NPagination, NInputNumber, useMessage,
 } from "naive-ui"
 import { Search, Download, ExternalLink, ThumbsUp, PackageOpen, ArrowDown } from "lucide-vue-next"
 import type { RemoteMod, RemoteModSearchResult, ModFileInfo } from "../types"
@@ -71,6 +71,16 @@ function onSortChange(val: string) {
 function onPageChange(p: number) {
   page.value = p
   doSearch(false)
+}
+
+const jumpPage = ref<number | null>(null)
+const totalPages = computed(() => Math.ceil(totalCount.value / pageSize))
+
+function jumpToPage() {
+  const p = jumpPage.value
+  if (p == null || p < 1 || p > totalPages.value) return
+  onPageChange(p)
+  jumpPage.value = null
 }
 
 // --- 下载 ---
@@ -251,13 +261,24 @@ function formatCount(n: number): string {
       </div>
 
       <!-- 分页 -->
-      <div v-if="totalCount > pageSize" class="flex justify-center mb-8">
+      <div v-if="totalCount > pageSize" class="flex justify-center items-center gap-3 mb-8">
         <NPagination
           :page="page"
           :page-size="pageSize"
           :item-count="totalCount"
           @update:page="onPageChange"
         />
+        <span class="text-xs text-gray-400">{{ t("discover.jumpTo") }}</span>
+        <NInputNumber
+          v-model:value="jumpPage"
+          size="tiny"
+          :min="1"
+          :max="totalPages"
+          :placeholder="String(page)"
+          style="width: 70px"
+          @keyup.enter="jumpToPage"
+        />
+        <NButton size="tiny" secondary @click="jumpToPage">Go</NButton>
       </div>
     </div>
 

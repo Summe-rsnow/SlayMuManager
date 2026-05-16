@@ -171,6 +171,7 @@
     "gamePath": {
       "title": "Game Path",
       "placeholder": "Game installation directory",
+      "browse": "Browse",
       "autoDetect": "Auto Detect",
       "valid": "✓ Path valid",
       "invalid": "✗ Path invalid (SlayTheSpire2.exe not found)"
@@ -226,6 +227,7 @@
       "downloads": "Most Downloaded"
     },
     "resultCount": "{total} result(s)",
+    "jumpTo": "Jump to",
     "unknownAuthor": "Unknown",
     "details": "Details",
     "install": "Install",
@@ -258,6 +260,7 @@
     },
     "unknown": "Unknown",
     "backup": "Backup",
+    "migrate": "Migrate",
     "allHistoryBackups": "All History",
     "historyBackups": "History",
     "deleteSlot": "Delete Save",
@@ -388,8 +391,10 @@
     "importBundle": "Import Bundle",
     "create": "New Preset",
     "builtin": "Built-in",
+    "active": "Active",
     "modCount": "{n} mod(s)",
     "confirmDelete": "Delete \"{name}\"?",
+    "confirmDeleteActive": "\"{name}\" is currently active. Deleting it will reset the active preset to Vanilla. Are you sure?",
     "empty": {
       "noProfiles": "No presets",
       "noProfilesHint": "Save your current mod configuration from the Library, or click New Preset above"

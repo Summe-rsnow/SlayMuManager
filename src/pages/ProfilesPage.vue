@@ -9,13 +9,14 @@ import {
 import {
   Plus, FolderHeart, Edit3, Trash2, Play, Download, Upload, Save, Search,
 } from "lucide-vue-next"
-import type { ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
+import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
 
 const { t } = useI18n()
 const message = useMessage()
 
 // --- 状态 ---
 const profiles = ref<ModProfile[]>([])
+const activeProfileName = ref("")
 const showCreateDialog = ref(false)
 const showApplyDialog = ref(false)
 const showImportDialog = ref(false)
@@ -275,7 +276,13 @@ async function saveCurrentMods() {
   }
 }
 
-onMounted(loadProfiles)
+onMounted(async () => {
+  await loadProfiles()
+  try {
+    const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+    activeProfileName.value = bootstrap.activeProfileName || ""
+  } catch { /* ignore */ }
+})
 </script>
 
 <template>
@@ -318,6 +325,9 @@ onMounted(loadProfiles)
               <NTag v-if="p.builtin" type="success" size="tiny" :bordered="false">
                 {{ t("profiles.builtin") }}
               </NTag>
+              <NTag v-if="p.name === activeProfileName" type="info" size="tiny" :bordered="false">
+                {{ t("profiles.active") }}
+              </NTag>
             </div>
             <p v-if="p.description" class="text-xs text-gray-400 mb-2 line-clamp-2">
               {{ p.description }}
@@ -338,13 +348,18 @@ onMounted(loadProfiles)
             <NButton v-if="!p.builtin" text size="tiny" @click="() => openEdit(p)">
               <template #icon><NIcon :size="14"><Edit3 /></NIcon></template>
             </NButton>
-            <NPopconfirm v-if="!p.builtin" @positive-click="() => handleDelete(p)">
+            <NPopconfirm v-if="!p.builtin && p.name !== activeProfileName" @positive-click="() => handleDelete(p)">
               <template #trigger>
                 <NButton text size="tiny" type="error">
                   <template #icon><NIcon :size="14"><Trash2 /></NIcon></template>
                 </NButton>
               </template>
-              {{ t("profiles.confirmDelete", { name: p.name }) }}
+              <template v-if="p.name === activeProfileName">
+                {{ t("profiles.confirmDeleteActive", { name: p.name }) }}
+              </template>
+              <template v-else>
+                {{ t("profiles.confirmDelete", { name: p.name }) }}
+              </template>
             </NPopconfirm>
           </NSpace>
         </div>

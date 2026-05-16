@@ -49,6 +49,7 @@ pub fn run() {
             app::commands::pick_archive_file,
             app::commands::pick_archive_files,
             app::commands::pick_import_folder,
+            app::commands::pick_game_folder,
             app::commands::preview_install_archive,
             app::commands::install_archive,
             app::commands::process_import_targets,

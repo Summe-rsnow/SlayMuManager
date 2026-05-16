@@ -68,7 +68,7 @@ fn default_mods_disabled_dir_name() -> String {
 }
 
 fn default_active_profile_name() -> String {
-    "No active profile".to_string()
+    "原版".to_string()
 }
 
 fn default_locale() -> String {
