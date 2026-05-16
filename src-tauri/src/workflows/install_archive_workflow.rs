@@ -4,6 +4,7 @@ use crate::domain::mod_entity::{
 };
 use crate::integrations::manifest::ModManifest;
 use crate::services::mod_service;
+use crate::services::save_service;
 use crate::utils::error::AppError;
 use serde::Serialize;
 use std::io::Read;
@@ -497,7 +498,7 @@ pub fn install_discovered_mods(
             let new_id = format!("{}{}", dmod.mod_id, suffix);
             // 使用临时目录存放重命名后的 Mod
             let temp_rename = extracted_root.join(format!("_rename_{}", &new_id));
-            copy_dir_recursive(&source_folder, &temp_rename)?;
+            save_service::copy_dir_recursive(&source_folder, &temp_rename)?;
             if let Err(e) = ModManifest::rewrite_manifest_id(&temp_rename, &new_id) {
                 let _ = std::fs::remove_dir_all(&temp_rename);
                 return Err(AppError::Other(format!("重命名失败: {}", e)));
@@ -507,14 +508,14 @@ pub fn install_discovered_mods(
             if dest_path.exists() {
                 std::fs::remove_dir_all(&dest_path).map_err(AppError::Io)?;
             }
-            copy_dir_recursive(&temp_rename, &dest_path)?;
+            save_service::copy_dir_recursive(&temp_rename, &dest_path)?;
             let _ = std::fs::remove_dir_all(&temp_rename);
         } else {
             let dest_path = target_dir.join(&dest_folder_name);
             if dest_path.exists() {
                 std::fs::remove_dir_all(&dest_path).map_err(AppError::Io)?;
             }
-            copy_dir_recursive(&source_folder, &dest_path)?;
+            save_service::copy_dir_recursive(&source_folder, &dest_path)?;
         }
 
         let dest_path = target_dir.join(&dest_folder_name);
@@ -587,21 +588,6 @@ fn find_dir_recursive(root: &Path, target: &str) -> Option<PathBuf> {
         }
     }
     None
-}
-
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), AppError> {
-    std::fs::create_dir_all(dst).map_err(AppError::Io)?;
-    for entry in std::fs::read_dir(src).map_err(AppError::Io)? {
-        let entry = entry.map_err(AppError::Io)?;
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
-        if src_path.is_dir() {
-            copy_dir_recursive(&src_path, &dst_path)?;
-        } else {
-            std::fs::copy(&src_path, &dst_path).map_err(AppError::Io)?;
-        }
-    }
-    Ok(())
 }
 
 /// 清理临时解压目录

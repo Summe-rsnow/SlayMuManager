@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from "vue"
+import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
   NCard, NButton, NTag, NIcon, NSpace, NModal, NInput,
-  NPopconfirm, NCheckbox, useMessage,
+  NPopconfirm, NCheckbox, NPopover, useMessage,
 } from "naive-ui"
 import {
   Plus, FolderHeart, Edit3, Trash2, Play, Download, Upload, Search,
 } from "lucide-vue-next"
 import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
+import { useIsActive } from "../composables/useIsActive"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -24,8 +25,7 @@ const applyResult = ref<ApplyProfileResult | null>(null)
 const loading = ref(false)
 
 // --- 组件生命周期守卫 ---
-const isActive = ref(true)
-onBeforeUnmount(() => { isActive.value = false })
+const { isActive } = useIsActive()
 
 // 创建/编辑表单
 const editingId = ref<string | null>(null)
@@ -183,6 +183,7 @@ async function handleApply(profile: ModProfile) {
   try {
     applyResult.value = await invoke<ApplyProfileResult>("apply_profile", { id: profile.id })
     if (!isActive.value) return
+    activeProfileName.value = applyResult.value.profile.name
     showApplyDialog.value = true
     await loadProfiles()
   } catch (e: any) {
@@ -245,6 +246,7 @@ async function confirmImport() {
     showImportDialog.value = false
     bundlePreview.value = null
     message.success(t("profiles.success.bundleImported", { n: result.enabledModIds.length }))
+    activeProfileName.value = result.profile.name
     await loadProfiles()
   } catch (e: any) {
     message.error(`${t("profiles.error.importFailed")}: ${e}`)
@@ -283,16 +285,17 @@ onMounted(async () => {
     </div>
 
     <!-- 预设列表 -->
-    <div v-if="profiles.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div v-if="profiles.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3 auto-rows-fr">
       <NCard
         v-for="p in profiles"
         :key="p.id"
         size="small"
         class="hover:shadow-md transition-shadow"
       >
-        <div class="flex items-start justify-between">
+        <div class="flex items-start">
           <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
+            <!-- 名称 + 标签 -->
+            <div class="flex items-center gap-2 flex-wrap">
               <NIcon :size="16" :color="p.builtin ? '#10b981' : '#6366f1'"><FolderHeart /></NIcon>
               <span class="font-semibold text-gray-800 truncate">{{ p.name }}</span>
               <NTag v-if="p.builtin" type="success" size="tiny" :bordered="false">
@@ -302,15 +305,27 @@ onMounted(async () => {
                 {{ t("profiles.active") }}
               </NTag>
             </div>
-            <p v-if="p.description" class="text-xs text-gray-400 mb-2 line-clamp-2">
-              {{ p.description }}
-            </p>
-            <NSpace :size="4">
+
+            <!-- 描述区域（固定高度，无描述时显示占位文字） -->
+            <div style="height: 2.25rem" class="mt-1 mb-0.5">
+              <NPopover v-if="p.description" trigger="hover" placement="top" :width="320">
+                <template #trigger>
+                  <p class="text-xs text-gray-400 line-clamp-2 cursor-help">{{ p.description }}</p>
+                </template>
+                <div class="text-xs leading-relaxed">{{ p.description }}</div>
+              </NPopover>
+              <p v-else class="text-xs text-gray-300 leading-5">{{ t("profiles.noDescription") }}</p>
+            </div>
+
+            <!-- Mod 数量 -->
+            <div class="h-6 flex items-center">
               <NTag size="small" :bordered="false">
                 {{ t("profiles.modCount", { n: p.modIds.length }) }}
               </NTag>
-            </NSpace>
+            </div>
           </div>
+
+          <!-- 右侧操作按钮 -->
           <NSpace :size="4" class="ml-3 flex-shrink-0">
             <NButton text size="tiny" @click="() => handleApply(p)">
               <template #icon><NIcon :size="14"><Play /></NIcon></template>

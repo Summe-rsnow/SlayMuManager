@@ -51,13 +51,13 @@ function handleUpdateValue(key: string) {
 </script>
 
 <template>
-  <nav class="w-52 flex-shrink-0 border-r border-gray-100 bg-gray-50/50 p-3">
-    <NMenu
-      :value="activeKey"
-      :options="menuOptions"
-      :indent="16"
-      :default-expanded-keys="[]"
-      @update:value="handleUpdateValue"
-    />
+  <nav class="w-52 flex-shrink-0 border-r border-gray-100 bg-gray-50/50 flex flex-col p-3">
+      <NMenu
+        :value="activeKey"
+        :options="menuOptions"
+        :indent="16"
+        :default-expanded-keys="[]"
+        @update:value="handleUpdateValue"
+      />
   </nav>
 </template>

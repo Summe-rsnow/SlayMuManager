@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from "vue"
+import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
   NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, useMessage,
 } from "naive-ui"
 import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown } from "lucide-vue-next"
-import type { RemoteMod, RemoteModSearchResult } from "../types"
+import type { RemoteMod, RemoteModSearchResult, AppBootstrap } from "../types"
+import { useIsActive } from "../composables/useIsActive"
+import TruncatedText from "../components/TruncatedText.vue"
 
 const { t } = useI18n()
 const message = useMessage()
+const { isActive } = useIsActive()
 
 // --- 排序选项 ---
 const sortOptions = computed(() => [
@@ -25,17 +28,25 @@ const sortBy = ref("latest_added")
 const results = ref<RemoteMod[]>([])
 const totalCount = ref(0)
 const page = ref(1)
-const pageSize = 10
+const pageSize = 18
 const loading = ref(false)
 const initialLoading = ref(true)
 const searched = ref(false)
-
-// --- 组件生命周期守卫（防止切换页面时异步回调卡死）---
-const isActive = ref(true)
-onBeforeUnmount(() => { isActive.value = false })
+const hasApiKey = ref(true)
+const imageLoadFailed = ref<Record<string, boolean>>({})
+function onImgError(modId: string) {
+  imageLoadFailed.value = { ...imageLoadFailed.value, [modId]: true }
+}
 
 // --- 初始加载（空搜索浏览最新 Mod） ---
-onMounted(() => doSearch())
+onMounted(async () => {
+  // 检测是否配置了 API Key
+  try {
+    const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+    hasApiKey.value = !!bootstrap.nexusApiKey
+  } catch { /* ignore */ }
+  doSearch()
+})
 
 async function doSearch(resetPage = true) {
   if (resetPage) page.value = 1
@@ -93,7 +104,7 @@ function formatCount(n: number): string {
 </script>
 
 <template>
-  <div>
+  <div class="flex flex-col h-full">
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-gray-800">{{ t("discover.title") }}</h1>
       <p class="text-sm text-gray-500 mt-1">{{ t("discover.subtitle") }}</p>
@@ -124,9 +135,11 @@ function formatCount(n: number): string {
       </NButton>
     </div>
 
+    <div class="flex-1">
+
     <!-- 初始加载骨架屏 -->
-    <div v-if="initialLoading" class="grid grid-cols-1 gap-3">
-      <NCard v-for="i in 5" :key="i" size="small">
+    <div v-if="initialLoading" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      <NCard v-for="i in 18" :key="i" size="small">
         <div class="flex items-start gap-3 animate-pulse">
           <div class="w-16 h-16 rounded-lg bg-gray-200 flex-shrink-0" />
           <div class="flex-1 space-y-2">
@@ -134,6 +147,7 @@ function formatCount(n: number): string {
             <div class="h-3 bg-gray-100 rounded w-full" />
             <div class="h-3 bg-gray-100 rounded w-1/2" />
           </div>
+          <div class="w-14 h-6 bg-gray-100 rounded flex-shrink-0" />
         </div>
       </NCard>
     </div>
@@ -158,12 +172,20 @@ function formatCount(n: number): string {
               class="w-16 h-16 rounded-lg flex-shrink-0 overflow-hidden bg-gray-100"
             >
               <img
+                v-show="!imageLoadFailed[mod.remoteId]"
                 :src="mod.pictureUrl"
                 :alt="mod.name"
                 class="w-full h-full object-cover"
                 loading="lazy"
                 referrerpolicy="no-referrer"
+                @error="onImgError(mod.remoteId)"
               />
+              <div
+                v-show="imageLoadFailed[mod.remoteId]"
+                class="w-full h-full flex items-center justify-center"
+              >
+                <NIcon :size="24" color="#9ca3af"><PackageOpen /></NIcon>
+              </div>
             </div>
             <div
               v-else
@@ -180,9 +202,7 @@ function formatCount(n: number): string {
                   v{{ mod.latestVersion }}
                 </span>
               </div>
-              <p v-if="mod.summary" class="text-xs text-gray-500 mb-2 line-clamp-2">
-                {{ mod.summary }}
-              </p>
+              <TruncatedText :text="mod.summary" />
               <div class="flex items-center gap-3 text-xs text-gray-400">
                 <span>{{ mod.author ?? t("discover.unknownAuthor") }}</span>
                 <span class="flex items-center gap-1">
@@ -204,9 +224,27 @@ function formatCount(n: number): string {
           </div>
         </NCard>
       </div>
+    </div>
 
-      <!-- 分页 -->
-      <div v-if="totalCount > pageSize" class="flex justify-center items-center gap-3 mb-8">
+    <NCard v-else-if="searched && !loading" size="small">
+      <div class="text-center py-12 text-gray-400">
+        <NIcon :size="48" class="c-gray-300 mb-3"><Search /></NIcon>
+        <p>{{ t("discover.empty.notFound") }}</p>
+        <p v-if="!hasApiKey" class="text-sm mt-2">{{ t("discover.empty.needsApiKey") }}</p>
+      </div>
+    </NCard>
+
+    <NCard v-else size="small">
+      <div class="text-center py-12 text-gray-400">
+        <NIcon :size="48" class="c-gray-300 mb-3"><PackageOpen /></NIcon>
+        <p>{{ t("discover.empty.startSearch") }}</p>
+        <p v-if="!hasApiKey" class="text-sm mt-1">{{ t("discover.empty.needsApiKey") }}</p>
+      </div>
+    </NCard>
+    </div>
+
+    <!-- 分页 - 固定底部 -->
+    <div v-if="!initialLoading && results.length > 0 && totalCount > pageSize" class="flex justify-center items-center gap-3 pt-4 pb-2 sticky bottom-0 bg-white border-t border-gray-100 z-10">
         <NPagination
           :page="page"
           :page-size="pageSize"
@@ -223,24 +261,7 @@ function formatCount(n: number): string {
           style="width: 70px"
           @keyup.enter="jumpToPage"
         />
-        <NButton size="tiny" secondary @click="jumpToPage">Go</NButton>
-      </div>
+        <NButton size="tiny" secondary @click="jumpToPage">{{ t("discover.jumpToBtn") }}</NButton>
     </div>
-
-    <NCard v-else-if="searched && !loading" size="small">
-      <div class="text-center py-12 text-gray-400">
-        <NIcon :size="48" class="c-gray-300 mb-3"><Search /></NIcon>
-        <p>{{ t("discover.empty.notFound") }}</p>
-        <p class="text-sm mt-2">{{ t("discover.empty.needsApiKey") }}</p>
-      </div>
-    </NCard>
-
-    <NCard v-else size="small">
-      <div class="text-center py-12 text-gray-400">
-        <NIcon :size="48" class="c-gray-300 mb-3"><PackageOpen /></NIcon>
-        <p>{{ t("discover.empty.startSearch") }}</p>
-        <p class="text-sm mt-1">{{ t("discover.empty.needsApiKey") }}</p>
-      </div>
-    </NCard>
   </div>
 </template>

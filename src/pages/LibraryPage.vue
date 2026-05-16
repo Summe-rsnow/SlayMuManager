@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, onBeforeUnmount } from "vue"
+import { ref, computed, onMounted, onUnmounted, watch } from "vue"
 import { useI18n } from "vue-i18n"
+import { currentLocale } from "../i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import {
@@ -9,7 +10,7 @@ import {
 } from "naive-ui"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
-  AlertTriangle, Filter, X, Tag, Play,
+  AlertTriangle, Filter, X, Tag, Play, PackageOpen, Check,
 } from "lucide-vue-next"
 import ImportDialog from "../components/ImportDialog.vue"
 import ModCard from "../components/ModCard.vue"
@@ -17,6 +18,10 @@ import { useModCache } from "../composables/useModCache"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
 import { useRouter } from "vue-router"
 import type { InstalledMod, ModProfile, ModToggleResult, CloudSaveStatus, AppBootstrap } from "../types"
+import { useIsActive } from "../composables/useIsActive"
+
+/** 内置原版预设 ID（与服务端 BUILTIN_VANILLA_ID 对应） */
+const BUILTIN_VANILLA_ID = "__builtin__vanilla"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -25,8 +30,7 @@ const { enabledMods, disabledMods, loading, fetchMods } = useModCache()
 const { getTags, usedTags, getTagLabel } = useModTags()
 
 // --- 组件生命周期守卫（防止切换页面时异步回调卡死）---
-const isActive = ref(true)
-onBeforeUnmount(() => { isActive.value = false })
+const { isActive } = useIsActive()
 
 // --- 启动游戏 ---
 const launchingGame = ref(false)
@@ -127,7 +131,7 @@ const activePresetName = ref("")
 const presetSnapshot = ref<Set<string>>(new Set())
 
 /** 当前激活预设是否为原版（内置） */
-const isActivePresetBuiltin = computed(() => activePresetId.value === "__builtin__vanilla")
+const isActivePresetBuiltin = computed(() => activePresetId.value === BUILTIN_VANILLA_ID)
 
 /** 当前启用的 mod 是否偏离了激活预设 */
 const isPresetDirty = computed(() => {
@@ -140,6 +144,54 @@ const isPresetDirty = computed(() => {
   return false
 })
 
+// --- 新增预设（空预设 + 切换）---
+const showNewPresetDialog = ref(false)
+const newPresetName = ref("")
+const creatingNewPreset = ref(false)
+
+function openNewPreset() {
+  newPresetName.value = ""
+  showNewPresetDialog.value = true
+}
+
+async function handleCreateNewPreset() {
+  const name = newPresetName.value.trim()
+  if (!name) {
+    message.warning(t("library.warning.enterPresetName"))
+    return
+  }
+  creatingNewPreset.value = true
+  try {
+    // 创建空预设
+    await invoke("create_profile", {
+      name,
+      description: null,
+      modIds: [] as string[],
+    })
+    // 查询所有预设找到刚创建的
+    const profiles = await invoke<ModProfile[]>("list_profiles")
+    const created = profiles.find(p => p.name === name)
+    if (created) {
+      // 切换到新预设
+      await invoke("apply_profile", { id: created.id })
+      if (!isActive.value) return
+      activePresetId.value = created.id
+      activePresetName.value = created.name
+      quickPresetId.value = created.id
+      presetSnapshot.value = new Set()
+      message.success(t("library.success.presetApplied", { name }))
+      await fetchMods()
+      loadQuickPresets()
+    }
+    showNewPresetDialog.value = false
+  } catch (e: any) {
+    if (!isActive.value) return
+    message.error(`${t("profiles.error.applyFailed")}: ${e}`)
+  } finally {
+    creatingNewPreset.value = false
+  }
+}
+
 // --- 保存为预设 ---
 const showSavePresetDialog = ref(false)
 const presetName = ref("")
@@ -151,7 +203,7 @@ function openSavePreset() {
     message.warning(t("library.warning.noEnabledMods"))
     return
   }
-  presetName.value = t("library.savePreset.defaultName") + " " + new Date().toLocaleDateString("zh-CN")
+  presetName.value = t("library.savePreset.defaultName") + " " + new Date().toLocaleDateString(currentLocale.value)
   presetDescription.value = t("library.savePreset.defaultDescription")
   showSavePresetDialog.value = true
 }
@@ -171,11 +223,57 @@ async function handleSavePreset() {
     })
     message.success(t("library.success.presetSaved", { name }))
     showSavePresetDialog.value = false
+    loadQuickPresets()
   } catch (e: any) {
     message.error(t("library.error.saveFailed", { e }))
   } finally {
     savingPreset.value = false
   }
+}
+
+// --- 全部启用 / 全部禁用 ---
+const batchBusy = ref(false)
+
+async function enableAllMods() {
+  const targets = disabledMods.value
+  if (targets.length === 0) {
+    message.info(t("library.info.allAlreadyEnabled"))
+    return
+  }
+  batchBusy.value = true
+  let success = 0
+  for (const mod of targets) {
+    try {
+      await invoke<ModToggleResult>("enable_mod", { modId: mod.id })
+      success++
+    } catch { /* skip failed */ }
+    if (!isActive.value) break
+  }
+  batchBusy.value = false
+  if (!isActive.value) return
+  message.success(t("library.success.batchEnabled", { n: success }))
+  await fetchMods()
+}
+
+async function disableAllMods() {
+  const targets = enabledMods.value
+  if (targets.length === 0) {
+    message.info(t("library.info.allAlreadyDisabled"))
+    return
+  }
+  batchBusy.value = true
+  let success = 0
+  for (const mod of targets) {
+    try {
+      await invoke<ModToggleResult>("disable_mod", { modId: mod.id })
+      success++
+    } catch { /* skip failed */ }
+    if (!isActive.value) break
+  }
+  batchBusy.value = false
+  if (!isActive.value) return
+  message.success(t("library.success.batchDisabled", { n: success }))
+  await fetchMods()
 }
 
 // --- 侧边栏筛选 ---
@@ -212,15 +310,25 @@ const usedPresetTags = computed(() =>
   PRESET_TAGS.filter((t) => usedTags.value.has(t.id))
 )
 
-// --- 搜索（回车提交）---
+// --- 搜索（实时 debounce 200ms + 回车立即搜索）---
 const searchInput = ref("")
 const searchQuery = ref("")
+let searchDebounce: ReturnType<typeof setTimeout> | null = null
+
+watch(searchInput, (val) => {
+  if (searchDebounce) clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => {
+    searchQuery.value = val
+  }, 200)
+})
 
 function applySearch() {
+  if (searchDebounce) clearTimeout(searchDebounce)
   searchQuery.value = searchInput.value
 }
 
 function clearSearch() {
+  if (searchDebounce) clearTimeout(searchDebounce)
   searchInput.value = ""
   searchQuery.value = ""
 }
@@ -415,7 +523,7 @@ onUnmounted(() => {
 <template>
   <div>
     <!-- 头部 -->
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">{{ t("library.title") }}</h1>
         <div class="flex items-center gap-4 mt-1 text-sm text-gray-500">
@@ -446,27 +554,32 @@ onUnmounted(() => {
               {{ t("library.success.presetDirty") }}
             </NTag>
           </template>
-          <span class="text-xs">{{ t("library.success.presetDirtyTip", { name: activePresetName }) }}</span>
+          <div class="text-xs max-w-48 space-y-2">
+            <p>{{ t("library.success.presetDirtyTip", { name: activePresetName }) }}</p>
+            <NButton size="tiny" secondary @click="openSavePreset">
+              {{ t("library.savePreset.title") }}
+            </NButton>
+          </div>
         </NPopover>
-        <NButton type="success" @click="handleLaunchGame" :loading="launchingGame">
-          <template #icon><NIcon :size="16"><Play /></NIcon></template>
+        <NButton size="small" type="success" @click="handleLaunchGame" :loading="launchingGame">
+          <template #icon><NIcon :size="14"><Play /></NIcon></template>
           {{ t("library.launchGame") }}
         </NButton>
-        <div class="w-px h-6 bg-gray-200 self-center" />
-        <NButton secondary @click="handleOpenModsDir">
-          <template #icon><NIcon :size="16"><FolderOpen /></NIcon></template>
+        <div class="w-px self-stretch bg-gray-200" />
+        <NButton size="small" secondary @click="handleOpenModsDir">
+          <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
           {{ t("library.openModsDir") }}
         </NButton>
-        <NButton secondary @click="openSavePreset">
-          <template #icon><NIcon :size="16"><Bookmark /></NIcon></template>
+        <NButton size="small" secondary @click="openNewPreset">
+          <template #icon><NIcon :size="14"><Bookmark /></NIcon></template>
           {{ t("library.newPreset") }}
         </NButton>
-        <NButton secondary :loading="loading" @click="fetchMods">
-          <template #icon><NIcon :size="16"><RefreshCw /></NIcon></template>
+        <NButton size="small" secondary :loading="loading" @click="fetchMods">
+          <template #icon><NIcon :size="14"><RefreshCw /></NIcon></template>
           {{ t("common.refresh") }}
         </NButton>
-        <NButton type="primary" @click="handleImport">
-          <template #icon><NIcon :size="16"><Download /></NIcon></template>
+        <NButton size="small" type="primary" @click="handleImport">
+          <template #icon><NIcon :size="14"><Download /></NIcon></template>
           {{ t("library.importMod") }}
         </NButton>
       </div>
@@ -527,20 +640,23 @@ onUnmounted(() => {
           </div>
 
           <!-- 标签筛选 -->
-          <div v-if="usedPresetTags.length > 0" class="space-y-2">
+          <div class="space-y-2">
             <div class="text-xs text-gray-500 font-medium flex items-center gap-1">
               <NIcon :size="12"><Tag /></NIcon>
               {{ t("library.filter.tags") }}
             </div>
-            <NCheckbox
-              v-for="t in usedPresetTags"
-              :key="t.id"
-              :checked="filterTagIds.has(t.id)"
-              size="small"
-              @update:checked="() => toggleFilterTag(t.id)"
-            >
-              <span class="text-xs">{{ getTagLabel(t.id) }}</span>
-            </NCheckbox>
+            <template v-if="usedPresetTags.length > 0">
+              <NCheckbox
+                v-for="t in usedPresetTags"
+                :key="t.id"
+                :checked="filterTagIds.has(t.id)"
+                size="small"
+                @update:checked="() => toggleFilterTag(t.id)"
+              >
+                <span class="text-xs">{{ getTagLabel(t.id) }}</span>
+              </NCheckbox>
+            </template>
+            <p v-else class="text-xs text-gray-300 italic">{{ t("library.filter.noTags") }}</p>
           </div>
 
           <!-- 筛选计数徽章 -->
@@ -557,16 +673,19 @@ onUnmounted(() => {
         <!-- 三层空状态 -->
         <div v-if="emptyReason" class="text-center py-16 text-gray-400">
           <template v-if="emptyReason === 'noMods'">
+            <NIcon :size="48" class="c-gray-300 mb-3"><PackageOpen /></NIcon>
             <p class="text-lg">{{ t("library.empty.noMods") }}</p>
             <p class="text-sm mt-1">{{ t("library.empty.noModsHint") }}</p>
           </template>
           <template v-else-if="emptyReason === 'filtered'">
+            <NIcon :size="48" class="c-gray-300 mb-3"><Filter /></NIcon>
             <p>{{ t("library.empty.filterNoResults") }}</p>
             <p class="text-sm mt-1">
               <NButton text size="tiny" @click="clearFilters">{{ t("library.empty.clearAllFilters") }}</NButton>
             </p>
           </template>
           <template v-else-if="emptyReason === 'search'">
+            <NIcon :size="48" class="c-gray-300 mb-3"><Search /></NIcon>
             <p>{{ t("library.empty.searchNoMatch", { q: searchQuery }) }}</p>
             <p class="text-sm mt-1">
               <NButton text size="tiny" @click="clearSearch">{{ t("library.empty.clearSearch") }}</NButton>
@@ -578,11 +697,24 @@ onUnmounted(() => {
           <!-- 已启用 Mod -->
           <NCard v-if="filterShowEnabled" size="small" class="mb-4">
             <template #header>
-              <div class="flex items-center gap-2">
-                <span>{{ t("library.section.enabled") }}</span>
-                <NTag :type="filteredEnabled.length > 0 ? 'success' : 'default'" size="small" round>
-                  {{ t("library.section.count", { n: filteredEnabled.length }) }}
-                </NTag>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span>{{ t("library.section.enabled") }}</span>
+                  <NTag :type="filteredEnabled.length > 0 ? 'success' : 'default'" size="small" round>
+                    {{ t("library.section.count", { n: filteredEnabled.length }) }}
+                  </NTag>
+                </div>
+                <NButton
+                  v-if="filteredEnabled.length > 0 && !isActivePresetBuiltin"
+                  size="small"
+                  secondary
+                  :disabled="batchBusy"
+                  :loading="batchBusy"
+                  @click="disableAllMods"
+                >
+                  <template #icon><NIcon :size="12"><X /></NIcon></template>
+                  {{ t("library.disableAll") }}
+                </NButton>
               </div>
             </template>
 
@@ -609,11 +741,24 @@ onUnmounted(() => {
           <!-- 已禁用 Mod -->
           <NCard v-if="filterShowDisabled" size="small">
             <template #header>
-              <div class="flex items-center gap-2">
-                <span>{{ t("library.section.disabled") }}</span>
-                <NTag type="default" size="small" round>
-                  {{ t("library.section.count", { n: filteredDisabled.length }) }}
-                </NTag>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span>{{ t("library.section.disabled") }}</span>
+                  <NTag type="default" size="small" round>
+                    {{ t("library.section.count", { n: filteredDisabled.length }) }}
+                  </NTag>
+                </div>
+                <NButton
+                  v-if="filteredDisabled.length > 0 && !isActivePresetBuiltin"
+                  size="small"
+                  secondary
+                  :disabled="batchBusy"
+                  :loading="batchBusy"
+                  @click="enableAllMods"
+                >
+                  <template #icon><NIcon :size="12"><Check /></NIcon></template>
+                  {{ t("library.enableAll") }}
+                </NButton>
               </div>
             </template>
 
@@ -647,17 +792,42 @@ onUnmounted(() => {
       @installed="onImportDone"
     />
 
+    <!-- 新增预设对话框 -->
+    <NModal :show="showNewPresetDialog" @update:show="(v: boolean) => !v && (showNewPresetDialog = false)">
+      <NCard style="width: 420px" :bordered="false" role="dialog" :title="t('library.newPreset')">
+        <NSpace vertical :size="12">
+          <div>
+            <label class="text-sm text-gray-500 mb-1 block">{{ t("library.savePreset.nameLabel") }}</label>
+            <NInput
+              v-model:value="newPresetName"
+              :placeholder="t('library.savePreset.namePlaceholder')"
+              @keyup.enter="handleCreateNewPreset"
+            />
+          </div>
+          <div class="text-xs text-gray-400">
+            {{ t("library.newPresetHint") }}
+          </div>
+          <div class="flex justify-end gap-2">
+            <NButton @click="showNewPresetDialog = false">{{ t("common.cancel") }}</NButton>
+            <NButton type="primary" :loading="creatingNewPreset" @click="handleCreateNewPreset">
+              {{ t("common.confirm") }}
+            </NButton>
+          </div>
+        </NSpace>
+      </NCard>
+    </NModal>
+
     <!-- 保存为预设对话框 -->
     <NModal :show="showSavePresetDialog" @update:show="(v: boolean) => !v && (showSavePresetDialog = false)">
       <NCard style="width: 480px" :bordered="false" role="dialog" :title="t('library.savePreset.title')">
         <NSpace vertical :size="12">
           <div>
-            <span class="text-sm text-gray-500">{{ t("library.savePreset.nameLabel") }}</span>
-            <NInput v-model:value="presetName" :placeholder="t('library.savePreset.namePlaceholder')" class="mt-1" />
+            <label class="text-sm text-gray-500 mb-1 block">{{ t("library.savePreset.nameLabel") }}</label>
+            <NInput v-model:value="presetName" :placeholder="t('library.savePreset.namePlaceholder')" />
           </div>
           <div>
-            <span class="text-sm text-gray-500">{{ t("library.savePreset.descriptionLabel") }}</span>
-            <NInput v-model:value="presetDescription" :placeholder="t('library.savePreset.descriptionPlaceholder')" class="mt-1" />
+            <label class="text-sm text-gray-500 mb-1 block">{{ t("library.savePreset.descriptionLabel") }}</label>
+            <NInput v-model:value="presetDescription" :placeholder="t('library.savePreset.descriptionPlaceholder')" />
           </div>
           <div class="text-xs text-gray-400">
             {{ t("library.savePreset.willSave", { n: enabledMods.length }) }}

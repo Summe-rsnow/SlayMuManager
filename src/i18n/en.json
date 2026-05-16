@@ -4,7 +4,7 @@
   },
 
   "nav": {
-    "library": "Library",
+    "library": "Mods",
     "discover": "Discover",
     "profiles": "Profiles",
     "saves": "Saves",
@@ -29,14 +29,17 @@
   },
 
   "library": {
-    "title": "Library",
+    "title": "Mods",
     "enabledCountLabel": "Enabled:",
     "disabledCountLabel": "Disabled:",
     "refreshing": "Refreshing...",
     "launchGame": "Launch Game",
     "quickPresetPlaceholder": "Quick Preset...",
-    "openModsDir": "Open Mods Folder",
+    "openModsDir": "Mods Folder",
     "newPreset": "New Preset",
+    "newPresetHint": "Create an empty preset and switch to it",
+    "enableAll": "Enable All",
+    "disableAll": "Disable All",
     "importMod": "Import Mod",
     "searchPlaceholder": "Search installed mods... Press Enter to search",
     "filter": {
@@ -48,6 +51,7 @@
       "attributes": "Attributes",
       "affectsGameplay": "Affects Multiplayer",
       "tags": "Tags",
+      "noTags": "No tags",
       "activeFilterCount": "{n} active filter(s)"
     },
     "empty": {
@@ -71,7 +75,9 @@
       "selectTag": "Select tag",
       "confirmUninstall": "Are you sure you want to uninstall \"{name}\"? This cannot be undone.",
       "note": "Note",
-      "notePlaceholder": "Add note..."
+      "notePlaceholder": "Add note...",
+      "openFolder": "Open folder",
+      "uninstall": "Uninstall"
     },
     "savePreset": {
       "title": "Save as Preset",
@@ -98,12 +104,18 @@
       "presetApplied": "Applied preset \"{name}\"",
       "gameLaunched": "Game launched",
       "presetDirty": "Modified",
-      "presetDirtyTip": "Current mod setup differs from preset \"{name}\". Save as a new preset?"
+      "presetDirtyTip": "Current mod setup differs from preset \"{name}\". Save as a new preset?",
+      "batchEnabled": "Enabled {n} mod(s)",
+      "batchDisabled": "Disabled {n} mod(s)"
     },
     "warning": {
       "noEnabledMods": "No mods are currently enabled",
       "enterPresetName": "Please enter a preset name",
       "gamePathNotSet": "Please configure the game path in Settings first"
+    },
+    "info": {
+      "allAlreadyEnabled": "All mods are already enabled",
+      "allAlreadyDisabled": "All mods are already disabled"
     },
     "launchMismatch": {
       "title": "Cloud Save Mismatch",
@@ -178,9 +190,17 @@
       "invalid": "✗ Path invalid (SlayTheSpire2.exe not found)"
     },
     "nexus": {
-      "title": "Nexus Mods",
+      "title": "Nexus API Key",
       "apiKeyPlaceholder": "Enter Nexus Mods API Key",
-      "hint": "Get a free API Key after registering at nexusmods.com"
+      "howToGet": "How to get?",
+      "help": {
+        "step1": "Open Nexus Mods website",
+        "step2": "Log into your Nexus account",
+        "step3": "Go to Account Details → API tab",
+        "step4": "Scroll to the bottom of the page",
+        "step5": "Copy the text in the \"Personal API Key\" field",
+        "step6": "Go back to SlayMuManager → Settings → Paste and save"
+      }
     },
     "proxy": {
       "title": "Proxy",
@@ -229,6 +249,7 @@
     },
     "resultCount": "{total} result(s)",
     "jumpTo": "Jump to",
+    "jumpToBtn": "Go",
     "unknownAuthor": "Unknown",
     "details": "Details",
     "empty": {
@@ -242,8 +263,8 @@
   },
 
   "saves": {
-    "title": "Save Management",
-    "subtitle": "Manage vanilla and modded saves with bidirectional transfer and pair sync",
+    "title": "Saves",
+    "subtitle": "Vanilla and modded saves with bidirectional transfer and pair sync",
     "sync": "Sync",
     "empty": {
       "setGamePath": "Please set the game path first",
@@ -363,12 +384,13 @@
   },
 
   "profiles": {
-    "title": "Preset Management",
-    "subtitle": "Manage mod presets — switch combinations with one click",
+    "title": "Profiles",
+    "subtitle": "Switch mod combinations with one click",
     "importBundle": "Import Bundle",
     "create": "New Preset",
     "builtin": "Built-in",
     "active": "Active",
+    "noDescription": "No description",
     "modCount": "{n} mod(s)",
     "confirmDelete": "Delete \"{name}\"?",
     "confirmDeleteActive": "\"{name}\" is currently active. Deleting it will reset the active preset to Vanilla. Are you sure?",

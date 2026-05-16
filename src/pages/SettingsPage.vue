@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSpace, NInput, NButton, NSelect, NIcon, NInputNumber, useMessage } from "naive-ui"
-import { FolderSearch, Key, Globe } from "lucide-vue-next"
+import { FolderSearch, Key, Globe, ChevronDown } from "lucide-vue-next"
 import { setLocale } from "../i18n"
 import type { AppBootstrap } from "../types"
 
@@ -86,6 +86,11 @@ async function saveGamePath() {
 }
 
 // --- Nexus ---
+const showNexusHelp = ref(false)
+function openUrl(url: string) {
+  invoke("open_url_in_browser", { url })
+}
+
 async function saveNexusKey() {
   try {
     await invoke("update_nexus_api_key", { apiKey: nexusKey.value })
@@ -148,7 +153,7 @@ onMounted(loadSettings)
       <h1 class="text-2xl font-bold text-gray-800">{{ t("settings.title") }}</h1>
     </div>
 
-    <div class="max-w-2xl flex flex-col gap-4">
+    <div class="max-w-2xl mx-auto flex flex-col gap-4">
       <!-- 游戏路径 -->
       <NCard :title="t('settings.gamePath.title')" size="small">
         <NSpace vertical>
@@ -192,9 +197,42 @@ onMounted(loadSettings)
             </NInput>
             <NButton secondary @click="saveNexusKey">{{ t("common.save") }}</NButton>
           </div>
-          <p class="text-xs text-gray-400">
-            {{ t("settings.nexus.hint") }}
-          </p>
+          <div class="flex items-center gap-2">
+            <NButton text size="tiny" class="c-indigo-500!" @click="showNexusHelp = !showNexusHelp">
+              {{ t("settings.nexus.howToGet") }}
+              <NIcon :size="12" class="ml-0.5 transition-transform" :class="showNexusHelp ? '' : '-rotate-90'"><ChevronDown /></NIcon>
+            </NButton>
+          </div>
+
+          <!-- 展开说明 -->
+          <div v-if="showNexusHelp" class="bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 space-y-2 text-xs">
+            <div class="flex items-start gap-2">
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+              <span>{{ t("settings.nexus.help.step1") }} — </span>
+              <NButton text size="tiny" class="c-indigo-600! underline! p-0!" @click="openUrl('https://www.nexusmods.com/')">nexusmods.com</NButton>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">2</span>
+              <span>{{ t("settings.nexus.help.step2") }}</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">3</span>
+              <span>{{ t("settings.nexus.help.step3") }} — </span>
+              <NButton text size="tiny" class="c-indigo-600! underline! p-0!" @click="openUrl('https://www.nexusmods.com/users/myaccount?tab=api')">打开 →</NButton>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">4</span>
+              <span>{{ t("settings.nexus.help.step4") }}</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">5</span>
+              <span>{{ t("settings.nexus.help.step5") }}</span>
+            </div>
+            <div class="flex items-start gap-2">
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">6</span>
+              <span>{{ t("settings.nexus.help.step6") }}</span>
+            </div>
+          </div>
         </NSpace>
       </NCard>
 

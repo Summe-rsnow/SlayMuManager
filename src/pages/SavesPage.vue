@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
+import { currentLocale } from "../i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
   NCard, NButton, NTag, NIcon, NSpace, NModal, NPopconfirm, NSwitch,
   NSelect, NRadioGroup, NRadio, useMessage,
 } from "naive-ui"
+import SlotCard from "../components/SlotCard.vue"
 import {
-  HardDrive, ArrowRightLeft, RefreshCw, Clock, Database,
+  HardDrive, ArrowRightLeft, RefreshCw, Database,
   History, RotateCcw, Trash2, Upload, Download, Cloud, AlertTriangle,
-  ShieldAlert,
 } from "lucide-vue-next"
 import type {
   SaveSlot, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
@@ -288,7 +289,7 @@ function diffKindLabel(k: string): string {
   return m[k] ?? k
 }
 
-function diffKindType(k: string): "success" | "warning" | "error" | "info" {
+function diffKindType(k: string): "success" | "warning" | "error" | "info" | "default" {
   const m: Record<string, "success" | "warning" | "error" | "info"> = {
     in_sync: "success", different: "warning", local_only: "info", cloud_only: "info",
   }
@@ -362,69 +363,14 @@ onMounted(async () => {
           </template>
 
           <NSpace v-if="vanillaSlots.length > 0" vertical :size="8">
-            <div
+            <SlotCard
               v-for="slot in vanillaSlots"
               :key="`v-${slot.slotIndex}`"
-              :class="slot.hasData
-                ? 'p-3 rounded-lg border border-gray-100 bg-white'
-                : 'p-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/70'"
-            >
-              <div :class="slot.hasData ? 'flex items-center justify-between mb-2' : 'flex items-center justify-between'">
-                <span class="font-medium text-sm text-gray-700">
-                  {{ t("saves.slotIndex", { i: slot.slotIndex }) }}
-                </span>
-                <NSpace :size="4">
-                  <NTag v-if="slot.hasCurrentRun" type="warning" size="tiny" :bordered="false">
-                    {{ t("saves.currentRun") }}
-                  </NTag>
-                  <NTag
-                    :type="slot.hasData ? 'success' : 'default'"
-                    size="tiny"
-                    :bordered="false"
-                  >
-                    {{ slot.hasData ? t("saves.fileCount", { n: slot.fileCount }) : t("saves.empty.empty") }}
-                  </NTag>
-                </NSpace>
-              </div>
-
-              <div v-if="slot.hasData" class="text-xs text-gray-400 mb-2">
-                <NIcon :size="12"><Clock /></NIcon>
-                {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("common.unknown") }}
-              </div>
-
-              <!-- 操作按钮行 -->
-              <div v-if="slot.hasData" class="flex items-center gap-1 flex-wrap">
-                <NButton size="tiny" secondary @click="createBackup(slot)">
-                  {{ t("saves.backup") }}
-                </NButton>
-                <NButton size="tiny" secondary @click="migrateSlot(slot)">
-                  <template #icon><NIcon :size="12"><Upload /></NIcon></template>
-                  {{ t("saves.migrate") }}
-                </NButton>
-                <NPopconfirm
-                  @positive-click="() => deleteSaveSlot(slot)"
-                >
-                  <template #trigger>
-                    <NButton size="tiny" type="error" text>
-                      <template #icon><NIcon :size="12"><Trash2 /></NIcon></template>
-                      {{ t("saves.deleteSlot") }}
-                    </NButton>
-                  </template>
-                  <div class="max-w-64">
-                    <div class="flex items-center gap-2 mb-1">
-                      <NIcon :size="16" color="#d03050"><ShieldAlert /></NIcon>
-                      <span class="font-medium">{{ t("saves.confirmDeleteSlotTitle") }}</span>
-                    </div>
-                    <p class="text-xs text-gray-500">
-                      {{ t("saves.confirmDeleteSlotDesc", { kind: kindLabel(slot.kind), i: slot.slotIndex }) }}
-                    </p>
-                    <p class="text-xs text-amber-600 mt-1">
-                      {{ t("saves.confirmDeleteSlotNote") }}
-                    </p>
-                  </div>
-                </NPopconfirm>
-              </div>
-            </div>
+              :slot="slot"
+              @backup="createBackup"
+              @migrate="migrateSlot"
+              @delete="deleteSaveSlot"
+            />
           </NSpace>
         </NCard>
 
@@ -440,68 +386,14 @@ onMounted(async () => {
           </template>
 
           <NSpace v-if="moddedSlots.length > 0" vertical :size="8">
-            <div
+            <SlotCard
               v-for="slot in moddedSlots"
               :key="`m-${slot.slotIndex}`"
-              :class="slot.hasData
-                ? 'p-3 rounded-lg border border-gray-100 bg-white'
-                : 'p-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/70'"
-            >
-              <div :class="slot.hasData ? 'flex items-center justify-between mb-2' : 'flex items-center justify-between'">
-                <span class="font-medium text-sm text-gray-700">
-                  {{ t("saves.slotIndex", { i: slot.slotIndex }) }}
-                </span>
-                <NSpace :size="4">
-                  <NTag v-if="slot.hasCurrentRun" type="warning" size="tiny" :bordered="false">
-                    {{ t("saves.currentRun") }}
-                  </NTag>
-                  <NTag
-                    :type="slot.hasData ? 'success' : 'default'"
-                    size="tiny"
-                    :bordered="false"
-                  >
-                    {{ slot.hasData ? t("saves.fileCount", { n: slot.fileCount }) : t("saves.empty.empty") }}
-                  </NTag>
-                </NSpace>
-              </div>
-
-              <div v-if="slot.hasData" class="text-xs text-gray-400 mb-2">
-                <NIcon :size="12"><Clock /></NIcon>
-                {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("common.unknown") }}
-              </div>
-
-              <div v-if="slot.hasData" class="flex items-center gap-1 flex-wrap">
-                <NButton size="tiny" secondary @click="createBackup(slot)">
-                  {{ t("saves.backup") }}
-                </NButton>
-                <NButton size="tiny" secondary @click="migrateSlot(slot)">
-                  <template #icon><NIcon :size="12"><Upload /></NIcon></template>
-                  {{ t("saves.migrate") }}
-                </NButton>
-                <NPopconfirm
-                  @positive-click="() => deleteSaveSlot(slot)"
-                >
-                  <template #trigger>
-                    <NButton size="tiny" type="error" text>
-                      <template #icon><NIcon :size="12"><Trash2 /></NIcon></template>
-                      {{ t("saves.deleteSlot") }}
-                    </NButton>
-                  </template>
-                  <div class="max-w-64">
-                    <div class="flex items-center gap-2 mb-1">
-                      <NIcon :size="16" color="#d03050"><ShieldAlert /></NIcon>
-                      <span class="font-medium">{{ t("saves.confirmDeleteSlotTitle") }}</span>
-                    </div>
-                    <p class="text-xs text-gray-500">
-                      {{ t("saves.confirmDeleteSlotDesc", { kind: kindLabel(slot.kind), i: slot.slotIndex }) }}
-                    </p>
-                    <p class="text-xs text-amber-600 mt-1">
-                      {{ t("saves.confirmDeleteSlotNote") }}
-                    </p>
-                  </div>
-                </NPopconfirm>
-              </div>
-            </div>
+              :slot="slot"
+              @backup="createBackup"
+              @migrate="migrateSlot"
+              @delete="deleteSaveSlot"
+            />
           </NSpace>
         </NCard>
       </div>
@@ -647,7 +539,7 @@ onMounted(async () => {
           >
             <div class="flex-1 min-w-0">
               <div class="text-sm font-medium text-gray-700">
-                {{ new Date(b.createdAt).toLocaleString("zh-CN") }}
+                {{ new Date(b.createdAt).toLocaleString(currentLocale) }}
               </div>
               <div class="text-xs text-gray-400">
                 {{ b.reason }} · {{ kindLabel(b.kind) }} {{ t("saves.slotIndex", { i: b.slotIndex }) }}
@@ -690,7 +582,7 @@ onMounted(async () => {
           <div class="mb-2">
             <span class="text-gray-400">{{ t("saves.backups.restoreFrom") }}:</span>
             <span class="ml-2 font-medium">
-              {{ new Date(restoreToSlotBackup.createdAt).toLocaleString("zh-CN") }}
+              {{ new Date(restoreToSlotBackup.createdAt).toLocaleString(currentLocale) }}
             </span>
           </div>
           <div class="text-xs text-gray-400 mb-3">

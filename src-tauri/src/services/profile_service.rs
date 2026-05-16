@@ -1,6 +1,7 @@
 use crate::domain::profile::{ApplyProfileResult, ModProfile};
 use crate::repositories::profile_repo;
 use crate::services::mod_service;
+use crate::services::save_service;
 use crate::utils::error::AppError;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -231,7 +232,7 @@ pub fn export_bundle(profile_id: &str, output_path: &str, game_root: &Path) -> R
                     .unwrap_or("unknown")
                     .to_string();
                 let dest = temp_dir.join(&folder_name);
-                copy_dir_recursive(&mod_folder, &dest)?;
+                save_service::copy_dir_recursive(&mod_folder, &dest)?;
 
                 let manifest = crate::integrations::manifest::ModManifest::find_in_dir(&mod_folder)
                     .map(|(_, m)| m);
@@ -281,38 +282,9 @@ pub fn export_bundle(profile_id: &str, output_path: &str, game_root: &Path) -> R
 // ---------------------------------------------------------------------------
 
 pub fn preview_bundle(bundle_path: &str, game_root: &Path) -> Result<BundlePreview, AppError> {
-    let temp_dir = std::env::temp_dir()
-        .join("slaymumanager")
-        .join("bundle_preview")
-        .join(uuid::Uuid::new_v4().to_string());
-
-    std::fs::create_dir_all(&temp_dir).map_err(AppError::Io)?;
-
-    // 解压
-    crate::workflows::install_archive_workflow::extract_archive(Path::new(bundle_path))
+    // 复用 install_archive_workflow 的统一解压逻辑
+    let temp_dir = crate::workflows::install_archive_workflow::extract_archive(Path::new(bundle_path))
         .map_err(|_| AppError::Other("解压整合包失败".to_string()))?;
-
-    // 实际上 extract_archive 返回的是另一个 temp dir...让我直接解压
-    let file = std::fs::File::open(bundle_path).map_err(AppError::Io)?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| AppError::Other(format!("ZIP 读取失败: {}", e)))?;
-
-    for i in 0..archive.len() {
-        let mut entry = archive
-            .by_index(i)
-            .map_err(|e| AppError::Other(format!("ZIP 条目读取失败: {}", e)))?;
-        let name = entry.name().to_string();
-        let out_path = temp_dir.join(&name);
-        if entry.is_dir() {
-            std::fs::create_dir_all(&out_path).map_err(AppError::Io)?;
-        } else {
-            if let Some(parent) = out_path.parent() {
-                std::fs::create_dir_all(parent).map_err(AppError::Io)?;
-            }
-            let mut out_file = std::fs::File::create(&out_path).map_err(AppError::Io)?;
-            std::io::copy(&mut entry, &mut out_file).map_err(AppError::Io)?;
-        }
-    }
 
     // 读取 bundle.spm
     let spm_path = temp_dir.join("bundle.spm");
@@ -370,34 +342,9 @@ pub fn import_bundle(
     resolutions: &[(String, String)], // (modId, "skip"|"replace")
     sync_pairs: &[crate::app::state::SaveSyncPair],
 ) -> Result<ApplyProfileResult, AppError> {
-    // 解压
-    let temp_dir = std::env::temp_dir()
-        .join("slaymumanager")
-        .join("bundle_import")
-        .join(uuid::Uuid::new_v4().to_string());
-
-    std::fs::create_dir_all(&temp_dir).map_err(AppError::Io)?;
-
-    let file = std::fs::File::open(bundle_path).map_err(AppError::Io)?;
-    let mut archive = zip::ZipArchive::new(file)
-        .map_err(|e| AppError::Other(format!("ZIP 读取失败: {}", e)))?;
-
-    for i in 0..archive.len() {
-        let mut entry = archive
-            .by_index(i)
-            .map_err(|e| AppError::Other(format!("ZIP 条目读取失败: {}", e)))?;
-        let name = entry.name().to_string();
-        let out_path = temp_dir.join(&name);
-        if entry.is_dir() {
-            std::fs::create_dir_all(&out_path).map_err(AppError::Io)?;
-        } else {
-            if let Some(parent) = out_path.parent() {
-                std::fs::create_dir_all(parent).map_err(AppError::Io)?;
-            }
-            let mut out_file = std::fs::File::create(&out_path).map_err(AppError::Io)?;
-            std::io::copy(&mut entry, &mut out_file).map_err(AppError::Io)?;
-        }
-    }
+    // 复用 install_archive_workflow 的统一解压逻辑
+    let temp_dir = crate::workflows::install_archive_workflow::extract_archive(Path::new(bundle_path))
+        .map_err(|_| AppError::Other("解压整合包失败".to_string()))?;
 
     // 读取 manifest
     let spm_path = temp_dir.join("bundle.spm");
@@ -427,7 +374,7 @@ pub fn import_bundle(
             if dest.exists() {
                 std::fs::remove_dir_all(&dest).map_err(AppError::Io)?;
             }
-            copy_dir_recursive(&source, &dest)?;
+            save_service::copy_dir_recursive(&source, &dest)?;
         }
     }
 
@@ -477,20 +424,7 @@ pub fn import_bundle(
 // 工具
 // ---------------------------------------------------------------------------
 
-fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), AppError> {
-    std::fs::create_dir_all(dst).map_err(AppError::Io)?;
-    for entry in std::fs::read_dir(src).map_err(AppError::Io)? {
-        let entry = entry.map_err(AppError::Io)?;
-        let src_path = entry.path();
-        let dst_path = dst.join(entry.file_name());
-        if src_path.is_dir() {
-            copy_dir_recursive(&src_path, &dst_path)?;
-        } else {
-            std::fs::copy(&src_path, &dst_path).map_err(AppError::Io)?;
-        }
-    }
-    Ok(())
-}
+
 
 fn zip_dir(src_dir: &Path, output_path: &Path) -> Result<(), AppError> {
     let file = std::fs::File::create(output_path).map_err(AppError::Io)?;

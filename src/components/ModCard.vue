@@ -8,7 +8,6 @@ import { FolderOpen, Trash2, Plus, StickyNote } from "lucide-vue-next"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
 import { useModNotes } from "../composables/useModNotes"
 import type { InstalledMod } from "../types"
-import "../assets/library-effects.css"
 
 const props = defineProps<{
   mod: InstalledMod
@@ -38,33 +37,24 @@ function saveNote(modId: string) {
 
 <template>
   <div
-    class="mod-card group flex items-center justify-between p-3 rounded-lg border transition-colors"
+    class="group flex items-center justify-between p-3 rounded-lg border border-l-3 transition-shadow hover:shadow-sm"
     :class="[
       enabled
-        ? 'mod-card--enabled border-gray-100 bg-white'
-        : 'mod-card--disabled border-gray-200 bg-gray-50/60',
+        ? 'border-l-green-500 border-gray-100 bg-white'
+        : 'border-l-gray-300 border-gray-200 bg-gray-50/60',
       { 'pointer-events-none opacity-60': busy },
     ]"
   >
     <div class="flex-1 min-w-0" style="position:relative;z-index:2">
       <!-- 名称 + 版本 + 标签 -->
-      <div class="flex items-center gap-2">
-        <span class="font-medium truncate" :class="enabled ? 'text-gray-800' : 'text-gray-600'">
+      <div class="flex items-center gap-1.5 flex-wrap">
+        <span class="font-medium truncate max-w-[180px]" :class="enabled ? 'text-gray-800' : 'text-gray-600'">
           {{ mod.name }}
         </span>
         <span class="text-xs text-gray-400 font-mono truncate">{{ mod.version ?? "—" }}</span>
         <NTag v-if="mod.affectsGameplay" type="warning" size="tiny" :bordered="false">
           {{ t("library.mod.affectsGameplay") }}
         </NTag>
-      </div>
-
-      <!-- 作者 + 文件夹 -->
-      <div class="text-xs text-gray-400 mt-0.5">
-        {{ mod.author ?? t("library.mod.unknownAuthor") }} · {{ mod.folderName }}
-      </div>
-
-      <!-- 标签行 -->
-      <div class="flex items-center gap-1 mt-1 flex-wrap">
         <NTag
           v-for="tagId in getTags(mod.id)"
           :key="tagId"
@@ -76,61 +66,72 @@ function saveNote(modId: string) {
         >
           {{ getTagLabel(tagId) }}
         </NTag>
+      </div>
 
-        <!-- 添加标签 -->
-        <NPopover trigger="click" placement="bottom-start">
-          <template #trigger>
-            <NButton text size="tiny" class="opacity-0 group-hover:opacity-100 transition-opacity">
-              <template #icon><NIcon :size="12"><Plus /></NIcon></template>
-            </NButton>
-          </template>
-          <div class="w-52">
-            <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.selectTag") }}</div>
-            <NSpace vertical :size="4">
-              <NCheckbox
-                v-for="t in PRESET_TAGS"
-                :key="t.id"
-                size="small"
-                :checked="getTags(mod.id).includes(t.id)"
-                @update:checked="() => toggleTag(mod.id, t.id)"
-              >
-                <span class="text-xs">{{ getTagLabel(t.id) }}</span>
-              </NCheckbox>
-            </NSpace>
-          </div>
-        </NPopover>
+      <!-- 作者 + 文件夹 -->
+      <div class="text-xs text-gray-400 mt-0.5">
+        {{ mod.author ?? t("library.mod.unknownAuthor") }} · {{ mod.folderName }}
+      </div>
 
-        <!-- 备注 -->
-        <NPopover trigger="click" placement="bottom" @update:show="(v: boolean) => v && openNotePopover(mod.id)">
-          <template #trigger>
-            <NButton text size="tiny" :type="hasNote(mod.id) ? 'warning' : 'default'">
-              <template #icon><NIcon :size="12"><StickyNote /></NIcon></template>
-            </NButton>
-          </template>
-          <div class="w-56">
-            <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.note") }}</div>
-            <NInput
-              :value="noteDraft"
-              type="textarea"
-              size="small"
-              :placeholder="t('library.mod.notePlaceholder')"
-              :autosize="{ minRows: 2, maxRows: 6 }"
-              @update:value="(v: string) => noteDraft = v"
-              @blur="saveNote(mod.id)"
-            />
-          </div>
-        </NPopover>
+      <!-- 备注内容（有备注时显示为淡色一行） -->
+      <div v-if="hasNote(mod.id)" class="mt-0.5 text-xs text-gray-400 truncate">
+        <NIcon :size="12" class="inline-block mr-0.5 align-middle"><StickyNote /></NIcon>
+        <span class="align-middle">{{ getNote(mod.id) }}</span>
       </div>
     </div>
 
     <!-- 操作按钮 -->
     <div class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4">
-      <NButton text size="tiny" :disabled="busy" @click="emit('openFolder', mod)">
+      <!-- 添加标签 -->
+      <NPopover trigger="click" placement="bottom-end">
+        <template #trigger>
+          <NButton text size="tiny" :disabled="busy" :aria-label="t('library.mod.selectTag')">
+            <template #icon><NIcon :size="14"><Plus /></NIcon></template>
+          </NButton>
+        </template>
+        <div class="w-52">
+          <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.selectTag") }}</div>
+          <NSpace vertical :size="4">
+            <NCheckbox
+              v-for="t in PRESET_TAGS"
+              :key="t.id"
+              size="small"
+              :checked="getTags(mod.id).includes(t.id)"
+              @update:checked="() => toggleTag(mod.id, t.id)"
+            >
+              <span class="text-xs">{{ getTagLabel(t.id) }}</span>
+            </NCheckbox>
+          </NSpace>
+        </div>
+      </NPopover>
+
+      <!-- 备注 -->
+      <NPopover trigger="click" placement="bottom" @update:show="(v: boolean) => v && openNotePopover(mod.id)">
+        <template #trigger>
+          <NButton text size="tiny" :disabled="busy">
+            <template #icon><NIcon :size="14"><StickyNote /></NIcon></template>
+          </NButton>
+        </template>
+        <div class="w-56">
+          <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.note") }}</div>
+          <NInput
+            :value="noteDraft"
+            type="textarea"
+            size="small"
+            :placeholder="t('library.mod.notePlaceholder')"
+            :autosize="{ minRows: 2, maxRows: 6 }"
+            @update:value="(v: string) => noteDraft = v"
+            @blur="saveNote(mod.id)"
+          />
+        </div>
+      </NPopover>
+
+      <NButton text size="tiny" :disabled="busy" :aria-label="t('library.mod.openFolder')" @click="emit('openFolder', mod)">
         <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
       </NButton>
       <NPopconfirm @positive-click="() => emit('uninstall', mod)">
         <template #trigger>
-          <NButton text size="tiny" type="error" :disabled="busy">
+          <NButton text size="tiny" type="error" :disabled="busy" :aria-label="t('library.mod.uninstall')">
             <template #icon><NIcon :size="14"><Trash2 /></NIcon></template>
           </NButton>
         </template>

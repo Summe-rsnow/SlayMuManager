@@ -12,6 +12,16 @@ const { minimize, toggleMaximize, close } = useWindow()
     class="flex items-center justify-between h-10 bg-gray-50 border-b border-gray-100 select-none flex-shrink-0"
   >
     <div class="flex items-center gap-2 px-4">
+      <svg viewBox="0 0 128 128" class="w-4 h-4 flex-shrink-0">
+        <defs>
+          <linearGradient id="titlelogo" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#6366f1"/>
+            <stop offset="100%" stop-color="#8b5cf6"/>
+          </linearGradient>
+        </defs>
+        <rect width="128" height="128" rx="28" fill="url(#titlelogo)"/>
+        <text x="64" y="84" font-family="system-ui,sans-serif" font-size="58" font-weight="800" fill="#fff" text-anchor="middle">S</text>
+      </svg>
       <span class="text-sm font-semibold text-gray-700">SlayMuManager</span>
     </div>
     <div class="flex h-full">

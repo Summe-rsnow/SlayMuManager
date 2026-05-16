@@ -5,18 +5,22 @@ import {
   NMessageProvider,
   NNotificationProvider,
   NDialogProvider,
+  NButton,
+  NIcon,
   zhCN,
   dateZhCN,
   enUS,
   dateEnUS,
 } from "naive-ui"
+import { Minus, Square, X } from "lucide-vue-next"
 import { currentLocale } from "./i18n"
 import { themeOverrides } from "./naive-theme"
-import TitleBar from "./components/TitleBar.vue"
+import { useWindow } from "./composables/useWindow"
 import SideNav from "./components/SideNav.vue"
 
 const naiveLocale = computed(() => (currentLocale.value === "zh-CN" ? zhCN : enUS))
 const naiveDateLocale = computed(() => (currentLocale.value === "zh-CN" ? dateZhCN : dateEnUS))
+const { minimize, toggleMaximize, close } = useWindow()
 </script>
 
 <template>
@@ -25,7 +29,34 @@ const naiveDateLocale = computed(() => (currentLocale.value === "zh-CN" ? dateZh
       <NMessageProvider>
         <NDialogProvider>
           <div class="h-screen flex flex-col bg-white text-gray-900 overflow-hidden">
-            <TitleBar />
+            <!-- 虚拟标题栏 -->
+            <div data-tauri-drag-region class="flex-shrink-0 h-9 flex items-center justify-between px-3 bg-gray-50 border-b border-gray-100 select-none">
+              <div class="flex items-center gap-2">
+                <svg viewBox="0 0 128 128" class="w-4 h-4 flex-shrink-0">
+                  <defs>
+                    <linearGradient id="titlelogo" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#6366f1"/>
+                      <stop offset="100%" stop-color="#8b5cf6"/>
+                    </linearGradient>
+                  </defs>
+                  <rect width="128" height="128" rx="28" fill="url(#titlelogo)"/>
+                  <text x="64" y="84" font-family="system-ui,sans-serif" font-size="58" font-weight="800" fill="#fff" text-anchor="middle">S</text>
+                </svg>
+                <span class="text-sm font-semibold text-gray-700">SlayMuManager</span>
+                <span class="text-xs text-gray-400">v1.1.0</span>
+              </div>
+              <div class="flex items-center -mr-2 h-full">
+                <NButton text class="h-full! w-11! rounded-none! c-gray-500 hover:c-gray-700 hover:bg-gray-200!" @click="minimize">
+                  <template #icon><NIcon :size="13"><Minus /></NIcon></template>
+                </NButton>
+                <NButton text class="h-full! w-11! rounded-none! c-gray-500 hover:c-gray-700 hover:bg-gray-200!" @click="toggleMaximize">
+                  <template #icon><NIcon :size="11"><Square /></NIcon></template>
+                </NButton>
+                <NButton text class="h-full! w-11! rounded-none! c-gray-500 hover:c-white hover:bg-red-500!" @click="close">
+                  <template #icon><NIcon :size="14"><X /></NIcon></template>
+                </NButton>
+              </div>
+            </div>
             <div class="flex flex-1 overflow-hidden">
               <SideNav />
               <main class="flex-1 overflow-auto p-6">

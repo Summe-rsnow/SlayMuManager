@@ -1,10 +1,10 @@
-import { ref } from "vue"
+import { ref, shallowRef } from "vue"
 import { invoke } from "@tauri-apps/api/core"
 import type { InstalledMod } from "../types"
 
 // Module-level state — singleton cache shared across all components
-const enabledMods = ref<InstalledMod[]>([])
-const disabledMods = ref<InstalledMod[]>([])
+const enabledMods = shallowRef<InstalledMod[]>([])
+const disabledMods = shallowRef<InstalledMod[]>([])
 const loading = ref(false)
 const lastFetched = ref<number | null>(null)
 
