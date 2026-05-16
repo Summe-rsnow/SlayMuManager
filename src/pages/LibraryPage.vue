@@ -9,16 +9,18 @@ import {
 } from "naive-ui"
 import {
   Search, Download, RefreshCw, FolderOpen, Trash2, Bookmark,
-  AlertTriangle, Filter, X, Tag, Plus, Play, Zap,
+  AlertTriangle, Filter, X, Tag, Plus, Play,
 } from "lucide-vue-next"
 import ImportDialog from "../components/ImportDialog.vue"
 import { useModCache } from "../composables/useModCache"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
-import type { InstalledMod, ModProfile, ModToggleResult } from "../types"
+import { useRouter } from "vue-router"
+import type { InstalledMod, ModProfile, ModToggleResult, CloudSaveStatus } from "../types"
 import "../assets/library-effects.css"
 
 const { t } = useI18n()
 const message = useMessage()
+const router = useRouter()
 const { enabledMods, disabledMods, loading, fetchMods } = useModCache()
 const { getTags, toggleTag, usedTags, getTagLabel, isPresetTag } = useModTags()
 
@@ -28,7 +30,25 @@ onBeforeUnmount(() => { isActive.value = false })
 
 // --- 启动游戏 ---
 const launchingGame = ref(false)
-async function handleLaunchGame() {
+
+// 云存档差异确认弹窗
+const showLaunchMismatchDialog = ref(false)
+const launchMismatchStatus = ref<CloudSaveStatus | null>(null)
+
+/** 弹窗：查看存档 → 跳转存档页面 */
+function handleGoToSaves() {
+  showLaunchMismatchDialog.value = false
+  router.push("/saves")
+}
+
+/** 弹窗：强制启动 → 跳过云存档检查直接启动 */
+async function handleLaunchAnyway() {
+  showLaunchMismatchDialog.value = false
+  await doLaunchGame()
+}
+
+/** 实际执行启动游戏（无检查） */
+async function doLaunchGame() {
   launchingGame.value = true
   try {
     await invoke("launch_game")
@@ -37,6 +57,28 @@ async function handleLaunchGame() {
   } catch (e: any) {
     if (!isActive.value) return
     message.error(t("library.error.launchFailed", { e }))
+  } finally {
+    if (isActive.value) launchingGame.value = false
+  }
+}
+
+/** 启动游戏入口：先检测云存档状态 */
+async function handleLaunchGame() {
+  launchingGame.value = true
+  try {
+    const cloudStatus = await invoke<CloudSaveStatus>("get_cloud_save_status")
+    if (!isActive.value) return
+
+    if (cloudStatus.isAvailable && cloudStatus.hasMismatch) {
+      launchMismatchStatus.value = cloudStatus
+      showLaunchMismatchDialog.value = true
+      return
+    }
+
+    await doLaunchGame()
+  } catch {
+    // 云存档检测失败时直接尝试启动
+    await doLaunchGame()
   } finally {
     if (isActive.value) launchingGame.value = false
   }
@@ -731,6 +773,40 @@ onUnmounted(() => {
           </p>
           <div class="flex justify-end mt-2">
             <NButton type="primary" size="small" @click="dismissSaveGuard">{{ t("library.saveGuard.gotIt") }}</NButton>
+          </div>
+        </NSpace>
+      </NCard>
+    </NModal>
+
+    <!-- 云存档差异确认弹窗 -->
+    <NModal :show="showLaunchMismatchDialog" @update:show="(v: boolean) => !v && (showLaunchMismatchDialog = false)">
+      <NCard style="width: 440px" :bordered="false" role="dialog">
+        <template #header>
+          <div class="flex items-center gap-2">
+            <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
+            <span class="font-semibold">{{ t("library.launchMismatch.title") }}</span>
+          </div>
+        </template>
+        <NSpace v-if="launchMismatchStatus" vertical :size="8">
+          <p class="text-sm text-gray-600">{{ t("library.launchMismatch.warning") }}</p>
+          <div class="text-xs text-gray-500 bg-amber-50 rounded p-2 space-y-1">
+            <div class="flex justify-between" v-if="launchMismatchStatus.differentCount > 0">
+              <span>{{ t("saves.cloud.mismatch.different", { n: launchMismatchStatus.differentCount }) }}</span>
+            </div>
+            <div class="flex justify-between" v-if="launchMismatchStatus.localOnlyCount > 0">
+              <span>{{ t("saves.cloud.mismatch.localOnly", { n: launchMismatchStatus.localOnlyCount }) }}</span>
+            </div>
+            <div class="flex justify-between" v-if="launchMismatchStatus.cloudOnlyCount > 0">
+              <span>{{ t("saves.cloud.mismatch.cloudOnly", { n: launchMismatchStatus.cloudOnlyCount }) }}</span>
+            </div>
+          </div>
+          <div class="flex justify-between mt-2 gap-2">
+            <NButton secondary size="small" @click="handleGoToSaves">
+              {{ t("library.launchMismatch.goToSaves") }}
+            </NButton>
+            <NButton type="warning" size="small" @click="handleLaunchAnyway">
+              {{ t("library.launchMismatch.forceLaunch") }}
+            </NButton>
           </div>
         </NSpace>
       </NCard>

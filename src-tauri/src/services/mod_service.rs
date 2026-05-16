@@ -215,7 +215,7 @@ fn toggle_mod(
                 result.synced_count as u32,
                 result.details.len() as u32,
             ),
-            Err(e) => (0, 0),
+            Err(_e) => (0, 0),
         }
     } else {
         (0, 0)

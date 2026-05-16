@@ -2,7 +2,6 @@ use crate::domain::mod_entity::InstalledMod;
 use crate::domain::remote_mod::{ModFileInfo, RemoteModSearchResult};
 use crate::integrations::nexus_client;
 use crate::repositories::settings_repo;
-use crate::services::mod_service;
 use crate::utils::error::AppError;
 use std::path::Path;
 

@@ -44,7 +44,7 @@ const moddedSlots = computed(() =>
   slots.value.filter((s) => s.kind === "modded").sort((a, b) => a.slotIndex - b.slotIndex),
 )
 
-const pairOptions = computed(() => [
+const pairOptions = computed<any[]>(() => [
   { label: t("saves.pairSync.noPair"), value: null },
   { label: t("saves.pairSync.slotWithNumber", { n: 1 }), value: 1 },
   { label: t("saves.pairSync.slotWithNumber", { n: 2 }), value: 2 },
@@ -304,7 +304,7 @@ onMounted(loadSlots)
       <NSpace>
         <NButton secondary :loading="loading" @click="loadSlots">
           <template #icon><NIcon :size="16"><RefreshCw /></NIcon></template>
-          {{ t("saves.common.refresh") }}
+          {{ t("common.refresh") }}
         </NButton>
         <NButton secondary @click="handleSync">
           <template #icon><NIcon :size="16"><ArrowRightLeft /></NIcon></template>
@@ -362,7 +362,7 @@ onMounted(loadSlots)
 
               <div v-if="slot.hasData" class="text-xs text-gray-400 mb-2">
                 <NIcon :size="12"><Clock /></NIcon>
-                {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("saves.common.unknown") }}
+                {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("common.unknown") }}
               </div>
 
               <NSpace v-if="slot.hasData" :size="4">
@@ -425,7 +425,7 @@ onMounted(loadSlots)
 
               <div v-if="slot.hasData" class="text-xs text-gray-400 mb-2">
                 <NIcon :size="12"><Clock /></NIcon>
-                {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("saves.common.unknown") }}
+                {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("common.unknown") }}
               </div>
 
               <NSpace v-if="slot.hasData" :size="4">
@@ -614,7 +614,7 @@ onMounted(loadSlots)
 
         <template #footer>
           <NSpace justify="end">
-            <NButton @click="showTransferDialog = false">{{ t("saves.common.cancel") }}</NButton>
+            <NButton @click="showTransferDialog = false">{{ t("common.cancel") }}</NButton>
             <NButton
               type="primary"
               :loading="loading"

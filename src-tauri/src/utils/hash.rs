@@ -16,12 +16,12 @@ pub fn sha1_file(path: &Path) -> Result<String, std::io::Error> {
         hasher.update(&buffer[..bytes_read]);
     }
 
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>())
 }
 
 /// 计算字节数据的 SHA1 哈希值
 pub fn sha1_bytes(data: &[u8]) -> String {
     let mut hasher = Sha1::new();
     hasher.update(data);
-    format!("{:x}", hasher.finalize())
+    hasher.finalize().iter().map(|b| format!("{:02x}", b)).collect::<String>()
 }

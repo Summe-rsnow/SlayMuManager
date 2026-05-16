@@ -36,7 +36,7 @@
     "launchGame": "启动游戏",
     "launching": "启动中...",
     "quickPresetPlaceholder": "快速预设...",
-    "openModsDir": "打开插件目录",
+    "openModsDir": "打开模组目录",
     "saveAsPreset": "保存为预设",
     "importMod": "导入 Mod",
     "searchPlaceholder": "搜索已安装的 Mod... 按 Enter 搜索",
@@ -101,6 +101,12 @@
       "noEnabledMods": "当前没有已启用的 Mod",
       "enterPresetName": "请输入预设名称",
       "gamePathNotSet": "请先在设置中配置游戏路径"
+    },
+    "launchMismatch": {
+      "title": "云存档不一致",
+      "warning": "检测到 Steam 云存档与本地存档存在差异。直接启动游戏可能导致存档覆盖或进度丢失。建议先前往存档页面查看并处理差异。",
+      "forceLaunch": "强制启动",
+      "goToSaves": "去存档页查看"
     },
     "error": {
       "operationFailed": "操作失败: {e}",
@@ -396,7 +402,7 @@
       "missing": "个 Mod 未安装",
       "ok": "确定"
     },
-    "importBundle": {
+    "importDialog": {
       "title": "导入「{name}」",
       "summary": "{n1} 个 Mod · {n2} 个预设条目",
       "conflictCount": "检测到 {n} 个冲突：",

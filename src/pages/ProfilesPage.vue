@@ -490,13 +490,13 @@ onMounted(loadProfiles)
       <NCard v-if="bundlePreview" style="width: 560px" :bordered="false" role="dialog">
         <template #header>
           <span class="text-lg font-semibold">
-            {{ t("profiles.importBundle.title", { name: bundlePreview.manifest.profile.name }) }}
+            {{ t("profiles.importDialog.title", { name: bundlePreview.manifest.profile.name }) }}
           </span>
         </template>
 
         <div class="mb-3">
           <span class="text-sm text-gray-500">
-            {{ t("profiles.importBundle.summary", {
+            {{ t("profiles.importDialog.summary", {
               n1: bundlePreview.manifest.mods.length,
               n2: bundlePreview.manifest.profile.modIds.length,
             }) }}
@@ -509,7 +509,7 @@ onMounted(loadProfiles)
           class="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200"
         >
           <p class="text-sm font-medium text-amber-800 mb-2">
-            {{ t("profiles.importBundle.conflictCount", { n: bundlePreview.conflicts.length }) }}
+            {{ t("profiles.importDialog.conflictCount", { n: bundlePreview.conflicts.length }) }}
           </p>
           <div
             v-for="c in bundlePreview.conflicts"
@@ -519,7 +519,7 @@ onMounted(loadProfiles)
             · {{ c.name }}: {{ c.reason }}
           </div>
           <div class="mt-2 text-xs text-gray-500">
-            {{ t("profiles.importBundle.conflictHint") }}
+            {{ t("profiles.importDialog.conflictHint") }}
           </div>
         </div>
 
@@ -528,14 +528,14 @@ onMounted(loadProfiles)
           v-if="bundlePreview.missingIds.length > 0"
           class="mb-3 text-xs text-gray-500"
         >
-          {{ t("profiles.importBundle.missingHint", { n: bundlePreview.missingIds.length }) }}
+          {{ t("profiles.importDialog.missingHint", { n: bundlePreview.missingIds.length }) }}
         </div>
 
         <template #footer>
           <NSpace justify="end">
             <NButton @click="showImportDialog = false">{{ t("common.cancel") }}</NButton>
             <NButton type="primary" :loading="loading" @click="confirmImport">
-              {{ t("profiles.importBundle.importBtn") }}
+              {{ t("profiles.importDialog.importBtn") }}
             </NButton>
           </NSpace>
         </template>

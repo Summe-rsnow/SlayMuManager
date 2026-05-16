@@ -102,6 +102,12 @@
       "enterPresetName": "Please enter a preset name",
       "gamePathNotSet": "Please configure the game path in Settings first"
     },
+    "launchMismatch": {
+      "title": "Cloud Save Mismatch",
+      "warning": "Steam cloud saves differ from local saves. Launching directly may cause save overwrites or progress loss. We recommend reviewing and resolving differences on the Saves page first.",
+      "forceLaunch": "Launch Anyway",
+      "goToSaves": "Go to Saves"
+    },
     "error": {
       "operationFailed": "Operation failed: {e}",
       "uninstallFailed": "Uninstall failed: {e}",
@@ -396,7 +402,7 @@
       "missing": " mod(s) not installed",
       "ok": "OK"
     },
-    "importBundle": {
+    "importDialog": {
       "title": "Import \"{name}\"",
       "summary": "{n1} mod(s) · {n2} preset entry/entries",
       "conflictCount": "{n} conflict(s) detected:",

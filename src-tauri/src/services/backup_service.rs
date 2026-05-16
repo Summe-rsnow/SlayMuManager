@@ -1,5 +1,5 @@
 use crate::domain::save::{
-    CloudSaveDiffEntry, CloudSaveStatus, DiffKind, SaveKind,
+    CloudSaveDiffEntry, CloudSaveStatus, DiffKind,
 };
 use crate::integrations::steam;
 use crate::services::save_service;
@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 // 云存档状态
 // ---------------------------------------------------------------------------
 
-pub fn get_cloud_save_status(game_root: &Path) -> Result<CloudSaveStatus, AppError> {
+pub fn get_cloud_save_status(_game_root: &Path) -> Result<CloudSaveStatus, AppError> {
     let mut diagnostic = String::new();
 
     // 尝试获取 Steam 用户：先注册表活跃用户，再扫描 userdata

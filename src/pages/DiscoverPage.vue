@@ -98,7 +98,7 @@ async function downloadMod(mod: RemoteMod) {
     }
 
     // 3. 下载并安装
-    const result = await invoke("download_and_install_mod", {
+    await invoke("download_and_install_mod", {
       modId,
       fileId: mainFile.fileId,
       enableAfterInstall: true,
