@@ -2,12 +2,6 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum AppError {
-    #[error("游戏目录未设置")]
-    GameDirNotSet,
-
-    #[error("游戏目录无效: {0}")]
-    InvalidGameDir(String),
-
     #[error("Mod 未找到: {0}")]
     ModNotFound(String),
 

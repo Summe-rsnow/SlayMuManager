@@ -48,27 +48,7 @@ pub fn auto_detect_game_install() -> Vec<(PathBuf, String)> {
     results
 }
 
-/// 获取游戏可执行文件路径
-pub fn game_exe_path(root: &Path) -> PathBuf {
-    root.join("SlayTheSpire2.exe")
-}
-
 /// 获取 Mod 启用目录
 pub fn mods_dir(root: &Path) -> PathBuf {
     root.join("mods")
-}
-
-/// 获取 Mod 禁用目录
-pub fn disabled_dir(root: &Path) -> PathBuf {
-    root.join("mods_disabled")
-}
-
-/// 获取模组版存档目录
-pub fn modded_saves_dir(root: &Path) -> PathBuf {
-    root.join("BepInEx").join("Saves")
-}
-
-/// 获取存档备份目录
-pub fn save_backups_dir(root: &Path) -> PathBuf {
-    root.join("BepInEx").join("spm_backups")
 }

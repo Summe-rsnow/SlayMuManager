@@ -34,7 +34,6 @@
     "disabledCountLabel": "Disabled:",
     "refreshing": "Refreshing...",
     "launchGame": "Launch Game",
-    "launching": "Launching...",
     "quickPresetPlaceholder": "Quick Preset...",
     "openModsDir": "Open Mods Folder",
     "newPreset": "New Preset",
@@ -267,8 +266,6 @@
     "slotCount": "{n} slot(s)",
     "slotIndex": "Slot {i}",
     "fileCount": "{n} file(s)",
-    "transferToModded": "→Modded{i}",
-    "transferToVanilla": "→Vanilla{i}",
     "pairSync": {
       "title": "Pair Sync",
       "autoSyncing": "Auto-syncing",
@@ -332,17 +329,7 @@
       "confirmDelete": "Delete this backup?",
       "manualReason": "Manual backup"
     },
-    "transfer": {
-      "title": "Confirm Save Transfer",
-      "source": "Source",
-      "target": "Target",
-      "hasData": "Has data",
-      "noData": "No data",
-      "autoBackupWarning": "⚠ Target has data — will auto-backup before transfer",
-      "confirm": "Transfer"
-    },
     "success": {
-      "transferDone": "Save transfer complete",
       "slotBackedUp": "Slot {i} backed up",
       "backupRestored": "Backup restored",
       "backupRestoredToSlot": "Restored to {kind} Slot {i}",
@@ -359,7 +346,6 @@
       "noSyncNeeded": "No saves need syncing"
     },
     "error": {
-      "transferFailed": "Transfer failed: {e}",
       "loadBackupsFailed": "Failed to load backups: {e}",
       "backupFailed": "Backup failed: {e}",
       "restoreFailed": "Restore failed: {e}",

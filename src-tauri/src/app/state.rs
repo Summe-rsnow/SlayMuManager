@@ -26,8 +26,6 @@ impl Default for AppState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub game_root_dir: Option<String>,
-    #[serde(default = "default_mods_disabled_dir_name")]
-    pub disabled_mods_dir_name: String,
     #[serde(default = "default_active_profile_name")]
     pub active_profile_name: String,
     #[serde(default = "default_locale")]
@@ -49,7 +47,6 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             game_root_dir: None,
-            disabled_mods_dir_name: default_mods_disabled_dir_name(),
             active_profile_name: default_active_profile_name(),
             locale: default_locale(),
             save_auto_sync: false,
@@ -61,10 +58,6 @@ impl Default for AppSettings {
             auto_backup_keep_count: default_auto_backup_keep_count(),
         }
     }
-}
-
-fn default_mods_disabled_dir_name() -> String {
-    "mods_disabled".to_string()
 }
 
 fn default_active_profile_name() -> String {

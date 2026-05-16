@@ -32,21 +32,6 @@ export interface SaveSlot {
   lastModifiedAt: string | null
 }
 
-export interface SaveSlotRef {
-  steamUserId: string
-  kind: "vanilla" | "modded"
-  slotIndex: number
-}
-
-export interface SaveTransferPreview {
-  source: SaveSlotRef
-  target: SaveSlotRef
-  sourceHasData: boolean
-  targetHasData: boolean
-  backupWillBeCreated: boolean
-  summary: string
-}
-
 export interface SaveBackupEntry {
   id: string
   steamUserId: string
@@ -211,16 +196,6 @@ export interface BundlePreview {
   manifest: BundleManifest
   conflicts: BundleConflict[]
   missingIds: string[]
-}
-
-// --- 操作日志 ---
-
-export interface ActivityLog {
-  id: string
-  category: string
-  title: string
-  detail: string | null
-  createdAt: string
 }
 
 // --- Mod 切换保护 ---

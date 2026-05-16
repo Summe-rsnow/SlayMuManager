@@ -112,8 +112,6 @@ pub fn apply_profile(
 
     let enabled_ids: Vec<String> = enabled.iter().map(|m| m.id.clone()).collect();
     let disabled_ids: Vec<String> = disabled.iter().map(|m| m.id.clone()).collect();
-    let _all_installed_ids: Vec<String> =
-        enabled_ids.iter().chain(disabled_ids.iter()).cloned().collect();
 
     let mut enabled_list = Vec::new();
     let mut disabled_list = Vec::new();

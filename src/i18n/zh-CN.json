@@ -34,7 +34,6 @@
     "disabledCountLabel": "已禁用:",
     "refreshing": "刷新中...",
     "launchGame": "启动游戏",
-    "launching": "启动中...",
     "quickPresetPlaceholder": "快速预设...",
     "openModsDir": "打开模组目录",
     "newPreset": "新增预设",
@@ -253,7 +252,7 @@
     "unknown": "未知",
     "backup": "备份",
     "migrate": "迁移",
-    "allHistoryBackups": "全部历史备份",
+    "allHistoryBackups": "历史备份",
     "historyBackups": "历史备份",
     "deleteSlot": "删除存档",
     "confirmDeleteSlotTitle": "确认删除存档",
@@ -267,8 +266,6 @@
     "slotCount": "{n} 个槽位",
     "slotIndex": "槽位 {i}",
     "fileCount": "{n} 文件",
-    "transferToModded": "→模组{i}",
-    "transferToVanilla": "→原版{i}",
     "pairSync": {
       "title": "配对同步",
       "autoSyncing": "自动同步中",
@@ -332,17 +329,7 @@
       "confirmDelete": "确定要删除此备份？",
       "manualReason": "手动备份"
     },
-    "transfer": {
-      "title": "确认存档传输",
-      "source": "源",
-      "target": "目标",
-      "hasData": "有数据",
-      "noData": "无数据",
-      "autoBackupWarning": "⚠ 目标有数据，传输前将自动备份",
-      "confirm": "传输"
-    },
     "success": {
-      "transferDone": "存档传输完成",
       "slotBackedUp": "槽位 {i} 已备份",
       "backupRestored": "备份已恢复",
       "backupRestoredToSlot": "已恢复到 {kind} 槽位 {i}",
@@ -359,7 +346,6 @@
       "noSyncNeeded": "没有需要同步的存档"
     },
     "error": {
-      "transferFailed": "传输失败: {e}",
       "loadBackupsFailed": "加载备份列表失败: {e}",
       "backupFailed": "备份失败: {e}",
       "restoreFailed": "恢复失败: {e}",

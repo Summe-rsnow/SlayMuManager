@@ -87,7 +87,7 @@ async function deleteSaveSlot(slot: SaveSlot) {
   }
 }
 
-// --- 全部历史备份（全局入口）---
+// --- 历史备份（全局入口）---
 async function openAllBackups() {
   loading.value = true
   try {

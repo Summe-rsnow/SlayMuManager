@@ -75,12 +75,7 @@
   box-shadow: 0 2px 16px rgba(24, 160, 88, 0.1);
 }
 
-/* --- 操作按钮过渡 --- */
+/* --- 操作按钮 --- */
 .mod-card .mod-actions {
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-}
-
-.mod-card:hover .mod-actions {
   opacity: 1;
 }

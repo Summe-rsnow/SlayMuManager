@@ -2,7 +2,6 @@ use crate::domain::remote_mod::{RemoteMod, RemoteModSearchResult};
 use crate::utils::error::AppError;
 use serde::Deserialize;
 
-const NEXUS_API_BASE: &str = "https://api.nexusmods.com/v1";
 const NEXUS_GRAPHQL_URL: &str = "https://api.nexusmods.com/v2/graphql";
 const NEXUS_GAME_ID: &str = "8916";
 // NEXUS_GAME_DOMAIN = "slaythespire2" — 通过 game_slug 参数传入

@@ -114,6 +114,5 @@ export function useModTags() {
     usedTags,
     getTagLabel,
     isPresetTag,
-    tagMap,
   }
 }

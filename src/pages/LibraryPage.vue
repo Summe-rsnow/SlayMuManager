@@ -626,7 +626,7 @@ onUnmounted(() => {
               <div
                 v-for="mod in filteredEnabled"
                 :key="mod.id"
-                class="mod-card mod-card--enabled flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-white transition-colors"
+                class="mod-card mod-card--enabled group flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-white transition-colors"
                 :class="{ 'pointer-events-none opacity-60': busyId === mod.id }"
                 @mousemove="(e: MouseEvent) => onCardMouseMove(e, (e.currentTarget as HTMLElement))"
                 @click="(e: MouseEvent) => onCardClick(e, (e.currentTarget as HTMLElement))"
@@ -739,7 +739,7 @@ onUnmounted(() => {
               <div
                 v-for="mod in filteredDisabled"
                 :key="mod.id"
-                class="mod-card mod-card--disabled flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-white transition-colors opacity-70"
+                class="mod-card mod-card--disabled group flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50/60 transition-colors"
                 :class="{ 'pointer-events-none opacity-40': busyId === mod.id }"
                 @mousemove="(e: MouseEvent) => onCardMouseMove(e, (e.currentTarget as HTMLElement))"
                 @click="(e: MouseEvent) => onCardClick(e, (e.currentTarget as HTMLElement))"

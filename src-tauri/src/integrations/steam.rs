@@ -11,15 +11,6 @@ pub fn account_id_to_steam_id64(account_id: u64) -> u64 {
     account_id + STEAM_ID64_OFFSET
 }
 
-/// 将 SteamID64 转换回 AccountID
-pub fn steam_id64_to_account_id(steam_id64: u64) -> Option<u64> {
-    if steam_id64 > STEAM_ID64_OFFSET {
-        Some(steam_id64 - STEAM_ID64_OFFSET)
-    } else {
-        None
-    }
-}
-
 /// 获取当前活跃的 Steam AccountID（短号，用于 userdata 目录查找）
 pub fn get_active_steam_account_id() -> Option<String> {
     let hkcu = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER);
@@ -29,13 +20,6 @@ pub fn get_active_steam_account_id() -> Option<String> {
         }
     }
     None
-}
-
-/// 获取当前活跃用户的 SteamID64（17 位长号，用于本地存档目录名匹配）
-pub fn get_active_steam_id64() -> Option<String> {
-    get_active_steam_account_id()
-        .and_then(|id| id.parse::<u64>().ok())
-        .map(|id| account_id_to_steam_id64(id).to_string())
 }
 
 /// 从 Windows 注册表读取 Steam 安装路径（多源尝试）

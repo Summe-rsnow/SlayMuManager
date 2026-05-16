@@ -31,9 +31,6 @@ export function useModCache() {
     enabledMods,
     disabledMods,
     loading,
-    lastFetched,
     fetchMods,
-    /** Refetch after any mutation (enable/disable/uninstall/import) */
-    invalidate: fetchMods,
   }
 }
