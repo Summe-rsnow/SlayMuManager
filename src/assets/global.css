@@ -20,8 +20,28 @@ html, body {
   display: none;
 }
 
-/* 暗色模式 CSS 变量（预留，暂未使用） */
+/* ============================================================
+   主题 CSS 变量 — 由 theme/index.ts 在运行时动态设置
+   ============================================================ */
+
 :root {
+  /* 主题色（由 JS 动态覆写） */
+  --primary-color: #6366f1;
+  --primary-color-hover: #818cf8;
+  --primary-color-pressed: #4f46e5;
+  --primary-color-suppl: #818cf8;
+  --primary-50: #eef2ff;
+  --primary-100: #e0e7ff;
+  --primary-200: #c7d2fe;
+  --primary-300: #a5b4fc;
+  --primary-400: #818cf8;
+  --primary-500: #6366f1;
+  --primary-600: #4f46e5;
+  --primary-700: #4338ca;
+  --primary-800: #3730a3;
+  --primary-900: #312e81;
+
+  /* 语义背景 / 文字（暗色模式下被 .dark 覆写） */
   --color-bg-primary: #ffffff;
   --color-bg-secondary: #f9fafb;
   --color-bg-card: #ffffff;
@@ -29,6 +49,10 @@ html, body {
   --color-text-secondary: #6b7280;
   --color-text-muted: #9ca3af;
   --color-border: #e5e7eb;
+  --color-bg-sidebar: #ffffff;
+  --color-titlebar-bg: #f9fafb;
+  --color-titlebar-border: #e5e7eb;
+  --color-main-bg: #ffffff;
 }
 
 .dark {
@@ -39,4 +63,37 @@ html, body {
   --color-text-secondary: #d1d5db;
   --color-text-muted: #9ca3af;
   --color-border: #374151;
+  --color-bg-sidebar: #1f2937;
+  --color-titlebar-bg: #1f2937;
+  --color-titlebar-border: #374151;
+  --color-main-bg: #111827;
+}
+
+/* ============================================================
+   基于 CSS 变量的主题辅助类（替代 UnoCSS 静态 primary）
+   ============================================================ */
+
+.bg-primary-theme {
+  background-color: var(--primary-color);
+}
+.text-primary-theme {
+  color: var(--primary-color);
+}
+.border-primary-theme {
+  border-color: var(--primary-color);
+}
+.hover\:text-primary-theme:hover {
+  color: var(--primary-color);
+}
+.hover\:bg-primary-10-theme:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+.bg-primary-10-theme {
+  background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+.bg-primary-50-theme {
+  background-color: var(--primary-50);
+}
+.text-primary-600-theme {
+  color: var(--primary-600);
 }

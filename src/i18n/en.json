@@ -208,7 +208,9 @@
     },
     "appearance": {
       "title": "Appearance",
-      "language": "Language"
+      "language": "Language",
+      "displayMode": "Display Mode",
+      "themeColor": "Theme Color"
     },
     "backup": {
       "title": "Backup",
@@ -273,6 +275,7 @@
     "unknown": "Unknown",
     "backup": "Backup",
     "migrate": "Migrate",
+    "steamUser": "Steam User",
     "allHistoryBackups": "All History",
     "historyBackups": "History",
     "deleteSlot": "Delete Save",

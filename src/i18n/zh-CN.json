@@ -208,7 +208,9 @@
     },
     "appearance": {
       "title": "外观",
-      "language": "语言"
+      "language": "语言",
+      "displayMode": "显示模式",
+      "themeColor": "主题色"
     },
     "backup": {
       "title": "备份",
@@ -273,6 +275,7 @@
     "unknown": "未知",
     "backup": "备份",
     "migrate": "迁移",
+    "steamUser": "Steam 用户",
     "allHistoryBackups": "历史备份",
     "historyBackups": "历史备份",
     "deleteSlot": "删除存档",

@@ -38,6 +38,8 @@ pub struct AppBootstrap {
     pub nexus_user_name: Option<String>,
     pub proxy_url: Option<String>,
     pub auto_backup_keep_count: usize,
+    pub theme_mode: String,
+    pub theme_color: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,6 +95,8 @@ pub fn get_app_bootstrap(state: State<AppState>) -> AppBootstrap {
         nexus_user_name: settings.nexus_user_name.clone(),
         proxy_url: settings.proxy_url.clone(),
         auto_backup_keep_count: settings.auto_backup_keep_count,
+        theme_mode: settings.theme_mode.clone(),
+        theme_color: settings.theme_color.clone(),
     }
 }
 
@@ -1195,6 +1199,22 @@ pub fn test_proxy(url: String) -> Result<bool, String> {
 pub fn update_auto_backup_keep_count(count: usize, state: State<AppState>) -> Result<(), String> {
     let mut settings = state.settings.write().unwrap();
     settings.auto_backup_keep_count = count;
+    let _ = settings_repo::save_settings(&settings);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_theme_mode(mode: String, state: State<AppState>) -> Result<(), String> {
+    let mut settings = state.settings.write().unwrap();
+    settings.theme_mode = mode;
+    let _ = settings_repo::save_settings(&settings);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_theme_color(color: String, state: State<AppState>) -> Result<(), String> {
+    let mut settings = state.settings.write().unwrap();
+    settings.theme_color = color;
     let _ = settings_repo::save_settings(&settings);
     Ok(())
 }

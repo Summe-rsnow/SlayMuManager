@@ -41,6 +41,10 @@ pub struct AppSettings {
     pub proxy_url: Option<String>,
     #[serde(default = "default_auto_backup_keep_count")]
     pub auto_backup_keep_count: usize,
+    #[serde(default = "default_theme_mode")]
+    pub theme_mode: String,
+    #[serde(default = "default_theme_color")]
+    pub theme_color: String,
 }
 
 impl Default for AppSettings {
@@ -56,6 +60,8 @@ impl Default for AppSettings {
             nexus_user_name: None,
             proxy_url: None,
             auto_backup_keep_count: default_auto_backup_keep_count(),
+            theme_mode: default_theme_mode(),
+            theme_color: default_theme_color(),
         }
     }
 }
@@ -70,6 +76,14 @@ fn default_locale() -> String {
 
 fn default_auto_backup_keep_count() -> usize {
     5
+}
+
+fn default_theme_mode() -> String {
+    "system".to_string()
+}
+
+fn default_theme_color() -> String {
+    "indigo".to_string()
 }
 
 // --- 存档同步配对 ---

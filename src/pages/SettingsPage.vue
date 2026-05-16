@@ -2,9 +2,10 @@
 import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NCard, NSpace, NInput, NButton, NSelect, NIcon, NInputNumber, useMessage } from "naive-ui"
-import { FolderSearch, Key, Globe, ChevronDown } from "lucide-vue-next"
+import { NCard, NSpace, NInput, NButton, NSelect, NIcon, NInputNumber, NRadioGroup, NRadio, useMessage } from "naive-ui"
+import { FolderSearch, Key, Globe, ChevronDown, Sun, Moon, Palette } from "lucide-vue-next"
 import { setLocale } from "../i18n"
+import { displayMode, setDisplayMode, themeColorKey, setThemeColor, colorPalettes, type ThemeColorKey, type DisplayMode } from "../theme"
 import type { AppBootstrap } from "../types"
 
 const { t } = useI18n()
@@ -14,6 +15,20 @@ const languageOptions = computed(() => [
   { label: t("settings.language.zhCN"), value: "zh-CN" },
   { label: t("settings.language.en"), value: "en" },
 ])
+
+const displayModeOptions: { label: string; value: DisplayMode }[] = [
+  { label: "跟随系统", value: "system" },
+  { label: "日间模式", value: "light" },
+  { label: "夜间模式", value: "dark" },
+]
+
+const themeColorOptions: { label: string; value: ThemeColorKey }[] = [
+  { label: "靛蓝", value: "indigo" as const },
+  { label: "蓝色", value: "blue" as const },
+  { label: "绿色", value: "green" as const },
+  { label: "紫色", value: "purple" as const },
+  { label: "玫红", value: "rose" as const },
+]
 
 // --- 状态 ---
 const gamePath = ref("")
@@ -135,6 +150,22 @@ async function updateLocale(val: string) {
   } catch {}
 }
 
+// --- 显示模式 ---
+async function handleDisplayModeChange(val: DisplayMode) {
+  setDisplayMode(val)
+  try {
+    await invoke("update_theme_mode", { mode: val })
+  } catch {}
+}
+
+// --- 主题色 ---
+async function handleThemeColorChange(val: ThemeColorKey) {
+  setThemeColor(val)
+  try {
+    await invoke("update_theme_color", { color: val })
+  } catch {}
+}
+
 // --- 备份 ---
 async function updateBackupCount(val: number | null) {
   if (val == null) return
@@ -150,7 +181,7 @@ onMounted(loadSettings)
 <template>
   <div>
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">{{ t("settings.title") }}</h1>
+      <h1 class="text-2xl font-bold" :style="{ color: 'var(--color-text-primary)' }">{{ t("settings.title") }}</h1>
     </div>
 
     <div class="max-w-2xl mx-auto flex flex-col gap-4">
@@ -262,6 +293,7 @@ onMounted(loadSettings)
       <!-- 外观 -->
       <NCard :title="t('settings.appearance.title')" size="small">
         <NSpace vertical>
+          <!-- 语言 -->
           <div class="flex items-center justify-between">
             <span class="text-sm">{{ t("settings.appearance.language") }}</span>
             <NSelect
@@ -271,6 +303,54 @@ onMounted(loadSettings)
               size="small"
               @update:value="updateLocale"
             />
+          </div>
+
+          <!-- 分隔线 -->
+          <div class="border-t border-gray-100 dark:border-gray-700"></div>
+
+          <!-- 显示模式 -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <NIcon :size="16" :color="displayMode === 'dark' ? '#818cf8' : '#f0a020'">
+                <Sun v-if="displayMode === 'light'" />
+                <Moon v-else-if="displayMode === 'dark'" />
+                <Sun v-else />
+              </NIcon>
+              <span class="text-sm">{{ t("settings.appearance.displayMode") }}</span>
+            </div>
+            <NRadioGroup
+              :value="displayMode"
+              size="small"
+              @update:value="handleDisplayModeChange"
+            >
+              <NRadio
+                v-for="opt in displayModeOptions"
+                :key="opt.value"
+                :value="opt.value"
+              >{{ opt.label }}</NRadio>
+            </NRadioGroup>
+          </div>
+
+          <!-- 分隔线 -->
+          <div class="border-t border-gray-100 dark:border-gray-700"></div>
+
+          <!-- 主题色 -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <NIcon :size="16" :color="colorPalettes[themeColorKey].DEFAULT"><Palette /></NIcon>
+              <span class="text-sm">{{ t("settings.appearance.themeColor") }}</span>
+            </div>
+            <div class="flex gap-1.5">
+              <button
+                v-for="opt in themeColorOptions"
+                :key="opt.value"
+                :title="opt.label"
+                class="w-6 h-6 rounded-full border-2 transition-all cursor-pointer"
+                :class="themeColorKey === opt.value ? 'border-gray-800 scale-110' : 'border-transparent hover:scale-110'"
+                :style="{ backgroundColor: colorPalettes[opt.value].DEFAULT }"
+                @click="handleThemeColorChange(opt.value)"
+              />
+            </div>
           </div>
         </NSpace>
       </NCard>

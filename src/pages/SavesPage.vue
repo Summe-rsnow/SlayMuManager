@@ -10,7 +10,7 @@ import {
 import SlotCard from "../components/SlotCard.vue"
 import {
   HardDrive, ArrowRightLeft, RefreshCw, Database,
-  History, RotateCcw, Trash2, Upload, Download, Cloud, AlertTriangle,
+  History, RotateCcw, Trash2, Upload, Download, Cloud, AlertTriangle, User,
 } from "lucide-vue-next"
 import type {
   SaveSlot, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
@@ -27,7 +27,7 @@ const backups = ref<SaveBackupEntry[]>([])
 const autoSync = ref(false)
 const syncPairs = ref<SaveSyncPair[]>([])
 const loading = ref(false)
-const steamUserId = ref("")
+const activeUserId = ref("")
 
 // 备份恢复到指定槽位
 const showRestoreToSlotDialog = ref(false)
@@ -39,12 +39,34 @@ const cloudStatus = ref<CloudSaveStatus | null>(null)
 const cloudDiffs = ref<CloudSaveDiffEntry[]>([])
 const showCloudDialog = ref(false)
 
-// --- 计算 ---
+// --- 根据 steamUserId 分组 ---
+const userGroups = computed(() => {
+  const groups = new Map<string, SaveSlot[]>()
+  for (const slot of slots.value) {
+    const list = groups.get(slot.steamUserId) || []
+    list.push(slot)
+    groups.set(slot.steamUserId, list)
+  }
+  return groups
+})
+
+const userIds = computed(() => Array.from(userGroups.value.keys()))
+
+// 确保 activeUserId 有效
+const safeActiveUserId = computed(() => {
+  if (activeUserId.value && userIds.value.includes(activeUserId.value)) {
+    return activeUserId.value
+  }
+  return userIds.value[0] || ""
+})
+
+const currentUserSlots = computed(() => userGroups.value.get(safeActiveUserId.value) || [])
+
 const vanillaSlots = computed(() =>
-  slots.value.filter((s) => s.kind === "vanilla").sort((a, b) => a.slotIndex - b.slotIndex),
+  currentUserSlots.value.filter((s) => s.kind === "vanilla").sort((a, b) => a.slotIndex - b.slotIndex),
 )
 const moddedSlots = computed(() =>
-  slots.value.filter((s) => s.kind === "modded").sort((a, b) => a.slotIndex - b.slotIndex),
+  currentUserSlots.value.filter((s) => s.kind === "modded").sort((a, b) => a.slotIndex - b.slotIndex),
 )
 
 const pairOptions = computed<any[]>(() => [
@@ -58,13 +80,19 @@ function kindLabel(kind: string): string {
   return kind === "vanilla" ? t("saves.kind.vanilla") : t("saves.kind.modded")
 }
 
+// 截断用户 ID 显示
+function shortUserId(id: string): string {
+  if (id.length <= 8) return id
+  return id.slice(0, 4) + "..." + id.slice(-4)
+}
+
 // --- 加载 ---
 async function loadSlots() {
   loading.value = true
   try {
     slots.value = await invoke<SaveSlot[]>("list_save_slots")
-    if (slots.value.length > 0) {
-      steamUserId.value = slots.value[0].steamUserId
+    if (slots.value.length > 0 && !activeUserId.value) {
+      activeUserId.value = slots.value[0].steamUserId
     }
   } catch {
     slots.value = []
@@ -92,7 +120,6 @@ async function deleteSaveSlot(slot: SaveSlot) {
 async function openAllBackups() {
   loading.value = true
   try {
-    // 不带过滤参数 → 加载全部槽位的全部备份
     backups.value = await invoke<SaveBackupEntry[]>("list_save_backups", {})
     showBackupsDialog.value = true
   } catch (e: any) {
@@ -147,7 +174,7 @@ async function doRestoreToSlot() {
   try {
     await invoke("restore_save_backup_to_slot", {
       backupId: b.id,
-      targetSteamUserId: steamUserId.value,
+      targetSteamUserId: b.steamUserId,
       targetKind: target.kind,
       targetSlotIndex: target.slotIndex,
     })
@@ -307,7 +334,6 @@ function mismatchLabel(s: CloudSaveStatus): string {
 
 onMounted(async () => {
   await loadSlots()
-  // 恢复上次保存的配对同步配置
   try {
     const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
     syncPairs.value = bootstrap.saveSyncPairs ?? []
@@ -321,8 +347,8 @@ onMounted(async () => {
     <!-- 头部 -->
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">{{ t("saves.title") }}</h1>
-        <p class="text-sm text-gray-500 mt-1">{{ t("saves.subtitle") }}</p>
+        <h1 class="text-2xl font-bold" :style="{ color: 'var(--color-text-primary)' }">{{ t("saves.title") }}</h1>
+        <p class="text-sm mt-1" :style="{ color: 'var(--color-text-secondary)' }">{{ t("saves.subtitle") }}</p>
       </div>
       <NSpace>
         <NButton secondary :loading="loading" @click="loadSlots">
@@ -342,13 +368,32 @@ onMounted(async () => {
 
     <!-- 空状态 -->
     <NCard v-if="slots.length === 0 && !loading" size="small">
-      <div class="text-center py-12 text-gray-400">
+      <div class="text-center py-12" :style="{ color: 'var(--color-text-muted)' }">
         <NIcon :size="48" class="c-gray-300 mb-3"><HardDrive /></NIcon>
         <p>{{ t("saves.empty.setGamePath") }}</p>
       </div>
     </NCard>
 
     <template v-else>
+      <!-- 多用户切换 -->
+      <div v-if="userIds.length > 1" class="flex items-center gap-3 mb-4">
+        <NIcon :size="16" :style="{ color: 'var(--color-text-muted)' }"><User /></NIcon>
+        <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("saves.steamUser") }}:</span>
+        <div class="flex gap-1.5">
+          <NButton
+            v-for="uid in userIds"
+            :key="uid"
+            :size="'tiny'"
+            :type="uid === safeActiveUserId ? 'primary' : 'default'"
+            :secondary="uid !== safeActiveUserId"
+            @click="activeUserId = uid"
+          >
+            <template #icon><NIcon :size="12"><User /></NIcon></template>
+            {{ shortUserId(uid) }}
+          </NButton>
+        </div>
+      </div>
+
       <!-- 双列布局 -->
       <div class="grid grid-cols-2 gap-4">
         <!-- 原版存档 -->
@@ -356,7 +401,7 @@ onMounted(async () => {
           <template #header>
             <div class="flex items-center gap-2">
               <NTag type="info" size="small" :bordered="false">{{ t("saves.kind.vanilla") }}</NTag>
-              <span class="text-xs text-gray-400">
+              <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">
                 {{ t("saves.slotCount", { n: vanillaSlots.length }) }}
               </span>
             </div>
@@ -365,7 +410,7 @@ onMounted(async () => {
           <NSpace v-if="vanillaSlots.length > 0" vertical :size="8">
             <SlotCard
               v-for="slot in vanillaSlots"
-              :key="`v-${slot.slotIndex}`"
+              :key="`v-${slot.steamUserId}-${slot.slotIndex}`"
               :slot="slot"
               @backup="createBackup"
               @migrate="migrateSlot"
@@ -379,7 +424,7 @@ onMounted(async () => {
           <template #header>
             <div class="flex items-center gap-2">
               <NTag type="warning" size="small" :bordered="false">{{ t("saves.kind.modded") }}</NTag>
-              <span class="text-xs text-gray-400">
+              <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">
                 {{ t("saves.slotCount", { n: moddedSlots.length }) }}
               </span>
             </div>
@@ -388,7 +433,7 @@ onMounted(async () => {
           <NSpace v-if="moddedSlots.length > 0" vertical :size="8">
             <SlotCard
               v-for="slot in moddedSlots"
-              :key="`m-${slot.slotIndex}`"
+              :key="`m-${slot.steamUserId}-${slot.slotIndex}`"
               :slot="slot"
               @backup="createBackup"
               @migrate="migrateSlot"
@@ -416,7 +461,7 @@ onMounted(async () => {
           </div>
         </template>
 
-        <p class="text-sm text-gray-500 mb-4">
+        <p class="text-sm" :style="{ color: 'var(--color-text-secondary)' }" class="mb-4">
           {{ t("saves.pairSync.description") }}
         </p>
 
@@ -435,8 +480,8 @@ onMounted(async () => {
                   <span class="text-sm font-bold text-blue-600">V{{ i }}</span>
                 </div>
                 <div class="flex flex-col">
-                  <span class="text-xs text-gray-400">{{ t("saves.pairSync.vanillaSlot") }}</span>
-                  <span class="text-sm font-medium text-gray-700">{{ t("saves.pairSync.slotWithNumber", { n: i }) }}</span>
+                  <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("saves.pairSync.vanillaSlot") }}</span>
+                  <span class="text-sm font-medium" :style="{ color: 'var(--color-text-primary)' }">{{ t("saves.pairSync.slotWithNumber", { n: i }) }}</span>
                 </div>
               </div>
 
@@ -462,7 +507,7 @@ onMounted(async () => {
                   >{{ getPairedModdedSlot(i) !== null ? `M${getPairedModdedSlot(i)}` : '?' }}</span>
                 </div>
                 <div class="flex flex-col items-end">
-                  <span class="text-xs text-gray-400">{{ t("saves.pairSync.moddedSlot") }}</span>
+                  <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("saves.pairSync.moddedSlot") }}</span>
                   <NSelect
                     :value="getPairedModdedSlot(i)"
                     :options="pairOptions"
@@ -478,7 +523,7 @@ onMounted(async () => {
         </div>
 
         <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-          <span class="text-xs text-gray-400">
+          <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">
             {{ t("saves.pairSync.pairCount", { n: syncPairs.length }) }}
           </span>
           <NButton type="primary" size="small" @click="saveSyncPairs">
@@ -496,7 +541,7 @@ onMounted(async () => {
             <span>{{ t("saves.cloud.title") }}</span>
           </div>
         </template>
-        <p class="text-xs text-gray-400 mb-3">
+        <p class="text-xs mb-3" :style="{ color: 'var(--color-text-muted)' }">
           {{ t("saves.cloud.description") }}
         </p>
         <NSpace>
@@ -526,7 +571,7 @@ onMounted(async () => {
           <span class="text-lg font-semibold">{{ t("saves.allHistoryBackups") }}</span>
         </template>
 
-        <div v-if="backups.length === 0" class="text-center py-8 text-gray-400">
+        <div v-if="backups.length === 0" class="text-center py-8" :style="{ color: 'var(--color-text-muted)' }">
           <NIcon :size="32" class="c-gray-300 mb-2"><Database /></NIcon>
           <p class="text-sm">{{ t("saves.backups.empty") }}</p>
         </div>
@@ -538,11 +583,14 @@ onMounted(async () => {
             class="flex items-center justify-between p-3 border-b border-gray-50 last:border-b-0"
           >
             <div class="flex-1 min-w-0">
-              <div class="text-sm font-medium text-gray-700">
+              <div class="text-sm font-medium" :style="{ color: 'var(--color-text-primary)' }">
                 {{ new Date(b.createdAt).toLocaleString(currentLocale) }}
               </div>
-              <div class="text-xs text-gray-400">
+              <div class="text-xs" :style="{ color: 'var(--color-text-muted)' }">
                 {{ b.reason }} · {{ kindLabel(b.kind) }} {{ t("saves.slotIndex", { i: b.slotIndex }) }}
+              </div>
+              <div class="text-[10px]" :style="{ color: 'var(--color-text-muted)' }">
+                {{ t("saves.steamUser") }}: {{ shortUserId(b.steamUserId) }}
               </div>
             </div>
             <NSpace :size="4">
@@ -578,20 +626,20 @@ onMounted(async () => {
           </div>
         </template>
 
-        <div class="text-sm text-gray-600 mb-4">
+        <div class="text-sm" :style="{ color: 'var(--color-text-secondary)' }">
           <div class="mb-2">
-            <span class="text-gray-400">{{ t("saves.backups.restoreFrom") }}:</span>
-            <span class="ml-2 font-medium">
+            <span :style="{ color: 'var(--color-text-muted)' }">{{ t("saves.backups.restoreFrom") }}:</span>
+            <span class="ml-2 font-medium" :style="{ color: 'var(--color-text-primary)' }">
               {{ new Date(restoreToSlotBackup.createdAt).toLocaleString(currentLocale) }}
             </span>
           </div>
-          <div class="text-xs text-gray-400 mb-3">
+          <div class="text-xs mb-3" :style="{ color: 'var(--color-text-muted)' }">
             {{ restoreToSlotBackup.reason }} · {{ kindLabel(restoreToSlotBackup.kind) }}
             {{ t("saves.slotIndex", { i: restoreToSlotBackup.slotIndex }) }}
           </div>
 
-          <div class="p-3 rounded-lg bg-gray-50 border border-gray-100">
-            <div class="text-xs text-gray-500 mb-2">{{ t("saves.backups.restoreTarget") }}</div>
+          <div class="p-3 rounded-lg border" :style="{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border)' }">
+            <div class="text-xs mb-2" :style="{ color: 'var(--color-text-muted)' }">{{ t("saves.backups.restoreTarget") }}</div>
             <NSpace vertical :size="8">
               <NRadioGroup
                 :value="restoreToSlotTarget.kind"
@@ -644,17 +692,17 @@ onMounted(async () => {
         </template>
 
         <div v-if="cloudStatus && cloudStatus.isAvailable" class="grid grid-cols-4 gap-2 mb-4">
-          <div class="text-center p-2 rounded bg-gray-50">
-            <div class="text-lg font-bold text-gray-700">{{ cloudStatus.localFileCount }}</div>
-            <div class="text-xs text-gray-400">{{ t("saves.cloud.localFiles") }}</div>
+          <div class="text-center p-2 rounded" :style="{ backgroundColor: 'var(--color-bg-secondary)' }">
+            <div class="text-lg font-bold" :style="{ color: 'var(--color-text-primary)' }">{{ cloudStatus.localFileCount }}</div>
+            <div class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("saves.cloud.localFiles") }}</div>
           </div>
-          <div class="text-center p-2 rounded bg-gray-50">
-            <div class="text-lg font-bold text-gray-700">{{ cloudStatus.cloudFileCount }}</div>
-            <div class="text-xs text-gray-400">{{ t("saves.cloud.cloudFiles") }}</div>
+          <div class="text-center p-2 rounded" :style="{ backgroundColor: 'var(--color-bg-secondary)' }">
+            <div class="text-lg font-bold" :style="{ color: 'var(--color-text-primary)' }">{{ cloudStatus.cloudFileCount }}</div>
+            <div class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("saves.cloud.cloudFiles") }}</div>
           </div>
-          <div class="text-center p-2 rounded bg-gray-50">
+          <div class="text-center p-2 rounded" :style="{ backgroundColor: 'var(--color-bg-secondary)' }">
             <div class="text-lg font-bold text-amber-600">{{ cloudStatus.differentCount }}</div>
-            <div class="text-xs text-gray-400">{{ t("saves.cloud.differences") }}</div>
+            <div class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("saves.cloud.differences") }}</div>
           </div>
           <div
             class="text-center p-2 rounded"
@@ -679,10 +727,10 @@ onMounted(async () => {
             <div>
               <div class="text-sm font-medium text-amber-800 mb-1">{{ t("saves.cloud.unavailable") }}</div>
               <div class="text-xs text-amber-600">{{ cloudStatus.diagnostic }}</div>
-              <div v-if="cloudStatus.cloudPath" class="text-xs text-gray-400 mt-1 font-mono">
+              <div v-if="cloudStatus.cloudPath" class="text-xs mt-1 font-mono" :style="{ color: 'var(--color-text-muted)' }">
                 {{ t("saves.cloud.cloudLabel") }}: {{ cloudStatus.cloudPath }}
               </div>
-              <div v-if="cloudStatus.localPath" class="text-xs text-gray-400 mt-0.5 font-mono">
+              <div v-if="cloudStatus.localPath" class="text-xs mt-0.5 font-mono" :style="{ color: 'var(--color-text-muted)' }">
                 {{ t("saves.cloud.localLabel") }}: {{ cloudStatus.localPath }}
               </div>
             </div>
@@ -694,17 +742,18 @@ onMounted(async () => {
           <NButton size="small" secondary :disabled="!cloudStatus?.isAvailable" @click="descendFull">{{ t("saves.cloud.descend") }}</NButton>
         </NSpace>
 
-        <div v-if="cloudDiffs.length > 0" class="max-h-64 overflow-auto border border-gray-100 rounded-lg">
+        <div v-if="cloudDiffs.length > 0" class="max-h-64 overflow-auto border rounded-lg" :style="{ borderColor: 'var(--color-border)' }">
           <div
             v-for="d in cloudDiffs"
             :key="d.relativePath"
-            class="flex items-center justify-between p-2 border-b border-gray-50 last:border-b-0 text-sm"
+            class="flex items-center justify-between p-2 border-b last:border-b-0 text-sm"
+            :style="{ borderColor: 'var(--color-border)' }"
           >
             <div class="flex-1 min-w-0 flex items-center gap-2">
               <NTag :type="diffKindType(d.kind)" size="tiny" :bordered="false">
                 {{ diffKindLabel(d.kind) }}
               </NTag>
-              <span class="text-gray-700 truncate font-mono text-xs">{{ d.relativePath }}</span>
+              <span class="truncate font-mono text-xs" :style="{ color: 'var(--color-text-primary)' }">{{ d.relativePath }}</span>
             </div>
             <NSpace :size="4" class="flex-shrink-0 ml-3">
               <NButton
@@ -726,7 +775,7 @@ onMounted(async () => {
             </NSpace>
           </div>
         </div>
-        <div v-else class="text-center py-6 text-gray-400 text-sm">
+        <div v-else class="text-center py-6 text-sm" :style="{ color: 'var(--color-text-muted)' }">
           {{ t("saves.cloud.inSync") }}
         </div>
       </NCard>

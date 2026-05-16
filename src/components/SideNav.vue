@@ -51,7 +51,13 @@ function handleUpdateValue(key: string) {
 </script>
 
 <template>
-  <nav class="w-52 flex-shrink-0 border-r border-gray-100 bg-gray-50/50 flex flex-col p-3">
+  <nav
+    class="w-52 flex-shrink-0 flex flex-col p-3"
+    :style="{
+      borderRight: '1px solid var(--color-border)',
+      backgroundColor: 'var(--color-bg-sidebar)',
+    }"
+  >
       <NMenu
         :value="activeKey"
         :options="menuOptions"
