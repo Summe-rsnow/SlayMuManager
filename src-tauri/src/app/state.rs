@@ -82,6 +82,7 @@ fn default_auto_backup_keep_count() -> usize {
 // --- 存档同步配对 ---
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SaveSyncPair {
     pub vanilla_slot: u32,
     pub modded_slot: u32,
