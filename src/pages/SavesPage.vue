@@ -369,7 +369,7 @@ onMounted(async () => {
     <!-- 空状态 -->
     <NCard v-if="slots.length === 0 && !loading" size="small">
       <div class="text-center py-12" :style="{ color: 'var(--color-text-muted)' }">
-        <NIcon :size="48" class="c-gray-300 mb-3"><HardDrive /></NIcon>
+        <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><HardDrive /></NIcon>
         <p>{{ t("saves.empty.setGamePath") }}</p>
       </div>
     </NCard>
@@ -461,7 +461,7 @@ onMounted(async () => {
           </div>
         </template>
 
-        <p class="text-sm" :style="{ color: 'var(--color-text-secondary)' }" class="mb-4">
+        <p class="text-sm mb-4" :style="{ color: 'var(--color-text-secondary)' }">
           {{ t("saves.pairSync.description") }}
         </p>
 
@@ -472,7 +472,7 @@ onMounted(async () => {
             class="pair-card rounded-xl p-4 border-2 transition-all"
             :class="getPairedModdedSlot(i) !== null
               ? 'border-indigo-200 bg-indigo-50/30'
-              : 'border-gray-100 bg-gray-50/50'"
+              : 'border-c-default bg-c-secondary'"
           >
             <div class="flex items-center gap-4">
               <div class="flex items-center gap-3 flex-1">
@@ -493,17 +493,17 @@ onMounted(async () => {
                   v-if="getPairedModdedSlot(i) !== null"
                   class="text-[10px] text-indigo-400 mt-0.5"
                 >{{ t("saves.pairSync.paired") }}</span>
-                <span v-else class="text-[10px] text-gray-300 mt-0.5">{{ t("saves.pairSync.unpaired") }}</span>
+                <span v-else class="text-[10px] text-c-muted mt-0.5">{{ t("saves.pairSync.unpaired") }}</span>
               </div>
 
               <div class="flex items-center gap-3 flex-1 justify-end">
                 <div
                   class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  :class="getPairedModdedSlot(i) !== null ? 'bg-purple-100' : 'bg-gray-100'"
+                  :class="getPairedModdedSlot(i) !== null ? 'bg-purple-100' : 'bg-c-secondary'"
                 >
                   <span
                     class="text-sm font-bold"
-                    :class="getPairedModdedSlot(i) !== null ? 'text-purple-600' : 'text-gray-400'"
+                    :class="getPairedModdedSlot(i) !== null ? 'text-purple-600' : 'text-c-muted'"
                   >{{ getPairedModdedSlot(i) !== null ? `M${getPairedModdedSlot(i)}` : '?' }}</span>
                 </div>
                 <div class="flex flex-col items-end">
@@ -522,7 +522,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+        <div class="flex items-center justify-between pt-3 border-t border-c-default">
           <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">
             {{ t("saves.pairSync.pairCount", { n: syncPairs.length }) }}
           </span>
@@ -572,7 +572,7 @@ onMounted(async () => {
         </template>
 
         <div v-if="backups.length === 0" class="text-center py-8" :style="{ color: 'var(--color-text-muted)' }">
-          <NIcon :size="32" class="c-gray-300 mb-2"><Database /></NIcon>
+          <NIcon :size="32" class="mb-2" :color="'var(--color-text-muted)'"><Database /></NIcon>
           <p class="text-sm">{{ t("saves.backups.empty") }}</p>
         </div>
 
@@ -580,7 +580,7 @@ onMounted(async () => {
           <div
             v-for="b in backups"
             :key="b.id"
-            class="flex items-center justify-between p-3 border-b border-gray-50 last:border-b-0"
+            class="flex items-center justify-between p-3 border-b border-c-default last:border-b-0"
           >
             <div class="flex-1 min-w-0">
               <div class="text-sm font-medium" :style="{ color: 'var(--color-text-primary)' }">

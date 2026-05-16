@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, onMounted, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
@@ -11,13 +11,14 @@ import {
 } from "lucide-vue-next"
 import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
 import { useIsActive } from "../composables/useIsActive"
+import { useSidebarActions } from "../composables/useSidebarActions"
 
 const { t } = useI18n()
 const message = useMessage()
 
 // --- 状态 ---
 const profiles = ref<ModProfile[]>([])
-const activeProfileName = ref("")
+const { activePresetName, presetAppliedTick } = useSidebarActions()
 const showCreateDialog = ref(false)
 const showApplyDialog = ref(false)
 const showImportDialog = ref(false)
@@ -183,9 +184,10 @@ async function handleApply(profile: ModProfile) {
   try {
     applyResult.value = await invoke<ApplyProfileResult>("apply_profile", { id: profile.id })
     if (!isActive.value) return
-    activeProfileName.value = applyResult.value.profile.name
+    activePresetName.value = applyResult.value.profile.name
     showApplyDialog.value = true
     await loadProfiles()
+    presetAppliedTick.value++
   } catch (e: any) {
     if (!isActive.value) return
     message.error(`${t("profiles.error.applyFailed")}: ${e}`)
@@ -246,7 +248,7 @@ async function confirmImport() {
     showImportDialog.value = false
     bundlePreview.value = null
     message.success(t("profiles.success.bundleImported", { n: result.enabledModIds.length }))
-    activeProfileName.value = result.profile.name
+    activePresetName.value = result.profile.name
     await loadProfiles()
   } catch (e: any) {
     message.error(`${t("profiles.error.importFailed")}: ${e}`)
@@ -259,8 +261,13 @@ onMounted(async () => {
   await loadProfiles()
   try {
     const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
-    activeProfileName.value = bootstrap.activeProfileName || ""
+    activePresetName.value = bootstrap.activeProfileName || ""
   } catch { /* ignore */ }
+})
+
+// 侧边栏切换预设后自动刷新
+watch(presetAppliedTick, () => {
+  loadProfiles()
 })
 </script>
 
@@ -269,8 +276,8 @@ onMounted(async () => {
     <!-- 头部 -->
     <div class="flex items-center justify-between mb-6">
       <div>
-        <h1 class="text-2xl font-bold text-gray-800">{{ t("profiles.title") }}</h1>
-        <p class="text-sm text-gray-500 mt-1">{{ t("profiles.subtitle") }}</p>
+        <h1 class="text-2xl font-bold text-c-primary">{{ t("profiles.title") }}</h1>
+        <p class="text-sm text-c-secondary mt-1">{{ t("profiles.subtitle") }}</p>
       </div>
       <NSpace>
         <NButton secondary @click="startImport">
@@ -285,82 +292,86 @@ onMounted(async () => {
     </div>
 
     <!-- 预设列表 -->
-    <div v-if="profiles.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3 auto-rows-fr">
-      <NCard
-        v-for="p in profiles"
-        :key="p.id"
-        size="small"
-        class="hover:shadow-md transition-shadow"
-      >
-        <div class="flex items-start">
-          <div class="flex-1 min-w-0">
-            <!-- 名称 + 标签 -->
-            <div class="flex items-center gap-2 flex-wrap">
-              <NIcon :size="16" :color="p.builtin ? '#10b981' : '#6366f1'"><FolderHeart /></NIcon>
-              <span class="font-semibold text-gray-800 truncate">{{ p.name }}</span>
-              <NTag v-if="p.builtin" type="success" size="tiny" :bordered="false">
-                {{ t("profiles.builtin") }}
-              </NTag>
-              <NTag v-if="p.name === activeProfileName" type="info" size="tiny" :bordered="false">
-                {{ t("profiles.active") }}
-              </NTag>
-            </div>
+    <Transition name="preset-fade" mode="out-in">
+      <div :key="presetAppliedTick">
+        <div v-if="profiles.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3 auto-rows-fr">
+          <NCard
+            v-for="p in profiles"
+            :key="p.id"
+            size="small"
+            class="hover:shadow-md transition-shadow"
+          >
+            <div class="flex items-start">
+              <div class="flex-1 min-w-0">
+                <!-- 名称 + 标签 -->
+                <div class="flex items-center gap-2 flex-wrap">
+                  <NIcon :size="16" :color="p.builtin ? '#10b981' : '#6366f1'"><FolderHeart /></NIcon>
+                  <span class="font-semibold text-c-primary truncate">{{ p.name }}</span>
+                  <NTag v-if="p.builtin" type="success" size="tiny" :bordered="false">
+                    {{ t("profiles.builtin") }}
+                  </NTag>
+                  <NTag v-if="p.name === activePresetName" type="info" size="tiny" :bordered="false">
+                    {{ t("profiles.active") }}
+                  </NTag>
+                </div>
 
-            <!-- 描述区域（固定高度，无描述时显示占位文字） -->
-            <div style="height: 2.25rem" class="mt-1 mb-0.5">
-              <NPopover v-if="p.description" trigger="hover" placement="top" :width="320">
-                <template #trigger>
-                  <p class="text-xs text-gray-400 line-clamp-2 cursor-help">{{ p.description }}</p>
-                </template>
-                <div class="text-xs leading-relaxed">{{ p.description }}</div>
-              </NPopover>
-              <p v-else class="text-xs text-gray-300 leading-5">{{ t("profiles.noDescription") }}</p>
-            </div>
+                <!-- 描述区域（固定高度，无描述时显示占位文字） -->
+                <div style="height: 2.25rem" class="mt-1 mb-0.5">
+                  <NPopover v-if="p.description" trigger="hover" placement="top" :width="320">
+                    <template #trigger>
+                      <p class="text-xs text-c-muted line-clamp-2 cursor-help">{{ p.description }}</p>
+                    </template>
+                    <div class="text-xs leading-relaxed">{{ p.description }}</div>
+                  </NPopover>
+                  <p v-else class="text-xs text-c-muted leading-5">{{ t("profiles.noDescription") }}</p>
+                </div>
 
-            <!-- Mod 数量 -->
-            <div class="h-6 flex items-center">
-              <NTag size="small" :bordered="false">
-                {{ t("profiles.modCount", { n: p.modIds.length }) }}
-              </NTag>
-            </div>
-          </div>
+                <!-- Mod 数量 -->
+                <div class="h-6 flex items-center">
+                  <NTag size="small" :bordered="false">
+                    {{ t("profiles.modCount", { n: p.modIds.length }) }}
+                  </NTag>
+                </div>
+              </div>
 
-          <!-- 右侧操作按钮 -->
-          <NSpace :size="4" class="ml-3 flex-shrink-0">
-            <NButton text size="tiny" @click="() => handleApply(p)">
-              <template #icon><NIcon :size="14"><Play /></NIcon></template>
-            </NButton>
-            <NButton v-if="!p.builtin" text size="tiny" @click="() => handleExport(p)">
-              <template #icon><NIcon :size="14"><Download /></NIcon></template>
-            </NButton>
-            <NButton v-if="!p.builtin" text size="tiny" @click="() => openEdit(p)">
-              <template #icon><NIcon :size="14"><Edit3 /></NIcon></template>
-            </NButton>
-            <NPopconfirm v-if="!p.builtin && p.name !== activeProfileName" @positive-click="() => handleDelete(p)">
-              <template #trigger>
-                <NButton text size="tiny" type="error">
-                  <template #icon><NIcon :size="14"><Trash2 /></NIcon></template>
+              <!-- 右侧操作按钮 -->
+              <NSpace :size="4" class="ml-3 flex-shrink-0">
+                <NButton text size="tiny" @click="() => handleApply(p)">
+                  <template #icon><NIcon :size="14"><Play /></NIcon></template>
                 </NButton>
-              </template>
-              <template v-if="p.name === activeProfileName">
-                {{ t("profiles.confirmDeleteActive", { name: p.name }) }}
-              </template>
-              <template v-else>
-                {{ t("profiles.confirmDelete", { name: p.name }) }}
-              </template>
-            </NPopconfirm>
-          </NSpace>
+                <NButton v-if="!p.builtin" text size="tiny" @click="() => handleExport(p)">
+                  <template #icon><NIcon :size="14"><Download /></NIcon></template>
+                </NButton>
+                <NButton v-if="!p.builtin" text size="tiny" @click="() => openEdit(p)">
+                  <template #icon><NIcon :size="14"><Edit3 /></NIcon></template>
+                </NButton>
+                <NPopconfirm v-if="!p.builtin && p.name !== activePresetName" @positive-click="() => handleDelete(p)">
+                  <template #trigger>
+                    <NButton text size="tiny" type="error">
+                      <template #icon><NIcon :size="14"><Trash2 /></NIcon></template>
+                    </NButton>
+                  </template>
+                  <template v-if="p.name === activePresetName">
+                    {{ t("profiles.confirmDeleteActive", { name: p.name }) }}
+                  </template>
+                  <template v-else>
+                    {{ t("profiles.confirmDelete", { name: p.name }) }}
+                  </template>
+                </NPopconfirm>
+              </NSpace>
+            </div>
+          </NCard>
         </div>
-      </NCard>
-    </div>
 
-    <NCard v-else size="small">
-      <div class="text-center py-12 text-gray-400">
-        <NIcon :size="48" class="c-gray-300 mb-3"><FolderHeart /></NIcon>
-        <p>{{ t("profiles.empty.noProfiles") }}</p>
-        <p class="text-sm mt-1">{{ t("profiles.empty.noProfilesHint") }}</p>
+        <NCard v-else size="small">
+          <div class="text-center py-12 text-c-muted">
+            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><FolderHeart /></NIcon>
+            <p>{{ t("profiles.empty.noProfiles") }}</p>
+            <p class="text-sm mt-1">{{ t("profiles.empty.noProfilesHint") }}</p>
+          </div>
+        </NCard>
       </div>
-    </NCard>
+    </Transition>
 
     <!-- 创建/编辑对话框 -->
     <NModal
@@ -374,11 +385,11 @@ onMounted(async () => {
         </template>
         <NSpace vertical :size="12">
           <div>
-            <label class="text-sm text-gray-600 mb-1 block">{{ t("profiles.form.name") }}</label>
+            <label class="text-sm text-c-secondary mb-1 block">{{ t("profiles.form.name") }}</label>
             <NInput v-model:value="formName" :placeholder="t('profiles.form.namePlaceholder')" />
           </div>
           <div>
-            <label class="text-sm text-gray-600 mb-1 block">{{ t("profiles.form.description") }}</label>
+            <label class="text-sm text-c-secondary mb-1 block">{{ t("profiles.form.description") }}</label>
             <NInput
               v-model:value="formDescription"
               type="textarea"
@@ -387,7 +398,7 @@ onMounted(async () => {
             />
           </div>
           <div>
-            <label class="text-sm text-gray-600 mb-1 flex items-center gap-2">
+            <label class="text-sm text-c-secondary mb-1 flex items-center gap-2">
               {{ t("profiles.form.modList") }}
               <NTag size="tiny" :bordered="false" :type="selectedModIds.length > 0 ? 'info' : 'default'">
                 {{ t("profiles.form.selectedCount", { n: selectedModIds.length }) }}
@@ -406,8 +417,8 @@ onMounted(async () => {
             </NInput>
 
             <!-- Mod 列表 -->
-            <div class="max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-2 space-y-1">
-              <div v-if="loadingMods" class="text-center py-4 text-xs text-gray-400">
+            <div class="max-h-60 overflow-y-auto border border-c-default rounded-lg p-2 space-y-1">
+              <div v-if="loadingMods" class="text-center py-4 text-xs text-c-muted">
                 {{ t("profiles.form.loadingMods") }}
               </div>
               <template v-else>
@@ -421,10 +432,10 @@ onMounted(async () => {
                 >
                   <span class="text-xs">
                     {{ mod.name }}
-                    <span v-if="mod.version" class="text-gray-400 font-mono ml-1">{{ mod.version }}</span>
+                    <span v-if="mod.version" class="text-c-muted font-mono ml-1">{{ mod.version }}</span>
                   </span>
                 </NCheckbox>
-                <div v-if="filteredModsForPicker.length === 0 && !loadingMods" class="text-center py-4 text-xs text-gray-400">
+                <div v-if="filteredModsForPicker.length === 0 && !loadingMods" class="text-center py-4 text-xs text-c-muted">
                   {{ t("profiles.form.noModsMatch") }}
                 </div>
               </template>
@@ -465,15 +476,15 @@ onMounted(async () => {
         <NSpace vertical :size="8">
           <div v-if="applyResult.enabledModIds.length > 0" class="flex items-center gap-2 text-sm">
             <NTag type="success" size="small" :bordered="false">+{{ applyResult.enabledModIds.length }}</NTag>
-            <span class="text-gray-600">{{ t("profiles.apply.enabled") }}</span>
+            <span class="text-c-secondary">{{ t("profiles.apply.enabled") }}</span>
           </div>
           <div v-if="applyResult.disabledModIds.length > 0" class="flex items-center gap-2 text-sm">
             <NTag type="default" size="small" :bordered="false">-{{ applyResult.disabledModIds.length }}</NTag>
-            <span class="text-gray-600">{{ t("profiles.apply.disabled") }}</span>
+            <span class="text-c-secondary">{{ t("profiles.apply.disabled") }}</span>
           </div>
           <div v-if="applyResult.missingModIds.length > 0" class="flex items-center gap-2 text-sm">
             <NTag type="warning" size="small" :bordered="false">!{{ applyResult.missingModIds.length }}</NTag>
-            <span class="text-gray-600">{{ t("profiles.apply.missing") }}</span>
+            <span class="text-c-secondary">{{ t("profiles.apply.missing") }}</span>
           </div>
         </NSpace>
         <template #footer>
@@ -498,7 +509,7 @@ onMounted(async () => {
         </template>
 
         <div class="mb-3">
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-c-secondary">
             {{ t("profiles.importDialog.summary", {
               n1: bundlePreview.manifest.mods.length,
               n2: bundlePreview.manifest.profile.modIds.length,
@@ -521,7 +532,7 @@ onMounted(async () => {
           >
             · {{ c.name }}: {{ c.reason }}
           </div>
-          <div class="mt-2 text-xs text-gray-500">
+          <div class="mt-2 text-xs text-c-secondary">
             {{ t("profiles.importDialog.conflictHint") }}
           </div>
         </div>
@@ -529,7 +540,7 @@ onMounted(async () => {
         <!-- 缺失提示 -->
         <div
           v-if="bundlePreview.missingIds.length > 0"
-          class="mb-3 text-xs text-gray-500"
+          class="mb-3 text-xs text-c-secondary"
         >
           {{ t("profiles.importDialog.missingHint", { n: bundlePreview.missingIds.length }) }}
         </div>

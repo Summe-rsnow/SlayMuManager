@@ -210,6 +210,9 @@
       "title": "Appearance",
       "language": "Language",
       "displayMode": "Display Mode",
+      "displayModeSystem": "System",
+      "displayModeLight": "Light",
+      "displayModeDark": "Dark",
       "themeColor": "Theme Color"
     },
     "backup": {

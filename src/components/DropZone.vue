@@ -104,8 +104,8 @@ function onDrop(e: DragEvent) {
     class="relative border-2 border-dashed rounded-lg transition-all duration-200"
     :class="{
       'border-green-400 bg-green-50 scale-[1.02] cursor-copy': isDragging && !busy,
-      'border-gray-200 bg-gray-50/50 hover:border-gray-300 hover:bg-gray-50 cursor-pointer': !isDragging && !busy,
-      'border-gray-100 bg-gray-50/30 cursor-not-allowed opacity-60': busy,
+      'border-c-default bg-c-secondary cursor-pointer': !isDragging && !busy,
+      'border-c-default bg-c-secondary cursor-not-allowed opacity-60': busy,
     }"
     @dragenter="onDragEnter"
     @dragleave="onDragLeave"
@@ -113,8 +113,7 @@ function onDrop(e: DragEvent) {
     @drop="onDrop"
   >
     <div
-      class="flex flex-col items-center justify-center py-6 gap-2"
-      :class="{ 'text-gray-300': busy, 'text-gray-400': !busy }"
+      class="flex flex-col items-center justify-center py-6 gap-2 text-c-muted"
     >
       <NIcon :size="28" :color="isDragging && !busy ? '#18a058' : undefined">
         <Upload />
@@ -122,7 +121,7 @@ function onDrop(e: DragEvent) {
       <p class="text-sm" :class="{ 'text-green-600 font-medium': isDragging && !busy }">
         {{ isDragging && !busy ? t("import.dropZoneDropHint") : t("import.dropZoneHint") }}
       </p>
-      <p class="text-xs text-gray-300">
+      <p class="text-xs text-c-muted">
         {{ t("import.dropZoneOrUseButton") }}
       </p>
     </div>

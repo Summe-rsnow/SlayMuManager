@@ -97,3 +97,39 @@ html, body {
 .text-primary-600-theme {
   color: var(--primary-600);
 }
+
+/* ============================================================
+   语义色辅助类 — 替代硬编码 UnoCSS 颜色类
+   ============================================================ */
+
+.text-c-primary {
+  color: var(--color-text-primary);
+}
+.text-c-secondary {
+  color: var(--color-text-secondary);
+}
+.text-c-muted {
+  color: var(--color-text-muted);
+}
+.bg-c-card {
+  background-color: var(--color-bg-card);
+}
+.bg-c-secondary {
+  background-color: var(--color-bg-secondary);
+}
+.border-c-default {
+  border-color: var(--color-border);
+}
+.ring-active {
+  box-shadow: 0 0 0 2.5px var(--color-text-primary);
+}
+
+/* 预设切换淡入淡出动画 */
+.preset-fade-enter-active,
+.preset-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.preset-fade-enter-from,
+.preset-fade-leave-to {
+  opacity: 0;
+}

@@ -259,7 +259,6 @@ function statusText(status: string) {
 <template>
   <NModal
     :show="show"
-    :mask-closable="false"
     @update:show="(v: boolean) => !v && handleClose()"
   >
     <NCard
@@ -305,13 +304,13 @@ function statusText(status: string) {
       <!-- === 阶段 2: 预览中=== -->
       <div v-else-if="stage === 'previewing'" class="flex flex-col items-center py-12 gap-4">
         <NSpin size="large" />
-        <p class="text-gray-500">{{ t("import.scanning") }}</p>
+        <p class="text-c-secondary">{{ t("import.scanning") }}</p>
       </div>
 
       <!-- === 阶段 3: 预览结果 === -->
       <template v-else-if="stage === 'ready' && preview">
         <div class="flex items-center justify-between mb-3">
-          <span class="text-sm text-gray-500">
+          <span class="text-sm text-c-secondary">
             {{ t("import.preview.foundMods", { ready: readyMods.length }) }}
             <template v-if="errorMods.length > 0">
               · {{ t("import.preview.errorCount", { count: errorMods.length }) }}
@@ -322,7 +321,7 @@ function statusText(status: string) {
           </NButton>
         </div>
 
-        <div class="max-h-80 overflow-auto border border-gray-100 rounded-lg">
+        <div class="max-h-80 overflow-auto border border-c-default rounded-lg">
           <!-- 有冲突提示 -->
           <div
             v-if="hasConflicts"
@@ -335,7 +334,7 @@ function statusText(status: string) {
           <div
             v-for="mod in preview.discoveredMods"
             :key="mod.modId"
-            class="border-b border-gray-50 last:border-b-0"
+            class="border-b border-c-default last:border-b-0"
           >
             <!-- Mod 行 -->
             <div
@@ -358,9 +357,9 @@ function statusText(status: string) {
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
                   <span class="font-medium text-sm truncate">{{ mod.name }}</span>
-                  <span v-if="mod.version" class="text-xs text-gray-400 font-mono">{{ mod.version }}</span>
+                  <span v-if="mod.version" class="text-xs text-c-muted font-mono">{{ mod.version }}</span>
                 </div>
-                <div v-if="mod.statusMessage" class="text-xs text-gray-400 mt-0.5">
+                <div v-if="mod.statusMessage" class="text-xs text-c-muted mt-0.5">
                   {{ mod.statusMessage }}
                 </div>
               </div>
@@ -375,7 +374,7 @@ function statusText(status: string) {
               v-if="mod.conflicts.length > 0 && selectedIds.has(mod.modId)"
               class="px-3 pb-3 ml-10"
             >
-              <div class="text-xs text-gray-500 mb-1">{{ t("import.conflict.details") }}</div>
+              <div class="text-xs text-c-secondary mb-1">{{ t("import.conflict.details") }}</div>
               <div v-for="c in mod.conflicts" :key="c" class="text-xs text-amber-600 mb-1">
                 · {{ c }}
               </div>
@@ -422,8 +421,8 @@ function statusText(status: string) {
           :processing="installProgress.status === 'installing'"
         />
         <div class="text-center">
-          <p class="text-gray-700 font-medium">{{ installProgress.name || t("import.progress.installing") }}</p>
-          <p v-if="installProgress.total > 0" class="text-xs text-gray-400 mt-1">
+          <p class="text-c-primary font-medium">{{ installProgress.name || t("import.progress.installing") }}</p>
+          <p v-if="installProgress.total > 0" class="text-xs text-c-muted mt-1">
             {{ installProgress.current }} / {{ installProgress.total }}
           </p>
         </div>

@@ -9,7 +9,8 @@ const { minimize, toggleMaximize, close } = useWindow()
 <template>
   <div
     data-tauri-drag-region
-    class="flex items-center justify-between h-10 bg-gray-50 border-b border-gray-100 select-none flex-shrink-0"
+    class="flex items-center justify-between h-10 select-none flex-shrink-0"
+    :style="{ backgroundColor: 'var(--color-titlebar-bg)', borderBottom: '1px solid var(--color-titlebar-border)' }"
   >
     <div class="flex items-center gap-2 px-4">
       <svg viewBox="0 0 128 128" class="w-4 h-4 flex-shrink-0">
@@ -22,12 +23,13 @@ const { minimize, toggleMaximize, close } = useWindow()
         <rect width="128" height="128" rx="28" fill="url(#titlelogo)"/>
         <text x="64" y="84" font-family="system-ui,sans-serif" font-size="58" font-weight="800" fill="#fff" text-anchor="middle">S</text>
       </svg>
-      <span class="text-sm font-semibold text-gray-700">SlayMuManager</span>
+      <span class="text-sm font-semibold text-c-primary">SlayMuManager</span>
     </div>
     <div class="flex h-full">
       <NButton
         text
-        class="h-full! w-10! rounded-none! c-gray-500 hover:c-gray-700 hover:bg-gray-200!"
+        class="h-full! w-10! rounded-none!"
+        :style="{ color: 'var(--color-text-muted)' }"
         @click="minimize"
       >
         <template #icon>
@@ -36,7 +38,8 @@ const { minimize, toggleMaximize, close } = useWindow()
       </NButton>
       <NButton
         text
-        class="h-full! w-10! rounded-none! c-gray-500 hover:c-gray-700 hover:bg-gray-200!"
+        class="h-full! w-10! rounded-none!"
+        :style="{ color: 'var(--color-text-muted)' }"
         @click="toggleMaximize"
       >
         <template #icon>
@@ -45,7 +48,8 @@ const { minimize, toggleMaximize, close } = useWindow()
       </NButton>
       <NButton
         text
-        class="h-full! w-10! rounded-none! c-gray-500 hover:c-white hover:bg-red-500!"
+        class="h-full! w-10! rounded-none! hover:bg-red-500!"
+        :style="{ color: 'var(--color-text-muted)' }"
         @click="close"
       >
         <template #icon>

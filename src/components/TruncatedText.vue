@@ -9,7 +9,7 @@ defineProps<{
 <template>
   <NPopover v-if="text" trigger="hover" placement="top" :width="320">
     <template #trigger>
-      <p class="text-xs text-gray-400 line-clamp-2 cursor-help">
+      <p class="text-xs text-c-muted line-clamp-2 cursor-help">
         {{ text }}
       </p>
     </template>

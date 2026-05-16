@@ -1160,11 +1160,13 @@ pub fn cleanup_backup_artifacts(state: State<AppState>) -> Result<(), String> {
 pub fn search_remote_mods(
     query: String,
     page: Option<u32>,
+    page_size: Option<u32>,
     sort_by: Option<String>,
 ) -> Result<RemoteModSearchResult, String> {
     discover_service::search_remote_mods(
         &query,
         page.unwrap_or(1),
+        page_size.unwrap_or(18),
         &sort_by.unwrap_or_else(|| "latest_added".to_string()),
     )
     .map_err(|e| e.to_string())

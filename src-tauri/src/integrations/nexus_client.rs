@@ -5,7 +5,7 @@ use serde::Deserialize;
 const NEXUS_GRAPHQL_URL: &str = "https://api.nexusmods.com/v2/graphql";
 const NEXUS_GAME_ID: &str = "8916";
 // NEXUS_GAME_DOMAIN = "slaythespire2" — 通过 game_slug 参数传入
-const PAGE_SIZE: u32 = 18;
+// PAGE_SIZE 通过命令参数传入，见 discover_service.rs
 
 /// 将前端 sortBy 映射为 GraphQL sort 字段
 fn graphql_sort_clause(sort_by: &str) -> &str {
@@ -22,11 +22,12 @@ pub fn search_mods(
     game_slug: &str,
     query: &str,
     page: u32,
+    page_size: u32,
     sort_by: &str,
     api_key: &str,
     proxy_url: Option<&str>,
 ) -> Result<RemoteModSearchResult, AppError> {
-    let offset = (page.max(1) - 1) * PAGE_SIZE;
+    let offset = (page.max(1) - 1) * page_size;
     let sort = graphql_sort_clause(sort_by);
 
     // 构建 GraphQL 过滤器
@@ -43,7 +44,7 @@ pub fn search_mods(
 
     let gql_query = format!(
         "{{ mods({}, sort: [{}], offset: {}, count: {}) {{ totalCount nodes {{ modId name summary author version pictureUrl thumbnailUrl thumbnailLargeUrl endorsements downloads }} }} }}",
-        filter, sort, offset, PAGE_SIZE
+        filter, sort, offset, page_size
     );
 
     let client = build_client(api_key, proxy_url)?;

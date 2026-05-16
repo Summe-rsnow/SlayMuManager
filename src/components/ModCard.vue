@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref, computed } from "vue"
 import { useI18n } from "vue-i18n"
 import {
   NTag, NButton, NIcon, NSwitch, NPopconfirm, NPopover, NCheckbox, NSpace, NInput,
@@ -33,25 +33,28 @@ function openNotePopover(modId: string) {
 function saveNote(modId: string) {
   setNote(modId, noteDraft.value)
 }
+
+// --- 动态卡片样式（暗色模式适配）---
+const cardStyle = computed(() => ({
+  backgroundColor: props.enabled ? "var(--color-bg-card)" : "var(--color-bg-secondary)",
+  borderColor: "var(--color-border)",
+  borderLeftColor: props.enabled ? "#22c55e" : "#d1d5db",
+}))
 </script>
 
 <template>
   <div
     class="group flex items-center justify-between p-3 rounded-lg border border-l-3 transition-shadow hover:shadow-sm"
-    :class="[
-      enabled
-        ? 'border-l-green-500 border-gray-100 bg-white'
-        : 'border-l-gray-300 border-gray-200 bg-gray-50/60',
-      { 'pointer-events-none opacity-60': busy },
-    ]"
+    :style="cardStyle"
+    :class="[{ 'pointer-events-none opacity-60': busy }]"
   >
     <div class="flex-1 min-w-0" style="position:relative;z-index:2">
       <!-- 名称 + 版本 + 标签 -->
       <div class="flex items-center gap-1.5 flex-wrap">
-        <span class="font-medium truncate max-w-[180px]" :class="enabled ? 'text-gray-800' : 'text-gray-600'">
+        <span class="font-medium truncate max-w-[180px] text-c-primary">
           {{ mod.name }}
         </span>
-        <span class="text-xs text-gray-400 font-mono truncate">{{ mod.version ?? "—" }}</span>
+        <span class="text-xs text-c-muted font-mono truncate">{{ mod.version ?? "—" }}</span>
         <NTag v-if="mod.affectsGameplay" type="warning" size="tiny" :bordered="false">
           {{ t("library.mod.affectsGameplay") }}
         </NTag>
@@ -69,12 +72,12 @@ function saveNote(modId: string) {
       </div>
 
       <!-- 作者 + 文件夹 -->
-      <div class="text-xs text-gray-400 mt-0.5">
+      <div class="text-xs text-c-muted mt-0.5">
         {{ mod.author ?? t("library.mod.unknownAuthor") }} · {{ mod.folderName }}
       </div>
 
       <!-- 备注内容（有备注时显示为淡色一行） -->
-      <div v-if="hasNote(mod.id)" class="mt-0.5 text-xs text-gray-400 truncate">
+      <div v-if="hasNote(mod.id)" class="mt-0.5 text-xs text-c-muted truncate">
         <NIcon :size="12" class="inline-block mr-0.5 align-middle"><StickyNote /></NIcon>
         <span class="align-middle">{{ getNote(mod.id) }}</span>
       </div>
@@ -90,7 +93,7 @@ function saveNote(modId: string) {
           </NButton>
         </template>
         <div class="w-52">
-          <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.selectTag") }}</div>
+          <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.selectTag") }}</div>
           <NSpace vertical :size="4">
             <NCheckbox
               v-for="t in PRESET_TAGS"
@@ -113,7 +116,7 @@ function saveNote(modId: string) {
           </NButton>
         </template>
         <div class="w-56">
-          <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.note") }}</div>
+          <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.note") }}</div>
           <NInput
             :value="noteDraft"
             type="textarea"

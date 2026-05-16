@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSpace, NInput, NButton, NSelect, NIcon, NInputNumber, NRadioGroup, NRadio, useMessage } from "naive-ui"
-import { FolderSearch, Key, Globe, ChevronDown, Sun, Moon, Palette } from "lucide-vue-next"
+import { FolderSearch, Key, Globe, ChevronDown } from "lucide-vue-next"
 import { setLocale } from "../i18n"
 import { displayMode, setDisplayMode, themeColorKey, setThemeColor, colorPalettes, type ThemeColorKey, type DisplayMode } from "../theme"
 import type { AppBootstrap } from "../types"
@@ -16,11 +16,11 @@ const languageOptions = computed(() => [
   { label: t("settings.language.en"), value: "en" },
 ])
 
-const displayModeOptions: { label: string; value: DisplayMode }[] = [
-  { label: "跟随系统", value: "system" },
-  { label: "日间模式", value: "light" },
-  { label: "夜间模式", value: "dark" },
-]
+const displayModeOptions = computed<{ label: string; value: DisplayMode }[]>(() => [
+  { label: t("settings.appearance.displayModeSystem"), value: "system" },
+  { label: t("settings.appearance.displayModeLight"), value: "light" },
+  { label: t("settings.appearance.displayModeDark"), value: "dark" },
+])
 
 const themeColorOptions: { label: string; value: ThemeColorKey }[] = [
   { label: "靛蓝", value: "indigo" as const },
@@ -306,18 +306,11 @@ onMounted(loadSettings)
           </div>
 
           <!-- 分隔线 -->
-          <div class="border-t border-gray-100 dark:border-gray-700"></div>
+          <div class="border-t border-c-default"></div>
 
           <!-- 显示模式 -->
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <NIcon :size="16" :color="displayMode === 'dark' ? '#818cf8' : '#f0a020'">
-                <Sun v-if="displayMode === 'light'" />
-                <Moon v-else-if="displayMode === 'dark'" />
-                <Sun v-else />
-              </NIcon>
-              <span class="text-sm">{{ t("settings.appearance.displayMode") }}</span>
-            </div>
+            <span class="text-sm">{{ t("settings.appearance.displayMode") }}</span>
             <NRadioGroup
               :value="displayMode"
               size="small"
@@ -332,22 +325,19 @@ onMounted(loadSettings)
           </div>
 
           <!-- 分隔线 -->
-          <div class="border-t border-gray-100 dark:border-gray-700"></div>
+          <div class="border-t border-c-default"></div>
 
           <!-- 主题色 -->
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <NIcon :size="16" :color="colorPalettes[themeColorKey].DEFAULT"><Palette /></NIcon>
-              <span class="text-sm">{{ t("settings.appearance.themeColor") }}</span>
-            </div>
+            <span class="text-sm">{{ t("settings.appearance.themeColor") }}</span>
             <div class="flex gap-1.5">
               <button
                 v-for="opt in themeColorOptions"
                 :key="opt.value"
                 :title="opt.label"
-                class="w-6 h-6 rounded-full border-2 transition-all cursor-pointer"
-                :class="themeColorKey === opt.value ? 'border-gray-800 scale-110' : 'border-transparent hover:scale-110'"
-                :style="{ backgroundColor: colorPalettes[opt.value].DEFAULT }"
+                class="w-6 h-6 rounded-full transition-all cursor-pointer"
+                :class="themeColorKey === opt.value ? 'scale-110 ring-active' : 'hover:scale-110'"
+                :style="[{ backgroundColor: colorPalettes[opt.value].DEFAULT }]"
                 @click="handleThemeColorChange(opt.value)"
               />
             </div>

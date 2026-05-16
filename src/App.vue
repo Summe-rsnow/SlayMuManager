@@ -62,16 +62,16 @@ const { minimize, toggleMaximize, close } = useWindow()
                   <text x="64" y="84" font-family="system-ui,sans-serif" font-size="58" font-weight="800" fill="#fff" text-anchor="middle">S</text>
                 </svg>
                 <span class="text-sm font-semibold" :style="{ color: 'var(--color-text-primary)' }">SlayMuManager</span>
-                <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">v1.2.0</span>
+                <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">v1.2.1</span>
               </div>
               <div class="flex items-center -mr-2 h-full">
-                <NButton text class="h-full! w-11! rounded-none! c-gray-500 hover:c-gray-700 hover:bg-gray-200!" @click="minimize">
+                <NButton text class="h-full! w-11! rounded-none!" :style="{ color: 'var(--color-text-muted)' }" @click="minimize">
                   <template #icon><NIcon :size="13"><Minus /></NIcon></template>
                 </NButton>
-                <NButton text class="h-full! w-11! rounded-none! c-gray-500 hover:c-gray-700 hover:bg-gray-200!" @click="toggleMaximize">
+                <NButton text class="h-full! w-11! rounded-none!" :style="{ color: 'var(--color-text-muted)' }" @click="toggleMaximize">
                   <template #icon><NIcon :size="11"><Square /></NIcon></template>
                 </NButton>
-                <NButton text class="h-full! w-11! rounded-none! c-gray-500 hover:c-white hover:bg-red-500!" @click="close">
+                <NButton text class="h-full! w-11! rounded-none! hover:bg-red-500!" :style="{ color: 'var(--color-text-muted)' }" @click="close">
                   <template #icon><NIcon :size="14"><X /></NIcon></template>
                 </NButton>
               </div>

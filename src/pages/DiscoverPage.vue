@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core"
 import {
   NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, useMessage,
 } from "naive-ui"
-import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown } from "lucide-vue-next"
+import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown, List } from "lucide-vue-next"
 import type { RemoteMod, RemoteModSearchResult, AppBootstrap } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import TruncatedText from "../components/TruncatedText.vue"
@@ -22,13 +22,21 @@ const sortOptions = computed(() => [
   { label: t("discover.sort.downloads"), value: "downloads" },
 ])
 
+// --- 每页条数选项 ---
+const pageSizeOptions = [
+  { label: "12", value: 12 },
+  { label: "18", value: 18 },
+  { label: "30", value: 30 },
+  { label: "60", value: 60 },
+]
+
 // --- 状态 ---
 const query = ref("")
 const sortBy = ref("latest_added")
 const results = ref<RemoteMod[]>([])
 const totalCount = ref(0)
 const page = ref(1)
-const pageSize = 18
+const pageSize = ref(12)
 const loading = ref(false)
 const initialLoading = ref(true)
 const searched = ref(false)
@@ -40,7 +48,6 @@ function onImgError(modId: string) {
 
 // --- 初始加载（空搜索浏览最新 Mod） ---
 onMounted(async () => {
-  // 检测是否配置了 API Key
   try {
     const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
     hasApiKey.value = !!bootstrap.nexusApiKey
@@ -56,6 +63,7 @@ async function doSearch(resetPage = true) {
     const res = await invoke<RemoteModSearchResult>("search_remote_mods", {
       query: query.value.trim(),
       page: page.value,
+      pageSize: pageSize.value,
       sortBy: sortBy.value,
     })
     if (!isActive.value) return
@@ -83,8 +91,13 @@ function onPageChange(p: number) {
   doSearch(false)
 }
 
+function onPageSizeChange(val: number) {
+  pageSize.value = val
+  doSearch(true) // resetPage = true
+}
+
 const jumpPage = ref<number | null>(null)
-const totalPages = computed(() => Math.ceil(totalCount.value / pageSize))
+const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
 
 function jumpToPage() {
   const p = jumpPage.value
@@ -106,8 +119,8 @@ function formatCount(n: number): string {
 <template>
   <div class="flex flex-col h-full">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">{{ t("discover.title") }}</h1>
-      <p class="text-sm text-gray-500 mt-1">{{ t("discover.subtitle") }}</p>
+      <h1 class="text-2xl font-bold" :style="{ color: 'var(--color-text-primary)' }">{{ t("discover.title") }}</h1>
+      <p class="text-sm mt-1" :style="{ color: 'var(--color-text-secondary)' }">{{ t("discover.subtitle") }}</p>
     </div>
 
     <!-- 搜索栏 + 排序 -->
@@ -138,38 +151,51 @@ function formatCount(n: number): string {
     <div class="flex-1">
 
     <!-- 初始加载骨架屏 -->
-    <div v-if="initialLoading" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-      <NCard v-for="i in 18" :key="i" size="small">
-        <div class="flex items-start gap-3 animate-pulse">
-          <div class="w-16 h-16 rounded-lg bg-gray-200 flex-shrink-0" />
-          <div class="flex-1 space-y-2">
-            <div class="h-4 bg-gray-200 rounded w-2/3" />
-            <div class="h-3 bg-gray-100 rounded w-full" />
-            <div class="h-3 bg-gray-100 rounded w-1/2" />
+    <div v-if="initialLoading" class="grid grid-cols-3 gap-4">
+      <NCard v-for="i in pageSize" :key="i" :style="{ minHeight: '150px' }">
+        <div class="flex gap-4 h-full animate-pulse">
+          <div class="w-28 h-28 rounded-lg flex-shrink-0" :style="{ backgroundColor: 'var(--color-bg-secondary)' }" />
+          <div class="flex-1 flex flex-col">
+            <div class="h-5 w-2/3 rounded" :style="{ backgroundColor: 'var(--color-bg-secondary)' }" />
+            <div class="flex-1 flex flex-col justify-end mt-2">
+              <div class="h-4 rounded w-full" :style="{ backgroundColor: 'var(--color-bg-secondary)' }" />
+              <div class="h-4 rounded w-3/4 mt-1" :style="{ backgroundColor: 'var(--color-bg-secondary)' }" />
+            </div>
           </div>
-          <div class="w-14 h-6 bg-gray-100 rounded flex-shrink-0" />
         </div>
       </NCard>
     </div>
 
     <!-- 结果列表 -->
     <div v-else-if="results.length > 0">
-      <div class="text-sm text-gray-400 mb-3">
-        {{ t("discover.resultCount", { total: totalCount }) }}
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm" :style="{ color: 'var(--color-text-muted)' }">
+          {{ t("discover.resultCount", { total: totalCount }) }}
+        </span>
+        <div class="flex items-center gap-2">
+          <NIcon :size="14" :style="{ color: 'var(--color-text-muted)' }"><List /></NIcon>
+          <NSelect
+            :value="pageSize"
+            :options="pageSizeOptions"
+            style="width: 90px"
+            size="tiny"
+            @update:value="onPageSizeChange"
+          />
+        </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-6">
+      <div class="grid grid-cols-3 gap-4 mb-6">
         <NCard
           v-for="mod in results"
           :key="mod.remoteId"
-          size="small"
           class="hover:shadow-md transition-shadow"
+          :style="{ minHeight: '150px' }"
         >
-          <div class="flex items-start gap-3">
-            <!-- 缩略图 -->
+          <div class="flex gap-4 h-full">
+            <!-- 左侧：缩略图 -->
             <div
               v-if="mod.pictureUrl"
-              class="w-16 h-16 rounded-lg flex-shrink-0 overflow-hidden bg-gray-100"
+              class="w-28 h-28 rounded-lg flex-shrink-0 overflow-hidden" :style="{ backgroundColor: 'var(--color-bg-secondary)' }"
             >
               <img
                 v-show="!imageLoadFailed[mod.remoteId]"
@@ -184,74 +210,80 @@ function formatCount(n: number): string {
                 v-show="imageLoadFailed[mod.remoteId]"
                 class="w-full h-full flex items-center justify-center"
               >
-                <NIcon :size="24" color="#9ca3af"><PackageOpen /></NIcon>
+                <NIcon :size="32" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
               </div>
             </div>
             <div
               v-else
-              class="w-16 h-16 rounded-lg flex-shrink-0 bg-gray-100 flex items-center justify-center"
+              class="w-28 h-28 rounded-lg flex-shrink-0 flex items-center justify-center"
+              :style="{ backgroundColor: 'var(--color-bg-secondary)' }"
             >
-              <NIcon :size="24" color="#9ca3af"><PackageOpen /></NIcon>
+              <NIcon :size="32" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
             </div>
 
-            <!-- 信息 -->
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="font-semibold text-gray-800 truncate">{{ mod.name }}</span>
-                <span v-if="mod.latestVersion" class="text-xs text-gray-400 font-mono">
-                  v{{ mod.latestVersion }}
-                </span>
+            <!-- 右侧：上下两行 -->
+            <div class="flex-1 flex flex-col min-w-0">
+              <!-- 上行：标题 + 版本号 + 跳转按钮 -->
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  <span class="font-semibold text-base truncate" :style="{ color: 'var(--color-text-primary)' }">{{ mod.name }}</span>
+                  <span v-if="mod.latestVersion" class="text-xs font-mono flex-shrink-0" :style="{ color: 'var(--color-text-muted)' }">
+                    v{{ mod.latestVersion }}
+                  </span>
+                </div>
+                <NButton size="small" secondary class="flex-shrink-0" @click="openModPage(mod.detailUrl)">
+                  <template #icon><NIcon :size="13"><ExternalLink /></NIcon></template>
+                  {{ t("discover.details") }}
+                </NButton>
               </div>
-              <TruncatedText :text="mod.summary" />
-              <div class="flex items-center gap-3 text-xs text-gray-400">
-                <span>{{ mod.author ?? t("discover.unknownAuthor") }}</span>
-                <span class="flex items-center gap-1">
-                  <NIcon :size="12"><ThumbsUp /></NIcon>
-                  {{ formatCount(mod.endorsementCount) }}
-                </span>
-                <span class="flex items-center gap-1">
-                  <NIcon :size="12"><ArrowDown /></NIcon>
-                  {{ formatCount(mod.downloadCount) }}
-                </span>
+
+              <!-- 下行：说明 + 统计 -->
+              <div class="flex-1 flex flex-col justify-between min-h-0 mt-2">
+                <TruncatedText :text="mod.summary" />
+                <div class="flex items-center gap-3 text-xs pt-2" :style="{ color: 'var(--color-text-muted)' }">
+                  <span>{{ mod.author ?? t("discover.unknownAuthor") }}</span>
+                  <span class="flex items-center gap-1">
+                    <NIcon :size="13"><ThumbsUp /></NIcon>
+                    {{ formatCount(mod.endorsementCount) }}
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <NIcon :size="13"><ArrowDown /></NIcon>
+                    {{ formatCount(mod.downloadCount) }}
+                  </span>
+                </div>
               </div>
             </div>
-
-            <!-- 操作 -->
-            <NButton size="tiny" secondary @click="openModPage(mod.detailUrl)">
-              <template #icon><NIcon :size="12"><ExternalLink /></NIcon></template>
-              {{ t("discover.details") }}
-            </NButton>
           </div>
         </NCard>
       </div>
     </div>
 
     <NCard v-else-if="searched && !loading" size="small">
-      <div class="text-center py-12 text-gray-400">
-        <NIcon :size="48" class="c-gray-300 mb-3"><Search /></NIcon>
+      <div class="text-center py-12" :style="{ color: 'var(--color-text-muted)' }">
+        <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Search /></NIcon>
         <p>{{ t("discover.empty.notFound") }}</p>
         <p v-if="!hasApiKey" class="text-sm mt-2">{{ t("discover.empty.needsApiKey") }}</p>
       </div>
     </NCard>
 
     <NCard v-else size="small">
-      <div class="text-center py-12 text-gray-400">
-        <NIcon :size="48" class="c-gray-300 mb-3"><PackageOpen /></NIcon>
+      <div class="text-center py-12" :style="{ color: 'var(--color-text-muted)' }">
+        <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
         <p>{{ t("discover.empty.startSearch") }}</p>
         <p v-if="!hasApiKey" class="text-sm mt-1">{{ t("discover.empty.needsApiKey") }}</p>
       </div>
     </NCard>
     </div>
 
-    <!-- 分页 - 固定底部 -->
-    <div v-if="!initialLoading && results.length > 0 && totalCount > pageSize" class="flex justify-center items-center gap-3 pt-4 pb-2 sticky bottom-0 bg-white border-t border-gray-100 z-10">
+    <!-- 分页 + 每页条数 -->
+    <div v-if="!initialLoading && results.length > 0 && totalCount > pageSize" class="flex justify-center items-center gap-3 pt-4 pb-2 sticky bottom-0 z-10" :style="{ backgroundColor: 'var(--color-bg-primary)', borderTop: '1px solid var(--color-border)' }">
         <NPagination
           :page="page"
           :page-size="pageSize"
           :item-count="totalCount"
           @update:page="onPageChange"
         />
-        <span class="text-xs text-gray-400">{{ t("discover.jumpTo") }}</span>
+        <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("discover.jumpTo") }}</span>
         <NInputNumber
           v-model:value="jumpPage"
           size="tiny"

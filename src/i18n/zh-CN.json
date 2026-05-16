@@ -210,6 +210,9 @@
       "title": "外观",
       "language": "语言",
       "displayMode": "显示模式",
+      "displayModeSystem": "跟随系统",
+      "displayModeLight": "日间模式",
+      "displayModeDark": "夜间模式",
       "themeColor": "主题色"
     },
     "backup": {

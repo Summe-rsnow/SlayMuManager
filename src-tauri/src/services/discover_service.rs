@@ -9,6 +9,7 @@ const DEFAULT_GAME_SLUG: &str = "slaythespire2";
 pub fn search_remote_mods(
     query: &str,
     page: u32,
+    page_size: u32,
     sort_by: &str,
 ) -> Result<RemoteModSearchResult, AppError> {
     let settings = settings_repo::load_settings().unwrap_or_default();
@@ -20,6 +21,7 @@ pub fn search_remote_mods(
         DEFAULT_GAME_SLUG,
         query,
         page.max(1),
+        page_size.max(1).min(100),
         sort_by,
         &api_key,
         settings.proxy_url.as_deref(),

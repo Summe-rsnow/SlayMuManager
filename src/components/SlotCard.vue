@@ -25,11 +25,11 @@ function kindLabel(kind: string): string {
 <template>
   <div
     :class="slot.hasData
-      ? 'p-3 rounded-xl border border-gray-100 bg-gray-50'
-      : 'p-2 rounded-xl border border-dashed border-gray-200 bg-gray-50/70'"
+      ? 'p-3 rounded-xl border border-c-default bg-c-secondary'
+      : 'p-2 rounded-xl border border-dashed border-c-default bg-c-secondary'"
   >
     <div :class="slot.hasData ? 'flex items-center justify-between mb-2' : 'flex items-center justify-between'">
-      <span class="font-medium text-sm text-gray-700">
+      <span class="font-medium text-sm text-c-primary">
         {{ t("saves.slotIndex", { i: slot.slotIndex }) }}
       </span>
       <NSpace :size="4">
@@ -46,7 +46,7 @@ function kindLabel(kind: string): string {
       </NSpace>
     </div>
 
-    <div v-if="slot.hasData" class="text-xs text-gray-400 mb-2">
+    <div v-if="slot.hasData" class="text-xs text-c-muted mb-2">
       <NIcon :size="12"><Clock /></NIcon>
       {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString(currentLocale) : t("common.unknown") }}
     </div>
@@ -75,7 +75,7 @@ function kindLabel(kind: string): string {
             <NIcon :size="16" color="#d03050"><ShieldAlert /></NIcon>
             <span class="font-medium">{{ t("saves.confirmDeleteSlotTitle") }}</span>
           </div>
-          <p class="text-xs text-gray-500">
+          <p class="text-xs text-c-secondary">
             {{ t("saves.confirmDeleteSlotDesc", { kind: kindLabel(slot.kind), i: slot.slotIndex }) }}
           </p>
           <p class="text-xs text-amber-600 mt-1">
