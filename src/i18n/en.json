@@ -256,6 +256,7 @@
     },
     "unknown": "Unknown",
     "backup": "Backup",
+    "allHistoryBackups": "All History",
     "historyBackups": "History",
     "deleteSlot": "Delete Save",
     "confirmDeleteSlotTitle": "Confirm Delete Save",

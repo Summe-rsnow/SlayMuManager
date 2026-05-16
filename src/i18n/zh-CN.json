@@ -256,6 +256,7 @@
     },
     "unknown": "未知",
     "backup": "备份",
+    "allHistoryBackups": "全部历史备份",
     "historyBackups": "历史备份",
     "deleteSlot": "删除存档",
     "confirmDeleteSlotTitle": "确认删除存档",

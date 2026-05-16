@@ -124,15 +124,12 @@ async function doTransfer() {
   }
 }
 
-// --- 备份 ---
-async function openBackups(slot: SaveSlot) {
+// --- 全部历史备份（全局入口）---
+async function openAllBackups() {
   loading.value = true
   try {
-    backups.value = await invoke<SaveBackupEntry[]>("list_save_backups", {
-      steamUserId: slot.steamUserId,
-      kind: slot.kind,
-      slotIndex: slot.slotIndex,
-    })
+    // 不带过滤参数 → 加载全部槽位的全部备份
+    backups.value = await invoke<SaveBackupEntry[]>("list_save_backups", {})
     showBackupsDialog.value = true
   } catch (e: any) {
     message.error(t("saves.error.loadBackupsFailed") + ": " + e)
@@ -354,6 +351,10 @@ onMounted(loadSlots)
           <template #icon><NIcon :size="16"><ArrowRightLeft /></NIcon></template>
           {{ t("saves.sync") }}
         </NButton>
+        <NButton secondary @click="openAllBackups">
+          <template #icon><NIcon :size="16"><History /></NIcon></template>
+          {{ t("saves.allHistoryBackups") }}
+        </NButton>
       </NSpace>
     </div>
 
@@ -413,10 +414,6 @@ onMounted(loadSlots)
               <NSpace :size="4">
                 <NButton size="tiny" secondary @click="createBackup(slot)">
                   {{ t("saves.backup") }}
-                </NButton>
-                <NButton size="tiny" secondary @click="openBackups(slot)">
-                  <template #icon><NIcon :size="12"><History /></NIcon></template>
-                  {{ t("saves.historyBackups") }}
                 </NButton>
                 <NButton
                   v-for="ts in moddedSlots"
@@ -503,10 +500,6 @@ onMounted(loadSlots)
               <NSpace :size="4">
                 <NButton size="tiny" secondary @click="createBackup(slot)">
                   {{ t("saves.backup") }}
-                </NButton>
-                <NButton size="tiny" secondary @click="openBackups(slot)">
-                  <template #icon><NIcon :size="12"><History /></NIcon></template>
-                  {{ t("saves.historyBackups") }}
                 </NButton>
                 <NButton
                   v-for="vs in vanillaSlots"
@@ -726,7 +719,7 @@ onMounted(loadSlots)
     >
       <NCard style="width: 560px; max-height: 75vh" :bordered="false" role="dialog">
         <template #header>
-          <span class="text-lg font-semibold">{{ t("saves.backups.title") }}</span>
+          <span class="text-lg font-semibold">{{ t("saves.allHistoryBackups") }}</span>
         </template>
 
         <div v-if="backups.length === 0" class="text-center py-8 text-gray-400">
