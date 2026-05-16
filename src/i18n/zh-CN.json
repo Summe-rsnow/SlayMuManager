@@ -267,7 +267,7 @@
     "confirmDeleteSlotTitle": "确认删除存档",
     "confirmDeleteSlotDesc": "确定要删除 {kind} 槽位 {i} 的所有存档文件？",
     "confirmDeleteSlotNote": "删除前会自动创建备份，可在历史备份中找回",
-    "currentRun": "当前局",
+    "currentRun": "正在对局",
     "kind": {
       "vanilla": "原版",
       "modded": "模组版"

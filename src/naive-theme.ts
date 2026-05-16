@@ -9,7 +9,7 @@ export const themeOverrides: GlobalThemeOverrides = {
     primaryColorSuppl: "#818cf8",
     borderRadius: "8px",
     fontSize: "14px",
-    fontFamily: `"Inter", "PingFang SC", "Microsoft YaHei", sans-serif`,
+    fontFamily: `"OPPO Sans", "PingFang SC", "Microsoft YaHei", sans-serif`,
   },
   Layout: {
     siderBorderColor: "transparent",

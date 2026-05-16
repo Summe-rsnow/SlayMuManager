@@ -1,3 +1,16 @@
+/* OPPO Sans 字体 */
+@font-face {
+  font-family: "OPPO Sans";
+  src: url("./fonts/OPPOSans.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+html, body {
+  font-family: "OPPO Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
 /* 全局隐藏滚动条（保持滚动功能） */
 * {
   scrollbar-width: none;
