@@ -858,6 +858,82 @@ pub fn delete_save_backup(
 }
 
 #[tauri::command]
+pub fn restore_save_backup_to_slot(
+    backup_id: String,
+    target_steam_user_id: String,
+    target_kind: String, // "vanilla" | "modded"
+    target_slot_index: u32,
+    state: State<AppState>,
+) -> Result<(), String> {
+    let settings = state.settings.read().unwrap();
+    let game_root = settings
+        .game_root_dir
+        .as_ref()
+        .ok_or("游戏目录未设置")?;
+
+    let kind = match target_kind.as_str() {
+        "modded" => SaveKind::Modded,
+        _ => SaveKind::Vanilla,
+    };
+
+    save_service::restore_save_backup_to_slot(
+        Path::new(game_root),
+        &backup_id,
+        &target_steam_user_id,
+        &kind,
+        target_slot_index,
+    )
+    .map_err(|e| e.to_string())?;
+
+    let mut activity = state.recent_activity.write().unwrap();
+    activity.push(ActivityLogEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        category: "save".to_string(),
+        title: format!(
+            "恢复备份 → {} {} 槽位 {}",
+            target_steam_user_id, target_kind, target_slot_index
+        ),
+        detail: Some(format!("备份 ID: {}", backup_id)),
+        created_at: chrono::Utc::now().to_rfc3339(),
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_save_slot(
+    steam_user_id: String,
+    kind: String,
+    slot_index: u32,
+    state: State<AppState>,
+) -> Result<(), String> {
+    let settings = state.settings.read().unwrap();
+    let game_root = settings
+        .game_root_dir
+        .as_ref()
+        .ok_or("游戏目录未设置")?;
+
+    let save_kind = match kind.as_str() {
+        "modded" => SaveKind::Modded,
+        _ => SaveKind::Vanilla,
+    };
+
+    save_service::delete_save_slot(Path::new(game_root), &steam_user_id, &save_kind, slot_index)
+        .map_err(|e| e.to_string())?;
+
+    let mut activity = state.recent_activity.write().unwrap();
+    activity.push(ActivityLogEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        category: "save".to_string(),
+        title: format!("清空存档: {} {} 槽位 {}", kind, steam_user_id, slot_index),
+        detail: None,
+        created_at: chrono::Utc::now().to_rfc3339(),
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn toggle_save_auto_sync(enabled: bool, state: State<AppState>) -> Result<(), String> {
     let mut settings = state.settings.write().unwrap();
     settings.save_auto_sync = enabled;

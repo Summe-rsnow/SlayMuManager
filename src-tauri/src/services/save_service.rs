@@ -407,6 +407,82 @@ pub fn delete_save_backup(game_root: &Path, backup_id: &str) -> Result<(), AppEr
     Ok(())
 }
 
+/// 将备份恢复到用户指定的槽位（而非原始槽位）
+pub fn restore_save_backup_to_slot(
+    game_root: &Path,
+    backup_id: &str,
+    target_steam_user_id: &str,
+    target_kind: &SaveKind,
+    target_slot_index: u32,
+) -> Result<(), AppError> {
+    let backups = list_save_backups(game_root, None, None, None);
+    let entry = backups
+        .iter()
+        .find(|e| e.id == backup_id)
+        .ok_or_else(|| AppError::Other(format!("备份不存在: {}", backup_id)))?;
+
+    let backup_dir = Path::new(&entry.backup_path);
+    if !backup_dir.exists() {
+        return Err(AppError::Other("备份目录不存在".to_string()));
+    }
+
+    let target_slot_dir = slot_path(game_root, target_steam_user_id, target_kind, target_slot_index);
+
+    // 覆盖前先备份当前数据
+    if target_slot_dir.exists() {
+        let _ = create_backup_internal(
+            game_root,
+            target_steam_user_id,
+            target_kind,
+            target_slot_index,
+            "恢复备份前自动备份",
+        );
+        std::fs::remove_dir_all(&target_slot_dir).map_err(AppError::Io)?;
+    }
+
+    if let Some(parent) = target_slot_dir.parent() {
+        std::fs::create_dir_all(parent).map_err(AppError::Io)?;
+    }
+
+    copy_dir_recursive(backup_dir, &target_slot_dir)?;
+    Ok(())
+}
+
+/// 清空存档槽位（删除前自动创建最终备份）
+pub fn delete_save_slot(
+    game_root: &Path,
+    steam_user_id: &str,
+    kind: &SaveKind,
+    slot_index: u32,
+) -> Result<(), AppError> {
+    let slot_dir = slot_path(game_root, steam_user_id, kind, slot_index);
+    if !slot_dir.exists() {
+        return Ok(()); // 已经为空，无需操作
+    }
+
+    // 删除前创建最终备份
+    let _ = create_backup_internal(
+        game_root,
+        steam_user_id,
+        kind,
+        slot_index,
+        "手动删除前自动备份",
+    );
+
+    // 清空 saves 目录下所有内容
+    for entry in std::fs::read_dir(&slot_dir).map_err(AppError::Io)? {
+        let entry = entry.map_err(AppError::Io)?;
+        let path = entry.path();
+        if path.is_dir() {
+            std::fs::remove_dir_all(&path).map_err(AppError::Io)?;
+        } else {
+            std::fs::remove_file(&path).map_err(AppError::Io)?;
+        }
+    }
+
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // 配对同步
 // ---------------------------------------------------------------------------

@@ -4,11 +4,12 @@ import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
   NCard, NButton, NTag, NIcon, NSpace, NModal, NPopconfirm, NSwitch,
-  NSelect, useMessage,
+  NSelect, NRadioGroup, NRadio, useMessage,
 } from "naive-ui"
 import {
   HardDrive, ArrowRightLeft, RefreshCw, Clock, Database,
   History, RotateCcw, Trash2, Upload, Download, Cloud, AlertTriangle,
+  ShieldAlert,
 } from "lucide-vue-next"
 import type {
   SaveSlot, SaveTransferPreview, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
@@ -30,6 +31,11 @@ const autoSync = ref(false)
 const syncPairs = ref<SaveSyncPair[]>([])
 const loading = ref(false)
 const steamUserId = ref("")
+
+// 备份恢复到指定槽位
+const showRestoreToSlotDialog = ref(false)
+const restoreToSlotBackup = ref<SaveBackupEntry | null>(null)
+const restoreToSlotTarget = ref<{ kind: string; slotIndex: number }>({ kind: "vanilla", slotIndex: 1 })
 
 // 云存档
 const cloudStatus = ref<CloudSaveStatus | null>(null)
@@ -67,6 +73,21 @@ async function loadSlots() {
     slots.value = []
   } finally {
     loading.value = false
+  }
+}
+
+// --- 删除存档 ---
+async function deleteSaveSlot(slot: SaveSlot) {
+  try {
+    await invoke("delete_save_slot", {
+      steamUserId: slot.steamUserId,
+      kind: slot.kind,
+      slotIndex: slot.slotIndex,
+    })
+    message.success(t("saves.success.slotDeleted", { i: slot.slotIndex }))
+    await loadSlots()
+  } catch (e: any) {
+    message.error(t("saves.error.deleteSlotFailed") + ": " + e)
   }
 }
 
@@ -134,10 +155,34 @@ async function createBackup(slot: SaveSlot) {
   }
 }
 
-async function restoreBackup(backup: SaveBackupEntry) {
+// 恢复到指定槽位
+function setRestoreTargetKind(v: string) {
+  restoreToSlotTarget.value.kind = v
+}
+function setRestoreTargetSlot(v: number) {
+  restoreToSlotTarget.value.slotIndex = v
+}
+
+function openRestoreToSlot(backup: SaveBackupEntry) {
+  restoreToSlotBackup.value = backup
+  restoreToSlotTarget.value = { kind: "vanilla", slotIndex: 1 }
+  showRestoreToSlotDialog.value = true
+}
+
+async function doRestoreToSlot() {
+  if (!restoreToSlotBackup.value) return
+  const b = restoreToSlotBackup.value
+  const target = restoreToSlotTarget.value
   try {
-    await invoke("restore_save_backup", { backupId: backup.id })
-    message.success(t("saves.success.backupRestored"))
+    await invoke("restore_save_backup_to_slot", {
+      backupId: b.id,
+      targetSteamUserId: steamUserId.value,
+      targetKind: target.kind,
+      targetSlotIndex: target.slotIndex,
+    })
+    message.success(t("saves.success.backupRestoredToSlot", { kind: kindLabel(target.kind), i: target.slotIndex }))
+    showRestoreToSlotDialog.value = false
+    showBackupsDialog.value = false
     await loadSlots()
   } catch (e: any) {
     message.error(t("saves.error.restoreFailed") + ": " + e)
@@ -148,7 +193,6 @@ async function deleteBackup(backup: SaveBackupEntry) {
   try {
     await invoke("delete_save_backup", { backupId: backup.id })
     message.success(t("saves.success.backupDeleted"))
-    // 刷新备份列表
     backups.value = backups.value.filter((b) => b.id !== backup.id)
   } catch (e: any) {
     message.error(t("saves.error.backupDeleteFailed") + ": " + e)
@@ -223,7 +267,7 @@ async function copyCloudSide(relPath: string, side: string) {
   try {
     await invoke("copy_cloud_save_diff_side", { relativePath: relPath, side })
     message.success(t("saves.success.copied"))
-    await openCloudDialog() // refresh
+    await openCloudDialog()
   } catch (e: any) {
     message.error(t("saves.error.copyFailed") + ": " + e)
   }
@@ -365,12 +409,14 @@ onMounted(loadSlots)
                 {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("common.unknown") }}
               </div>
 
-              <NSpace v-if="slot.hasData" :size="4">
+              <!-- 操作按钮行 -->
+              <NSpace :size="4">
                 <NButton size="tiny" secondary @click="createBackup(slot)">
                   {{ t("saves.backup") }}
                 </NButton>
                 <NButton size="tiny" secondary @click="openBackups(slot)">
                   <template #icon><NIcon :size="12"><History /></NIcon></template>
+                  {{ t("saves.historyBackups") }}
                 </NButton>
                 <NButton
                   v-for="ts in moddedSlots"
@@ -383,6 +429,32 @@ onMounted(loadSlots)
                   {{ t("saves.transferToModded", { i: ts.slotIndex }) }}
                 </NButton>
               </NSpace>
+
+              <!-- 删除存档（独立行，单独确认） -->
+              <div v-if="slot.hasData" class="mt-3 pt-2 border-t border-gray-100">
+                <NPopconfirm
+                  @positive-click="() => deleteSaveSlot(slot)"
+                >
+                  <template #trigger>
+                    <NButton size="tiny" type="error" text>
+                      <template #icon><NIcon :size="12"><Trash2 /></NIcon></template>
+                      {{ t("saves.deleteSlot") }}
+                    </NButton>
+                  </template>
+                  <div class="max-w-64">
+                    <div class="flex items-center gap-2 mb-1">
+                      <NIcon :size="16" color="#d03050"><ShieldAlert /></NIcon>
+                      <span class="font-medium">{{ t("saves.confirmDeleteSlotTitle") }}</span>
+                    </div>
+                    <p class="text-xs text-gray-500">
+                      {{ t("saves.confirmDeleteSlotDesc", { kind: kindLabel(slot.kind), i: slot.slotIndex }) }}
+                    </p>
+                    <p class="text-xs text-amber-600 mt-1">
+                      {{ t("saves.confirmDeleteSlotNote") }}
+                    </p>
+                  </div>
+                </NPopconfirm>
+              </div>
             </div>
           </NSpace>
         </NCard>
@@ -428,12 +500,13 @@ onMounted(loadSlots)
                 {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("common.unknown") }}
               </div>
 
-              <NSpace v-if="slot.hasData" :size="4">
+              <NSpace :size="4">
                 <NButton size="tiny" secondary @click="createBackup(slot)">
                   {{ t("saves.backup") }}
                 </NButton>
                 <NButton size="tiny" secondary @click="openBackups(slot)">
                   <template #icon><NIcon :size="12"><History /></NIcon></template>
+                  {{ t("saves.historyBackups") }}
                 </NButton>
                 <NButton
                   v-for="vs in vanillaSlots"
@@ -446,6 +519,31 @@ onMounted(loadSlots)
                   {{ t("saves.transferToVanilla", { i: vs.slotIndex }) }}
                 </NButton>
               </NSpace>
+
+              <div v-if="slot.hasData" class="mt-3 pt-2 border-t border-gray-100">
+                <NPopconfirm
+                  @positive-click="() => deleteSaveSlot(slot)"
+                >
+                  <template #trigger>
+                    <NButton size="tiny" type="error" text>
+                      <template #icon><NIcon :size="12"><Trash2 /></NIcon></template>
+                      {{ t("saves.deleteSlot") }}
+                    </NButton>
+                  </template>
+                  <div class="max-w-64">
+                    <div class="flex items-center gap-2 mb-1">
+                      <NIcon :size="16" color="#d03050"><ShieldAlert /></NIcon>
+                      <span class="font-medium">{{ t("saves.confirmDeleteSlotTitle") }}</span>
+                    </div>
+                    <p class="text-xs text-gray-500">
+                      {{ t("saves.confirmDeleteSlotDesc", { kind: kindLabel(slot.kind), i: slot.slotIndex }) }}
+                    </p>
+                    <p class="text-xs text-amber-600 mt-1">
+                      {{ t("saves.confirmDeleteSlotNote") }}
+                    </p>
+                  </div>
+                </NPopconfirm>
+              </div>
             </div>
           </NSpace>
         </NCard>
@@ -483,7 +581,6 @@ onMounted(loadSlots)
               : 'border-gray-100 bg-gray-50/50'"
           >
             <div class="flex items-center gap-4">
-              <!-- 左侧：原版 -->
               <div class="flex items-center gap-3 flex-1">
                 <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
                   <span class="text-sm font-bold text-blue-600">V{{ i }}</span>
@@ -494,7 +591,6 @@ onMounted(loadSlots)
                 </div>
               </div>
 
-              <!-- 中间：箭头 -->
               <div class="flex flex-col items-center flex-shrink-0">
                 <NIcon :size="22" :color="getPairedModdedSlot(i) !== null ? '#6366f1' : '#d1d5db'">
                   <ArrowRightLeft />
@@ -506,20 +602,15 @@ onMounted(loadSlots)
                 <span v-else class="text-[10px] text-gray-300 mt-0.5">{{ t("saves.pairSync.unpaired") }}</span>
               </div>
 
-              <!-- 右侧：模组版选择 -->
               <div class="flex items-center gap-3 flex-1 justify-end">
                 <div
                   class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  :class="getPairedModdedSlot(i) !== null
-                    ? 'bg-purple-100'
-                    : 'bg-gray-100'"
+                  :class="getPairedModdedSlot(i) !== null ? 'bg-purple-100' : 'bg-gray-100'"
                 >
                   <span
                     class="text-sm font-bold"
                     :class="getPairedModdedSlot(i) !== null ? 'text-purple-600' : 'text-gray-400'"
-                  >
-                    {{ getPairedModdedSlot(i) !== null ? `M${getPairedModdedSlot(i)}` : '?' }}
-                  </span>
+                  >{{ getPairedModdedSlot(i) !== null ? `M${getPairedModdedSlot(i)}` : '?' }}</span>
                 </div>
                 <div class="flex flex-col items-end">
                   <span class="text-xs text-gray-400">{{ t("saves.pairSync.moddedSlot") }}</span>
@@ -633,7 +724,7 @@ onMounted(loadSlots)
       :show="showBackupsDialog"
       @update:show="(v: boolean) => !v && (showBackupsDialog = false)"
     >
-      <NCard style="width: 520px; max-height: 70vh" :bordered="false" role="dialog">
+      <NCard style="width: 560px; max-height: 75vh" :bordered="false" role="dialog">
         <template #header>
           <span class="text-lg font-semibold">{{ t("saves.backups.title") }}</span>
         </template>
@@ -658,9 +749,10 @@ onMounted(loadSlots)
               </div>
             </div>
             <NSpace :size="4">
-              <NButton size="tiny" secondary @click="restoreBackup(b)">
+              <!-- 恢复到指定槽位 -->
+              <NButton size="tiny" secondary @click="openRestoreToSlot(b)">
                 <template #icon><NIcon :size="12"><RotateCcw /></NIcon></template>
-                {{ t("saves.backups.restore") }}
+                {{ t("saves.backups.restoreTo") }}
               </NButton>
               <NPopconfirm @positive-click="() => deleteBackup(b)">
                 <template #trigger>
@@ -673,6 +765,71 @@ onMounted(loadSlots)
             </NSpace>
           </div>
         </div>
+      </NCard>
+    </NModal>
+
+    <!-- 恢复到指定槽位对话框 -->
+    <NModal
+      :show="showRestoreToSlotDialog"
+      @update:show="(v: boolean) => !v && (showRestoreToSlotDialog = false)"
+    >
+      <NCard v-if="restoreToSlotBackup" style="width: 400px" :bordered="false" role="dialog">
+        <template #header>
+          <div class="flex items-center gap-2">
+            <NIcon :size="18" color="#6366f1"><RotateCcw /></NIcon>
+            <span class="text-lg font-semibold">{{ t("saves.backups.restoreToTitle") }}</span>
+          </div>
+        </template>
+
+        <div class="text-sm text-gray-600 mb-4">
+          <div class="mb-2">
+            <span class="text-gray-400">{{ t("saves.backups.restoreFrom") }}:</span>
+            <span class="ml-2 font-medium">
+              {{ new Date(restoreToSlotBackup.createdAt).toLocaleString("zh-CN") }}
+            </span>
+          </div>
+          <div class="text-xs text-gray-400 mb-3">
+            {{ restoreToSlotBackup.reason }} · {{ kindLabel(restoreToSlotBackup.kind) }}
+            {{ t("saves.slotIndex", { i: restoreToSlotBackup.slotIndex }) }}
+          </div>
+
+          <div class="p-3 rounded-lg bg-gray-50 border border-gray-100">
+            <div class="text-xs text-gray-500 mb-2">{{ t("saves.backups.restoreTarget") }}</div>
+            <NSpace vertical :size="8">
+              <NRadioGroup
+                :value="restoreToSlotTarget.kind"
+                @update:value="(v: string) => setRestoreTargetKind(v)"
+              >
+                <NSpace>
+                  <NRadio value="vanilla">{{ t("saves.kind.vanilla") }}</NRadio>
+                  <NRadio value="modded">{{ t("saves.kind.modded") }}</NRadio>
+                </NSpace>
+              </NRadioGroup>
+              <NSelect
+                :value="restoreToSlotTarget.slotIndex"
+                :options="[1, 2, 3].map(i => ({ label: t('saves.slotIndex', { i }), value: i }))"
+                size="small"
+                style="width: 120px"
+                :placeholder="t('saves.backups.chooseSlot')"
+                @update:value="(v: number) => setRestoreTargetSlot(v)"
+              />
+            </NSpace>
+          </div>
+
+          <div class="mt-3 p-2 rounded bg-amber-50 text-xs text-amber-700 flex items-start gap-1.5">
+            <NIcon :size="14"><AlertTriangle /></NIcon>
+            <span>{{ t("saves.backups.restoreConfirmHint") }}</span>
+          </div>
+        </div>
+
+        <template #footer>
+          <NSpace justify="end">
+            <NButton @click="showRestoreToSlotDialog = false">{{ t("common.cancel") }}</NButton>
+            <NButton type="primary" @click="doRestoreToSlot">
+              {{ t("saves.backups.confirmRestore") }}
+            </NButton>
+          </NSpace>
+        </template>
       </NCard>
     </NModal>
 
@@ -689,7 +846,6 @@ onMounted(loadSlots)
           </div>
         </template>
 
-        <!-- 状态概览 -->
         <div v-if="cloudStatus && cloudStatus.isAvailable" class="grid grid-cols-4 gap-2 mb-4">
           <div class="text-center p-2 rounded bg-gray-50">
             <div class="text-lg font-bold text-gray-700">{{ cloudStatus.localFileCount }}</div>
@@ -707,10 +863,7 @@ onMounted(loadSlots)
             class="text-center p-2 rounded"
             :class="cloudStatus.hasMismatch ? 'bg-amber-50' : 'bg-green-50'"
           >
-            <NIcon
-              :size="24"
-              :color="cloudStatus.hasMismatch ? '#f0a020' : '#18a058'"
-            >
+            <NIcon :size="24" :color="cloudStatus.hasMismatch ? '#f0a020' : '#18a058'">
               <AlertTriangle v-if="cloudStatus.hasMismatch" />
               <Cloud v-else />
             </NIcon>
@@ -720,7 +873,6 @@ onMounted(loadSlots)
           </div>
         </div>
 
-        <!-- 不可用诊断 -->
         <div
           v-if="cloudStatus && !cloudStatus.isAvailable"
           class="p-4 rounded-lg bg-amber-50 border border-amber-200 mb-4"
@@ -740,13 +892,11 @@ onMounted(loadSlots)
           </div>
         </div>
 
-        <!-- 操作按钮 -->
         <NSpace class="mb-4">
           <NButton size="small" secondary :disabled="!cloudStatus?.isAvailable" @click="ascendFull">{{ t("saves.cloud.ascend") }}</NButton>
           <NButton size="small" secondary :disabled="!cloudStatus?.isAvailable" @click="descendFull">{{ t("saves.cloud.descend") }}</NButton>
         </NSpace>
 
-        <!-- 差异列表 -->
         <div v-if="cloudDiffs.length > 0" class="max-h-64 overflow-auto border border-gray-100 rounded-lg">
           <div
             v-for="d in cloudDiffs"
