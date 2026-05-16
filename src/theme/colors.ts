@@ -21,7 +21,7 @@ export interface ColorPalette {
   900: string
 }
 
-export type ThemeColorKey = "indigo" | "blue" | "green" | "purple" | "rose"
+export type ThemeColorKey = "indigo" | "blue" | "green" | "purple" | "rose" | "orange" | "cyan"
 
 export const colorPalettes: Record<ThemeColorKey, ColorPalette> = {
   indigo: {
@@ -104,6 +104,38 @@ export const colorPalettes: Record<ThemeColorKey, ColorPalette> = {
     800: "#9f1239",
     900: "#881337",
   },
+  orange: {
+    DEFAULT: "#f97316",
+    hover: "#fb923c",
+    pressed: "#ea580c",
+    suppl: "#fb923c",
+    50: "#fff7ed",
+    100: "#ffedd5",
+    200: "#fed7aa",
+    300: "#fdba74",
+    400: "#fb923c",
+    500: "#f97316",
+    600: "#ea580c",
+    700: "#c2410c",
+    800: "#9a3412",
+    900: "#7c2d12",
+  },
+  cyan: {
+    DEFAULT: "#06b6d4",
+    hover: "#22d3ee",
+    pressed: "#0891b2",
+    suppl: "#22d3ee",
+    50: "#ecfeff",
+    100: "#cffafe",
+    200: "#a5f3fc",
+    300: "#67e8f9",
+    400: "#22d3ee",
+    500: "#06b6d4",
+    600: "#0891b2",
+    700: "#0e7490",
+    800: "#155e75",
+    900: "#164e63",
+  },
 }
 
 /** 所有主题色 key 的展示名称（由 i18n 提供） */
@@ -113,4 +145,6 @@ export const themeColorLabels: Record<ThemeColorKey, string> = {
   green: "绿色",
   purple: "紫色",
   rose: "玫红",
+  orange: "橙色",
+  cyan: "青色",
 }

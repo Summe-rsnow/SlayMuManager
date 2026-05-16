@@ -55,14 +55,14 @@ const { minimize, toggleMaximize, close } = useWindow()
                   <defs>
                     <linearGradient id="titlelogo" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stop-color="var(--primary-color)"/>
-                      <stop offset="100%" stop-color="#8b5cf6"/>
+                      <stop offset="100%" style="stop-color: var(--primary-600)"/>
                     </linearGradient>
                   </defs>
                   <rect width="128" height="128" rx="28" fill="url(#titlelogo)"/>
                   <text x="64" y="84" font-family="system-ui,sans-serif" font-size="58" font-weight="800" fill="#fff" text-anchor="middle">S</text>
                 </svg>
                 <span class="text-sm font-semibold" :style="{ color: 'var(--color-text-primary)' }">SlayMuManager</span>
-                <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">v1.2.1</span>
+                <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">v1.2.2</span>
               </div>
               <div class="flex items-center -mr-2 h-full">
                 <NButton text class="h-full! w-11! rounded-none!" :style="{ color: 'var(--color-text-muted)' }" @click="minimize">

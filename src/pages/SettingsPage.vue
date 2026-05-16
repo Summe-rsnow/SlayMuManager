@@ -28,6 +28,8 @@ const themeColorOptions: { label: string; value: ThemeColorKey }[] = [
   { label: "绿色", value: "green" as const },
   { label: "紫色", value: "purple" as const },
   { label: "玫红", value: "rose" as const },
+  { label: "橙色", value: "orange" as const },
+  { label: "青色", value: "cyan" as const },
 ]
 
 // --- 状态 ---
@@ -229,38 +231,38 @@ onMounted(loadSettings)
             <NButton secondary @click="saveNexusKey">{{ t("common.save") }}</NButton>
           </div>
           <div class="flex items-center gap-2">
-            <NButton text size="tiny" class="c-indigo-500!" @click="showNexusHelp = !showNexusHelp">
+            <NButton text size="tiny" class="text-primary-theme" @click="showNexusHelp = !showNexusHelp">
               {{ t("settings.nexus.howToGet") }}
               <NIcon :size="12" class="ml-0.5 transition-transform" :class="showNexusHelp ? '' : '-rotate-90'"><ChevronDown /></NIcon>
             </NButton>
           </div>
 
           <!-- 展开说明 -->
-          <div v-if="showNexusHelp" class="bg-indigo-50/70 border border-indigo-100 rounded-lg p-3 space-y-2 text-xs">
+          <div v-if="showNexusHelp" class="bg-primary-10-theme border border-primary-theme rounded-lg p-3 space-y-2 text-xs">
             <div class="flex items-start gap-2">
-              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">1</span>
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-theme text-white flex items-center justify-center text-[10px] font-bold">1</span>
               <span>{{ t("settings.nexus.help.step1") }} — </span>
-              <NButton text size="tiny" class="c-indigo-600! underline! p-0!" @click="openUrl('https://www.nexusmods.com/')">nexusmods.com</NButton>
+              <NButton text size="tiny" class="text-primary-600-theme! underline! p-0!" @click="openUrl('https://www.nexusmods.com/')">nexusmods.com</NButton>
             </div>
             <div class="flex items-start gap-2">
-              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">2</span>
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-theme text-white flex items-center justify-center text-[10px] font-bold">2</span>
               <span>{{ t("settings.nexus.help.step2") }}</span>
             </div>
             <div class="flex items-start gap-2">
-              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">3</span>
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-theme text-white flex items-center justify-center text-[10px] font-bold">3</span>
               <span>{{ t("settings.nexus.help.step3") }} — </span>
-              <NButton text size="tiny" class="c-indigo-600! underline! p-0!" @click="openUrl('https://www.nexusmods.com/users/myaccount?tab=api')">打开 →</NButton>
+              <NButton text size="tiny" class="text-primary-600-theme! underline! p-0!" @click="openUrl('https://www.nexusmods.com/users/myaccount?tab=api')">打开 →</NButton>
             </div>
             <div class="flex items-start gap-2">
-              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">4</span>
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-theme text-white flex items-center justify-center text-[10px] font-bold">4</span>
               <span>{{ t("settings.nexus.help.step4") }}</span>
             </div>
             <div class="flex items-start gap-2">
-              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">5</span>
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-theme text-white flex items-center justify-center text-[10px] font-bold">5</span>
               <span>{{ t("settings.nexus.help.step5") }}</span>
             </div>
             <div class="flex items-start gap-2">
-              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[10px] font-bold">6</span>
+              <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-theme text-white flex items-center justify-center text-[10px] font-bold">6</span>
               <span>{{ t("settings.nexus.help.step6") }}</span>
             </div>
           </div>
@@ -335,8 +337,8 @@ onMounted(loadSettings)
                 v-for="opt in themeColorOptions"
                 :key="opt.value"
                 :title="opt.label"
-                class="w-6 h-6 rounded-full transition-all cursor-pointer"
-                :class="themeColorKey === opt.value ? 'scale-110 ring-active' : 'hover:scale-110'"
+                class="color-btn"
+                :class="{ active: themeColorKey === opt.value }"
                 :style="[{ backgroundColor: colorPalettes[opt.value].DEFAULT }]"
                 @click="handleThemeColorChange(opt.value)"
               />
@@ -362,3 +364,23 @@ onMounted(loadSettings)
     </div>
   </div>
 </template>
+
+<style scoped>
+.color-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.color-btn:hover {
+  transform: scale(1.1);
+}
+.color-btn.active {
+  border-color: white;
+  box-shadow: 0 0 0 1.5px var(--primary-color);
+  transform: scale(1.15);
+}
+</style>

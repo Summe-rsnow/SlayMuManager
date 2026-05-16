@@ -16,8 +16,8 @@ const { minimize, toggleMaximize, close } = useWindow()
       <svg viewBox="0 0 128 128" class="w-4 h-4 flex-shrink-0">
         <defs>
           <linearGradient id="titlelogo" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#6366f1"/>
-            <stop offset="100%" stop-color="#8b5cf6"/>
+            <stop offset="0%" style="stop-color: var(--primary-color)"/>
+            <stop offset="100%" style="stop-color: var(--primary-600)"/>
           </linearGradient>
         </defs>
         <rect width="128" height="128" rx="28" fill="url(#titlelogo)"/>

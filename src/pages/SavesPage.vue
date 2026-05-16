@@ -448,7 +448,7 @@ onMounted(async () => {
         <template #header>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <NIcon :size="20" color="#6366f1"><ArrowRightLeft /></NIcon>
+              <NIcon :size="20" :color="'var(--primary-color)'"><ArrowRightLeft /></NIcon>
               <span class="text-lg font-semibold">{{ t("saves.pairSync.title") }}</span>
               <NTag :type="autoSync ? 'success' : 'default'" size="small" :bordered="false">
                 {{ autoSync ? t("saves.pairSync.autoSyncing") : t("saves.pairSync.manual") }}
@@ -471,13 +471,13 @@ onMounted(async () => {
             :key="`pair-${i}`"
             class="pair-card rounded-xl p-4 border-2 transition-all"
             :class="getPairedModdedSlot(i) !== null
-              ? 'border-indigo-200 bg-indigo-50/30'
+              ? 'border-primary-theme bg-primary-10-theme'
               : 'border-c-default bg-c-secondary'"
           >
             <div class="flex items-center gap-4">
               <div class="flex items-center gap-3 flex-1">
-                <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <span class="text-sm font-bold text-blue-600">V{{ i }}</span>
+                <div class="w-10 h-10 rounded-xl bg-primary-10-theme flex items-center justify-center flex-shrink-0">
+                  <span class="text-sm font-bold text-primary-600-theme">V{{ i }}</span>
                 </div>
                 <div class="flex flex-col">
                   <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("saves.pairSync.vanillaSlot") }}</span>
@@ -486,12 +486,12 @@ onMounted(async () => {
               </div>
 
               <div class="flex flex-col items-center flex-shrink-0">
-                <NIcon :size="22" :color="getPairedModdedSlot(i) !== null ? '#6366f1' : '#d1d5db'">
+                <NIcon :size="22" :color="getPairedModdedSlot(i) !== null ? 'var(--primary-color)' : 'var(--color-text-muted)'">
                   <ArrowRightLeft />
                 </NIcon>
                 <span
                   v-if="getPairedModdedSlot(i) !== null"
-                  class="text-[10px] text-indigo-400 mt-0.5"
+                  class="text-[10px] text-primary-theme mt-0.5"
                 >{{ t("saves.pairSync.paired") }}</span>
                 <span v-else class="text-[10px] text-c-muted mt-0.5">{{ t("saves.pairSync.unpaired") }}</span>
               </div>
@@ -499,11 +499,11 @@ onMounted(async () => {
               <div class="flex items-center gap-3 flex-1 justify-end">
                 <div
                   class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  :class="getPairedModdedSlot(i) !== null ? 'bg-purple-100' : 'bg-c-secondary'"
+                  :class="getPairedModdedSlot(i) !== null ? 'bg-primary-20-theme' : 'bg-c-secondary'"
                 >
                   <span
                     class="text-sm font-bold"
-                    :class="getPairedModdedSlot(i) !== null ? 'text-purple-600' : 'text-c-muted'"
+                    :class="getPairedModdedSlot(i) !== null ? 'text-primary-theme' : 'text-c-muted'"
                   >{{ getPairedModdedSlot(i) !== null ? `M${getPairedModdedSlot(i)}` : '?' }}</span>
                 </div>
                 <div class="flex flex-col items-end">
@@ -537,7 +537,7 @@ onMounted(async () => {
       <NCard size="small" class="mt-4">
         <template #header>
           <div class="flex items-center gap-2">
-            <NIcon :size="16" color="#6366f1"><Cloud /></NIcon>
+            <NIcon :size="16" :color="'var(--primary-color)'"><Cloud /></NIcon>
             <span>{{ t("saves.cloud.title") }}</span>
           </div>
         </template>
@@ -621,7 +621,7 @@ onMounted(async () => {
       <NCard v-if="restoreToSlotBackup" style="width: 400px" :bordered="false" role="dialog">
         <template #header>
           <div class="flex items-center gap-2">
-            <NIcon :size="18" color="#6366f1"><RotateCcw /></NIcon>
+            <NIcon :size="18" :color="'var(--primary-color)'"><RotateCcw /></NIcon>
             <span class="text-lg font-semibold">{{ t("saves.backups.restoreToTitle") }}</span>
           </div>
         </template>

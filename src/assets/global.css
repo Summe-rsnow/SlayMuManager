@@ -56,17 +56,17 @@ html, body {
 }
 
 .dark {
-  --color-bg-primary: #111827;
-  --color-bg-secondary: #1f2937;
-  --color-bg-card: #1f2937;
+  --color-bg-primary: #000000;
+  --color-bg-secondary: #111111;
+  --color-bg-card: #111111;
   --color-text-primary: #f3f4f6;
   --color-text-secondary: #d1d5db;
   --color-text-muted: #9ca3af;
-  --color-border: #374151;
-  --color-bg-sidebar: #1f2937;
-  --color-titlebar-bg: #1f2937;
-  --color-titlebar-border: #374151;
-  --color-main-bg: #111827;
+  --color-border: #222222;
+  --color-bg-sidebar: #111111;
+  --color-titlebar-bg: #111111;
+  --color-titlebar-border: #222222;
+  --color-main-bg: #000000;
 }
 
 /* ============================================================
@@ -90,6 +90,9 @@ html, body {
 }
 .bg-primary-10-theme {
   background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+.bg-primary-20-theme {
+  background-color: color-mix(in srgb, var(--primary-color) 20%, transparent);
 }
 .bg-primary-50-theme {
   background-color: var(--primary-50);
@@ -120,10 +123,6 @@ html, body {
 .border-c-default {
   border-color: var(--color-border);
 }
-.ring-active {
-  box-shadow: 0 0 0 2.5px var(--color-text-primary);
-}
-
 /* 预设切换淡入淡出动画 */
 .preset-fade-enter-active,
 .preset-fade-leave-active {

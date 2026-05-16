@@ -305,7 +305,7 @@ watch(presetAppliedTick, () => {
               <div class="flex-1 min-w-0">
                 <!-- 名称 + 标签 -->
                 <div class="flex items-center gap-2 flex-wrap">
-                  <NIcon :size="16" :color="p.builtin ? '#10b981' : '#6366f1'"><FolderHeart /></NIcon>
+                  <NIcon :size="16" :color="p.builtin ? 'var(--primary-500)' : 'var(--primary-color)'"><FolderHeart /></NIcon>
                   <span class="font-semibold text-c-primary truncate">{{ p.name }}</span>
                   <NTag v-if="p.builtin" type="success" size="tiny" :bordered="false">
                     {{ t("profiles.builtin") }}

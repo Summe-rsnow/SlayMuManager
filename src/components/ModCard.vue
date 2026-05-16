@@ -36,9 +36,9 @@ function saveNote(modId: string) {
 
 // --- 动态卡片样式（暗色模式适配）---
 const cardStyle = computed(() => ({
-  backgroundColor: props.enabled ? "var(--color-bg-card)" : "var(--color-bg-secondary)",
+  backgroundColor: "var(--color-bg-secondary)",
   borderColor: "var(--color-border)",
-  borderLeftColor: props.enabled ? "#22c55e" : "#d1d5db",
+  borderLeftColor: props.enabled ? "var(--primary-color)" : "var(--color-text-muted)",
 }))
 </script>
 

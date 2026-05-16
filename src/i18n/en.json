@@ -209,7 +209,7 @@
     "appearance": {
       "title": "Appearance",
       "language": "Language",
-      "displayMode": "Display Mode",
+      "displayMode": "Theme",
       "displayModeSystem": "System",
       "displayModeLight": "Light",
       "displayModeDark": "Dark",

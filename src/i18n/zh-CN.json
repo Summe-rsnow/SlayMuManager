@@ -209,10 +209,10 @@
     "appearance": {
       "title": "外观",
       "language": "语言",
-      "displayMode": "显示模式",
+      "displayMode": "主题",
       "displayModeSystem": "跟随系统",
-      "displayModeLight": "日间模式",
-      "displayModeDark": "夜间模式",
+      "displayModeLight": "浅色模式",
+      "displayModeDark": "深色模式",
       "themeColor": "主题色"
     },
     "backup": {

@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue"
+import { ref, computed, onMounted, onUnmounted } from "vue"
+import { onBeforeRouteLeave } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
-  NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, useMessage,
+  NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, NModal, NPopover, useMessage,
 } from "naive-ui"
 import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown, List } from "lucide-vue-next"
 import type { RemoteMod, RemoteModSearchResult, AppBootstrap } from "../types"
@@ -106,6 +107,14 @@ function jumpToPage() {
   jumpPage.value = null
 }
 
+const showImagePreview = ref(false)
+const previewImageUrl = ref("")
+
+function openImagePreview(url: string) {
+  previewImageUrl.value = url
+  showImagePreview.value = true
+}
+
 function openModPage(url: string) {
   invoke("open_url_in_browser", { url }).catch(() => {})
 }
@@ -114,6 +123,18 @@ function formatCount(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return n.toString()
 }
+
+// 离开发现页时提前清空结果，避免大量图片拖慢页面切换
+onBeforeRouteLeave(() => {
+  results.value = []
+  imageLoadFailed.value = {}
+})
+
+// 组件卸载时也清理
+onUnmounted(() => {
+  results.value = []
+  imageLoadFailed.value = {}
+})
 </script>
 
 <template>
@@ -172,23 +193,14 @@ function formatCount(n: number): string {
         <span class="text-sm" :style="{ color: 'var(--color-text-muted)' }">
           {{ t("discover.resultCount", { total: totalCount }) }}
         </span>
-        <div class="flex items-center gap-2">
-          <NIcon :size="14" :style="{ color: 'var(--color-text-muted)' }"><List /></NIcon>
-          <NSelect
-            :value="pageSize"
-            :options="pageSizeOptions"
-            style="width: 90px"
-            size="tiny"
-            @update:value="onPageSizeChange"
-          />
-        </div>
+        <span />
       </div>
 
       <div class="grid grid-cols-3 gap-4 mb-6">
         <NCard
           v-for="mod in results"
           :key="mod.remoteId"
-          class="hover:shadow-md transition-shadow"
+          class="discover-card hover:shadow-md transition-shadow"
           :style="{ minHeight: '150px' }"
         >
           <div class="flex gap-4 h-full">
@@ -201,10 +213,11 @@ function formatCount(n: number): string {
                 v-show="!imageLoadFailed[mod.remoteId]"
                 :src="mod.pictureUrl"
                 :alt="mod.name"
-                class="w-full h-full object-cover"
+                class="w-full h-full object-cover cursor-pointer"
                 loading="lazy"
                 referrerpolicy="no-referrer"
                 @error="onImgError(mod.remoteId)"
+                @click="openImagePreview(mod.pictureUrl!)"
               />
               <div
                 v-show="imageLoadFailed[mod.remoteId]"
@@ -226,7 +239,12 @@ function formatCount(n: number): string {
               <!-- 上行：标题 + 版本号 + 跳转按钮 -->
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-2 min-w-0 flex-1">
-                  <span class="font-semibold text-base truncate" :style="{ color: 'var(--color-text-primary)' }">{{ mod.name }}</span>
+                  <NPopover v-if="mod.name" trigger="hover" placement="top" :width="320">
+                    <template #trigger>
+                      <span class="font-semibold text-base truncate cursor-help" :style="{ color: 'var(--color-text-primary)' }">{{ mod.name }}</span>
+                    </template>
+                    <div class="text-xs leading-relaxed break-words max-w-xs">{{ mod.name }}</div>
+                  </NPopover>
                   <span v-if="mod.latestVersion" class="text-xs font-mono flex-shrink-0" :style="{ color: 'var(--color-text-muted)' }">
                     v{{ mod.latestVersion }}
                   </span>
@@ -277,11 +295,22 @@ function formatCount(n: number): string {
 
     <!-- 分页 + 每页条数 -->
     <div v-if="!initialLoading && results.length > 0 && totalCount > pageSize" class="flex justify-center items-center gap-3 pt-4 pb-2 sticky bottom-0 z-10" :style="{ backgroundColor: 'var(--color-bg-primary)', borderTop: '1px solid var(--color-border)' }">
+        <div class="flex items-center gap-1.5">
+          <NIcon :size="14" :style="{ color: 'var(--color-text-muted)' }"><List /></NIcon>
+          <NSelect
+            :value="pageSize"
+            :options="pageSizeOptions"
+            style="width: 80px"
+            size="tiny"
+            @update:value="onPageSizeChange"
+          />
+        </div>
         <NPagination
           :page="page"
           :page-size="pageSize"
           :item-count="totalCount"
           @update:page="onPageChange"
+          size="small"
         />
         <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("discover.jumpTo") }}</span>
         <NInputNumber
@@ -295,5 +324,27 @@ function formatCount(n: number): string {
         />
         <NButton size="tiny" secondary @click="jumpToPage">{{ t("discover.jumpToBtn") }}</NButton>
     </div>
+
+    <!-- 图片放大预览 -->
+    <NModal :show="showImagePreview" @update:show="(v: boolean) => !v && (showImagePreview = false)">
+      <div
+        class="flex items-center justify-center"
+        style="max-width: 90vw; max-height: 90vh;"
+        @click="showImagePreview = false"
+      >
+        <img
+          v-if="previewImageUrl"
+          :src="previewImageUrl"
+          class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain"
+          style="max-width: 85vw;"
+        />
+      </div>
+    </NModal>
   </div>
 </template>
+
+<style scoped>
+.discover-card {
+  --n-border-color: color-mix(in srgb, var(--color-border), var(--color-text-muted) 50%);
+}
+</style>
