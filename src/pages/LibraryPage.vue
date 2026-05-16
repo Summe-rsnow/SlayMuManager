@@ -4,27 +4,25 @@ import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import {
-  NSpace, NCard, NTag, NButton, NInput, NIcon, NSwitch,
-  NPopconfirm, NModal, NCheckbox, NPopover, NSelect, useMessage,
+  NSpace, NCard, NTag, NButton, NInput, NIcon,
+  NModal, NCheckbox, NPopover, NSelect, useMessage,
 } from "naive-ui"
 import {
-  Search, Download, RefreshCw, FolderOpen, Trash2, Bookmark,
-  AlertTriangle, Filter, X, Tag, Plus, Play, StickyNote,
+  Search, Download, RefreshCw, FolderOpen, Bookmark,
+  AlertTriangle, Filter, X, Tag, Play,
 } from "lucide-vue-next"
 import ImportDialog from "../components/ImportDialog.vue"
+import ModCard from "../components/ModCard.vue"
 import { useModCache } from "../composables/useModCache"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
-import { useModNotes } from "../composables/useModNotes"
 import { useRouter } from "vue-router"
 import type { InstalledMod, ModProfile, ModToggleResult, CloudSaveStatus, AppBootstrap } from "../types"
-import "../assets/library-effects.css"
 
 const { t } = useI18n()
 const message = useMessage()
 const router = useRouter()
 const { enabledMods, disabledMods, loading, fetchMods } = useModCache()
-const { getTags, toggleTag, usedTags, getTagLabel, isPresetTag } = useModTags()
-const { getNote, setNote, hasNote } = useModNotes()
+const { getTags, usedTags, getTagLabel } = useModTags()
 
 // --- 组件生命周期守卫（防止切换页面时异步回调卡死）---
 const isActive = ref(true)
@@ -230,15 +228,6 @@ function clearSearch() {
 // --- 行级操作锁 ---
 const busyId = ref<string | null>(null)
 
-// --- 备注编辑 ---
-const noteDraft = ref("")
-function openNotePopover(modId: string) {
-  noteDraft.value = getNote(modId)
-}
-function saveNote(modId: string) {
-  setNote(modId, noteDraft.value)
-}
-
 // --- Save Guard 弹窗 ---
 const showSaveGuardDialog = ref(false)
 const saveGuardInfo = ref<ModToggleResult | null>(null)
@@ -303,26 +292,6 @@ const emptyReason = computed(() => {
   if (hasSearch.value && filteredEnabled.value.length + filteredDisabled.value.length === 0) return "search"
   return null
 })
-
-// --- 卡片鼠标特效 ---
-function onCardMouseMove(e: MouseEvent, el: HTMLElement) {
-  const rect = el.getBoundingClientRect()
-  el.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`)
-  el.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`)
-}
-
-function onCardClick(e: MouseEvent, el: HTMLElement) {
-  const rect = el.getBoundingClientRect()
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-  const ripple = document.createElement("span")
-  ripple.className = "ripple-effect"
-  ripple.style.left = `${x}px`
-  ripple.style.top = `${y}px`
-  ripple.style.width = ripple.style.height = `${Math.max(rect.width, rect.height)}px`
-  el.appendChild(ripple)
-  ripple.addEventListener("animationend", () => ripple.remove())
-}
 
 // --- 操作 ---
 async function handleToggle(mod: InstalledMod) {
@@ -461,7 +430,7 @@ onUnmounted(() => {
           <span v-if="loading" class="text-xs text-gray-400 animate-pulse">{{ t("library.refreshing") }}</span>
         </div>
       </div>
-      <NSpace>
+      <div class="flex flex-wrap gap-2">
         <NSelect
           v-model:value="quickPresetId"
           :options="quickPresetOptions"
@@ -500,7 +469,7 @@ onUnmounted(() => {
           <template #icon><NIcon :size="16"><Download /></NIcon></template>
           {{ t("library.importMod") }}
         </NButton>
-      </NSpace>
+      </div>
     </div>
 
     <!-- 搜索栏 -->
@@ -521,7 +490,7 @@ onUnmounted(() => {
     <!-- 主布局：侧边栏 + 内容 -->
     <div class="flex gap-4">
       <!-- 侧边栏筛选 -->
-      <div class="w-44 flex-shrink-0">
+      <div class="w-48 flex-shrink-0">
         <div class="sticky top-4 space-y-3 p-3 rounded-lg border border-gray-100 bg-gray-50/50">
           <div class="flex items-center justify-between">
             <span class="text-sm font-medium text-gray-600 flex items-center gap-1.5">
@@ -623,99 +592,17 @@ onUnmounted(() => {
             </div>
 
             <NSpace v-else vertical :size="8">
-              <div
+              <ModCard
                 v-for="mod in filteredEnabled"
                 :key="mod.id"
-                class="mod-card mod-card--enabled group flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-white transition-colors"
-                :class="{ 'pointer-events-none opacity-60': busyId === mod.id }"
-                @mousemove="(e: MouseEvent) => onCardMouseMove(e, (e.currentTarget as HTMLElement))"
-                @click="(e: MouseEvent) => onCardClick(e, (e.currentTarget as HTMLElement))"
-              >
-                <div class="flex-1 min-w-0" style="position:relative;z-index:2">
-                  <div class="flex items-center gap-2">
-                    <span class="font-medium text-gray-800 truncate">{{ mod.name }}</span>
-                    <span class="text-xs text-gray-400 font-mono truncate">{{ mod.version ?? "—" }}</span>
-                    <NTag v-if="mod.affectsGameplay" type="warning" size="tiny" :bordered="false">
-                      {{ t("library.mod.affectsGameplay") }}
-                    </NTag>
-                  </div>
-                  <div class="text-xs text-gray-400 mt-0.5">
-                    {{ mod.author ?? t("library.mod.unknownAuthor") }} · {{ mod.folderName }}
-                  </div>
-                  <!-- 标签行 -->
-                  <div class="flex items-center gap-1 mt-1 flex-wrap">
-                    <NTag
-                      v-for="tagId in getTags(mod.id)"
-                      :key="tagId"
-                      size="tiny"
-                      :bordered="false"
-                      :type="isPresetTag(tagId) ? 'info' : 'default'"
-                      closable
-                      @close="() => toggleTag(mod.id, tagId)"
-                    >
-                      {{ getTagLabel(tagId) }}
-                    </NTag>
-                    <NPopover trigger="click" placement="bottom-start">
-                      <template #trigger>
-                        <NButton text size="tiny" class="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <template #icon><NIcon :size="12"><Plus /></NIcon></template>
-                        </NButton>
-                      </template>
-                      <div class="w-52">
-                        <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.selectTag") }}</div>
-                        <NSpace vertical :size="4">
-                          <NCheckbox
-                            v-for="t in PRESET_TAGS"
-                            :key="t.id"
-                            size="small"
-                            :checked="getTags(mod.id).includes(t.id)"
-                            @update:checked="() => toggleTag(mod.id, t.id)"
-                          >
-                            <span class="text-xs">{{ getTagLabel(t.id) }}</span>
-                          </NCheckbox>
-                        </NSpace>
-                      </div>
-                    </NPopover>
-                    <NPopover trigger="click" placement="bottom" @update:show="(v: boolean) => v && openNotePopover(mod.id)">
-                      <template #trigger>
-                        <NButton text size="tiny" :type="hasNote(mod.id) ? 'warning' : 'default'">
-                          <template #icon><NIcon :size="12"><StickyNote /></NIcon></template>
-                        </NButton>
-                      </template>
-                      <div class="w-56">
-                        <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.note") }}</div>
-                        <NInput
-                          :value="noteDraft"
-                          type="textarea"
-                          size="small"
-                          :placeholder="t('library.mod.notePlaceholder')"
-                          :autosize="{ minRows: 2, maxRows: 6 }"
-                          @update:value="(v: string) => noteDraft = v"
-                          @blur="saveNote(mod.id)"
-                        />
-                      </div>
-                    </NPopover>
-                  </div>
-                </div>
-                <div class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4" style="position:relative;z-index:2">
-                  <NButton text size="tiny" :disabled="busyId !== null" @click="handleOpenFolder(mod)">
-                    <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
-                  </NButton>
-                  <NPopconfirm @positive-click="() => handleUninstall(mod)">
-                    <template #trigger>
-                      <NButton text size="tiny" type="error" :disabled="busyId !== null">
-                        <template #icon><NIcon :size="14"><Trash2 /></NIcon></template>
-                      </NButton>
-                    </template>
-                    {{ t("library.mod.confirmUninstall", { name: mod.name }) }}
-                  </NPopconfirm>
-                  <NSwitch
-                    :value="true"
-                    :disabled="busyId !== null || isActivePresetBuiltin"
-                    @update:value="() => handleToggle(mod)"
-                  />
-                </div>
-              </div>
+                :mod="mod"
+                :enabled="true"
+                :busy="busyId === mod.id"
+                :toggle-disabled="isActivePresetBuiltin"
+                @toggle="handleToggle"
+                @open-folder="handleOpenFolder"
+                @uninstall="handleUninstall"
+              />
             </NSpace>
           </NCard>
 
@@ -736,96 +623,17 @@ onUnmounted(() => {
             </div>
 
             <NSpace v-else vertical :size="8">
-              <div
+              <ModCard
                 v-for="mod in filteredDisabled"
                 :key="mod.id"
-                class="mod-card mod-card--disabled group flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50/60 transition-colors"
-                :class="{ 'pointer-events-none opacity-40': busyId === mod.id }"
-                @mousemove="(e: MouseEvent) => onCardMouseMove(e, (e.currentTarget as HTMLElement))"
-                @click="(e: MouseEvent) => onCardClick(e, (e.currentTarget as HTMLElement))"
-              >
-                <div class="flex-1 min-w-0" style="position:relative;z-index:2">
-                  <div class="flex items-center gap-2">
-                    <span class="font-medium text-gray-600 truncate">{{ mod.name }}</span>
-                    <span class="text-xs text-gray-400 font-mono truncate">{{ mod.version ?? "—" }}</span>
-                  </div>
-                  <div class="text-xs text-gray-400 mt-0.5">
-                    {{ mod.author ?? t("library.mod.unknownAuthor") }} · {{ mod.folderName }}
-                  </div>
-                  <!-- 标签行 -->
-                  <div class="flex items-center gap-1 mt-1 flex-wrap">
-                    <NTag
-                      v-for="tagId in getTags(mod.id)"
-                      :key="tagId"
-                      size="tiny"
-                      :bordered="false"
-                      :type="isPresetTag(tagId) ? 'info' : 'default'"
-                      closable
-                      @close="() => toggleTag(mod.id, tagId)"
-                    >
-                      {{ getTagLabel(tagId) }}
-                    </NTag>
-                    <NPopover trigger="click" placement="bottom-start">
-                      <template #trigger>
-                        <NButton text size="tiny" class="opacity-0 group-hover:opacity-100 transition-opacity">
-                          <template #icon><NIcon :size="12"><Plus /></NIcon></template>
-                        </NButton>
-                      </template>
-                      <div class="w-52">
-                        <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.selectTag") }}</div>
-                        <NSpace vertical :size="4">
-                          <NCheckbox
-                            v-for="t in PRESET_TAGS"
-                            :key="t.id"
-                            size="small"
-                            :checked="getTags(mod.id).includes(t.id)"
-                            @update:checked="() => toggleTag(mod.id, t.id)"
-                          >
-                            <span class="text-xs">{{ getTagLabel(t.id) }}</span>
-                          </NCheckbox>
-                        </NSpace>
-                      </div>
-                    </NPopover>
-                    <NPopover trigger="click" placement="bottom" @update:show="(v: boolean) => v && openNotePopover(mod.id)">
-                      <template #trigger>
-                        <NButton text size="tiny" :type="hasNote(mod.id) ? 'warning' : 'default'">
-                          <template #icon><NIcon :size="12"><StickyNote /></NIcon></template>
-                        </NButton>
-                      </template>
-                      <div class="w-56">
-                        <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.note") }}</div>
-                        <NInput
-                          :value="noteDraft"
-                          type="textarea"
-                          size="small"
-                          :placeholder="t('library.mod.notePlaceholder')"
-                          :autosize="{ minRows: 2, maxRows: 6 }"
-                          @update:value="(v: string) => noteDraft = v"
-                          @blur="saveNote(mod.id)"
-                        />
-                      </div>
-                    </NPopover>
-                  </div>
-                </div>
-                <div class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4" style="position:relative;z-index:2">
-                  <NButton text size="tiny" :disabled="busyId !== null" @click="handleOpenFolder(mod)">
-                    <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
-                  </NButton>
-                  <NPopconfirm @positive-click="() => handleUninstall(mod)">
-                    <template #trigger>
-                      <NButton text size="tiny" type="error" :disabled="busyId !== null">
-                        <template #icon><NIcon :size="14"><Trash2 /></NIcon></template>
-                      </NButton>
-                    </template>
-                    {{ t("library.mod.confirmUninstall", { name: mod.name }) }}
-                  </NPopconfirm>
-                  <NSwitch
-                    :value="false"
-                    :disabled="busyId !== null || isActivePresetBuiltin"
-                    @update:value="() => handleToggle(mod)"
-                  />
-                </div>
-              </div>
+                :mod="mod"
+                :enabled="false"
+                :busy="busyId === mod.id"
+                :toggle-disabled="isActivePresetBuiltin"
+                @toggle="handleToggle"
+                @open-folder="handleOpenFolder"
+                @uninstall="handleUninstall"
+              />
             </NSpace>
           </NCard>
         </template>

@@ -1,81 +1,21 @@
-/* ===================================================================
-   SlayMuManager — 模组卡片视觉特效
-   =================================================================== */
+/* SlayMuManager — ModCard 微交互 */
 
-/* --- 卡片基础 --- */
 .mod-card {
-  position: relative;
-  overflow: hidden;
-  transition: box-shadow 0.25s ease, transform 0.2s ease, border-color 0.3s ease;
+  transition: box-shadow 0.2s ease;
 }
 
-/* --- 鼠标跟随光晕 --- */
-.mod-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.mod-card:hover::before {
-  opacity: 1;
-}
-
-.mod-card.mod-card--enabled {
+.mod-card--enabled {
   border-left: 3px solid #18a058;
 }
 
-.mod-card.mod-card--enabled::before {
-  background: radial-gradient(
-    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    rgba(24, 160, 88, 0.08),
-    transparent 40%
-  );
-}
-
-.mod-card.mod-card--disabled {
+.mod-card--disabled {
   border-left: 3px solid #d1d5db;
 }
 
-.mod-card.mod-card--disabled::before {
-  background: radial-gradient(
-    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-    rgba(156, 163, 175, 0.06),
-    transparent 40%
-  );
-}
-
-/* --- 点击涟漪 --- */
-.mod-card .ripple-effect {
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(24, 160, 88, 0.15);
-  transform: scale(0);
-  animation: ripple 0.6s ease-out;
-  pointer-events: none;
-  z-index: 1;
-}
-
-@keyframes ripple {
-  to {
-    transform: scale(4);
-    opacity: 0;
-  }
-}
-
-/* --- 悬浮微抬 --- */
 .mod-card:hover {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
-.mod-card.mod-card--enabled:hover {
+.mod-card--enabled:hover {
   box-shadow: 0 2px 16px rgba(24, 160, 88, 0.1);
-}
-
-/* --- 操作按钮 --- */
-.mod-card .mod-actions {
-  opacity: 1;
 }
