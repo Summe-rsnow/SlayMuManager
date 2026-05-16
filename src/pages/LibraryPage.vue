@@ -9,11 +9,12 @@ import {
 } from "naive-ui"
 import {
   Search, Download, RefreshCw, FolderOpen, Trash2, Bookmark,
-  AlertTriangle, Filter, X, Tag, Plus, Play,
+  AlertTriangle, Filter, X, Tag, Plus, Play, StickyNote,
 } from "lucide-vue-next"
 import ImportDialog from "../components/ImportDialog.vue"
 import { useModCache } from "../composables/useModCache"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
+import { useModNotes } from "../composables/useModNotes"
 import { useRouter } from "vue-router"
 import type { InstalledMod, ModProfile, ModToggleResult, CloudSaveStatus, AppBootstrap } from "../types"
 import "../assets/library-effects.css"
@@ -23,6 +24,7 @@ const message = useMessage()
 const router = useRouter()
 const { enabledMods, disabledMods, loading, fetchMods } = useModCache()
 const { getTags, toggleTag, usedTags, getTagLabel, isPresetTag } = useModTags()
+const { getNote, setNote, hasNote } = useModNotes()
 
 // --- 组件生命周期守卫（防止切换页面时异步回调卡死）---
 const isActive = ref(true)
@@ -227,6 +229,15 @@ function clearSearch() {
 
 // --- 行级操作锁 ---
 const busyId = ref<string | null>(null)
+
+// --- 备注编辑 ---
+const noteDraft = ref("")
+function openNotePopover(modId: string) {
+  noteDraft.value = getNote(modId)
+}
+function saveNote(modId: string) {
+  setNote(modId, noteDraft.value)
+}
 
 // --- Save Guard 弹窗 ---
 const showSaveGuardDialog = ref(false)
@@ -479,7 +490,7 @@ onUnmounted(() => {
         </NButton>
         <NButton secondary @click="openSavePreset">
           <template #icon><NIcon :size="16"><Bookmark /></NIcon></template>
-          {{ t("library.saveAsPreset") }}
+          {{ t("library.newPreset") }}
         </NButton>
         <NButton secondary :loading="loading" @click="fetchMods">
           <template #icon><NIcon :size="16"><RefreshCw /></NIcon></template>
@@ -665,6 +676,25 @@ onUnmounted(() => {
                         </NSpace>
                       </div>
                     </NPopover>
+                    <NPopover trigger="click" placement="bottom" @update:show="(v: boolean) => v && openNotePopover(mod.id)">
+                      <template #trigger>
+                        <NButton text size="tiny" :type="hasNote(mod.id) ? 'warning' : 'default'">
+                          <template #icon><NIcon :size="12"><StickyNote /></NIcon></template>
+                        </NButton>
+                      </template>
+                      <div class="w-56">
+                        <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.note") }}</div>
+                        <NInput
+                          :value="noteDraft"
+                          type="textarea"
+                          size="small"
+                          :placeholder="t('library.mod.notePlaceholder')"
+                          :autosize="{ minRows: 2, maxRows: 6 }"
+                          @update:value="(v: string) => noteDraft = v"
+                          @blur="saveNote(mod.id)"
+                        />
+                      </div>
+                    </NPopover>
                   </div>
                 </div>
                 <div class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4" style="position:relative;z-index:2">
@@ -754,6 +784,25 @@ onUnmounted(() => {
                             <span class="text-xs">{{ getTagLabel(t.id) }}</span>
                           </NCheckbox>
                         </NSpace>
+                      </div>
+                    </NPopover>
+                    <NPopover trigger="click" placement="bottom" @update:show="(v: boolean) => v && openNotePopover(mod.id)">
+                      <template #trigger>
+                        <NButton text size="tiny" :type="hasNote(mod.id) ? 'warning' : 'default'">
+                          <template #icon><NIcon :size="12"><StickyNote /></NIcon></template>
+                        </NButton>
+                      </template>
+                      <div class="w-56">
+                        <div class="text-xs text-gray-500 mb-2">{{ t("library.mod.note") }}</div>
+                        <NInput
+                          :value="noteDraft"
+                          type="textarea"
+                          size="small"
+                          :placeholder="t('library.mod.notePlaceholder')"
+                          :autosize="{ minRows: 2, maxRows: 6 }"
+                          @update:value="(v: string) => noteDraft = v"
+                          @blur="saveNote(mod.id)"
+                        />
                       </div>
                     </NPopover>
                   </div>

@@ -1,4 +1,4 @@
-use crate::domain::remote_mod::{ModFileInfo, RemoteMod, RemoteModSearchResult};
+use crate::domain::remote_mod::{RemoteMod, RemoteModSearchResult};
 use crate::utils::error::AppError;
 use serde::Deserialize;
 
@@ -104,106 +104,6 @@ pub fn search_mods(
     })
 }
 
-/// 获取 Mod 文件列表
-pub fn get_mod_files(
-    game_slug: &str,
-    mod_id: u32,
-    api_key: &str,
-    proxy_url: Option<&str>,
-) -> Result<Vec<ModFileInfo>, AppError> {
-    let url = format!(
-        "{}/games/{}/mods/{}/files.json",
-        NEXUS_API_BASE, game_slug, mod_id
-    );
-
-    let client = build_client(api_key, proxy_url)?;
-    let resp = client
-        .get(&url)
-        .send()
-        .map_err(|e| AppError::Other(format!("Nexus API 请求失败: {}", e)))?;
-
-    if !resp.status().is_success() {
-        return Err(AppError::Other(format!(
-            "Nexus API 返回错误: {} {}",
-            resp.status().as_u16(),
-            resp.text().unwrap_or_default()
-        )));
-    }
-
-    let raw: NexusFilesResponse = resp
-        .json()
-        .map_err(|e| AppError::Other(format!("Nexus API 解析失败: {}", e)))?;
-
-    let files: Vec<ModFileInfo> = raw
-        .files
-        .into_iter()
-        .map(|f| ModFileInfo {
-            file_id: f.file_id,
-            name: f.name,
-            version: f.version,
-            category: f.category_name.unwrap_or_default(),
-            is_primary: f.is_primary,
-            size_kb: (f.size / 1024) as u32,
-            file_name: f.file_name,
-        })
-        .collect();
-
-    Ok(files)
-}
-
-/// 获取下载链接（Premium 用户直接返回 URL，免费用户返回 Nexus 页面）
-pub fn get_download_link(
-    game_slug: &str,
-    mod_id: u32,
-    file_id: u32,
-    api_key: &str,
-    proxy_url: Option<&str>,
-) -> Result<String, AppError> {
-    let url = format!(
-        "{}/games/{}/mods/{}/files/{}/download_link.json",
-        NEXUS_API_BASE, game_slug, mod_id, file_id
-    );
-
-    let client = build_client(api_key, proxy_url)?;
-    let resp = client
-        .get(&url)
-        .send()
-        .map_err(|e| AppError::Other(format!("Nexus API 请求失败: {}", e)))?;
-
-    let status = resp.status();
-    if !status.is_success() {
-        // 403 → 免费用户（没有直接下载权限），返回 Nexus 下载页面
-        if status.as_u16() == 403 {
-            return Ok(format!(
-                "https://www.nexusmods.com/{}/mods/{}?tab=files&file_id={}",
-                game_slug, mod_id, file_id
-            ));
-        }
-        // 401 → API Key 无效
-        if status.as_u16() == 401 {
-            return Err(AppError::Other("API Key 无效，无法获取下载链接".to_string()));
-        }
-        return Err(AppError::Other(format!(
-            "获取下载链接失败: HTTP {}",
-            status.as_u16()
-        )));
-    }
-
-    #[derive(Deserialize)]
-    struct DownloadLinkResp {
-        uri: Option<String>,
-        url: Option<String>,
-    }
-
-    let raw: DownloadLinkResp = resp
-        .json()
-        .map_err(|e| AppError::Other(format!("下载链接解析失败: {}", e)))?;
-
-    raw.uri
-        .or(raw.url)
-        .ok_or_else(|| AppError::Other("未获取到下载链接".to_string()))
-}
-
 /// 测试代理连通性
 pub fn test_proxy(proxy_url: &str) -> Result<bool, AppError> {
     let client = reqwest::blocking::Client::builder()
@@ -295,22 +195,3 @@ struct GraphQLNode {
     downloads: Option<u64>,
 }
 
-// ---------------------------------------------------------------------------
-// REST v1 响应类型（文件列表、下载链接）
-// ---------------------------------------------------------------------------
-
-#[derive(Deserialize)]
-struct NexusFilesResponse {
-    files: Vec<NexusFileRaw>,
-}
-
-#[derive(Deserialize)]
-struct NexusFileRaw {
-    file_id: u32,
-    name: String,
-    version: String,
-    category_name: Option<String>,
-    is_primary: bool,
-    size: u64,
-    file_name: String,
-}

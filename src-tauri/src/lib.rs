@@ -88,9 +88,6 @@ pub fn run() {
             app::commands::cleanup_backup_artifacts,
             // 5.9 Nexus Mods 集成
             app::commands::search_remote_mods,
-            app::commands::get_nexus_mod_files,
-            app::commands::get_download_link,
-            app::commands::download_and_install_mod,
             // 5.10 设置
             app::commands::update_nexus_api_key,
             app::commands::update_proxy_url,

@@ -7,7 +7,7 @@ use crate::domain::save::{
     CloudSaveDiffEntry, CloudSaveStatus, SaveBackupEntry, SaveKind, SaveSlot, SaveSlotRef,
     SaveSyncResult, SaveTransferPreview,
 };
-use crate::domain::remote_mod::{ModFileInfo, RemoteModSearchResult};
+use crate::domain::remote_mod::RemoteModSearchResult;
 use crate::domain::task::ActivityLogEntry;
 use crate::repositories::settings_repo;
 use crate::services::{
@@ -1162,38 +1162,6 @@ pub fn search_remote_mods(
         &query,
         page.unwrap_or(1),
         &sort_by.unwrap_or_else(|| "latest_added".to_string()),
-    )
-    .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn get_nexus_mod_files(mod_id: u32) -> Result<Vec<ModFileInfo>, String> {
-    discover_service::get_mod_files(mod_id).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn get_download_link(mod_id: u32, file_id: u32) -> Result<String, String> {
-    discover_service::get_download_link(mod_id, file_id).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-pub fn download_and_install_mod(
-    mod_id: u32,
-    file_id: u32,
-    enable_after_install: bool,
-    state: State<AppState>,
-) -> Result<Vec<InstalledMod>, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    discover_service::download_and_install_mod(
-        mod_id,
-        file_id,
-        enable_after_install,
-        Path::new(game_root),
     )
     .map_err(|e| e.to_string())
 }

@@ -7,7 +7,7 @@ import {
   NPopconfirm, NCheckbox, useMessage,
 } from "naive-ui"
 import {
-  Plus, FolderHeart, Edit3, Trash2, Play, Download, Upload, Save, Search,
+  Plus, FolderHeart, Edit3, Trash2, Play, Download, Upload, Search,
 } from "lucide-vue-next"
 import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
 
@@ -253,29 +253,6 @@ async function confirmImport() {
   }
 }
 
-// --- 从模组库保存当前启用列表 ---
-async function saveCurrentMods() {
-  try {
-    await loadInstalledMods()
-    if (!isActive.value) return
-    if (installedMods.value.length === 0) {
-      message.warning(t("profiles.warning.noEnabledMods"))
-      return
-    }
-    selectedModIds.value = installedMods.value
-      .filter(m => m.state === "enabled")
-      .map(m => m.id)
-    formName.value = `${t("profiles.form.defaultName")} ${new Date().toLocaleDateString("zh-CN")}`
-    formDescription.value = t("profiles.form.defaultDescription")
-    editingId.value = null
-    modSearchQuery.value = ""
-    showCreateDialog.value = true
-  } catch (e: any) {
-    if (!isActive.value) return
-    message.error(`${t("profiles.error.readModsFailed")}: ${e}`)
-  }
-}
-
 onMounted(async () => {
   await loadProfiles()
   try {
@@ -294,10 +271,6 @@ onMounted(async () => {
         <p class="text-sm text-gray-500 mt-1">{{ t("profiles.subtitle") }}</p>
       </div>
       <NSpace>
-        <NButton secondary @click="saveCurrentMods">
-          <template #icon><NIcon :size="16"><Save /></NIcon></template>
-          {{ t("profiles.saveCurrent") }}
-        </NButton>
         <NButton secondary @click="startImport">
           <template #icon><NIcon :size="16"><Upload /></NIcon></template>
           {{ t("profiles.importBundle") }}

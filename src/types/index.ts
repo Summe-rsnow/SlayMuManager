@@ -143,16 +143,6 @@ export interface RemoteModSearchResult {
   count: number
 }
 
-export interface ModFileInfo {
-  fileId: number
-  name: string
-  version: string
-  category: string
-  isPrimary: boolean
-  sizeKb: number
-  fileName: string
-}
-
 // --- 批量导入 ---
 
 export type DiscoveredModStatus = "ready" | "conflict" | "unsupported_format" | "error"

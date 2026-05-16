@@ -26,15 +26,3 @@ pub struct RemoteModSearchResult {
     pub offset: u32,
     pub count: u32,
 }
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ModFileInfo {
-    pub file_id: u32,
-    pub name: String,
-    pub version: String,
-    pub category: String,
-    pub is_primary: bool,
-    pub size_kb: u32,
-    pub file_name: String,
-}

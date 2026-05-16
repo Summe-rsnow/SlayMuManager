@@ -37,7 +37,7 @@
     "launching": "Launching...",
     "quickPresetPlaceholder": "Quick Preset...",
     "openModsDir": "Open Mods Folder",
-    "saveAsPreset": "Save as Preset",
+    "newPreset": "New Preset",
     "importMod": "Import Mod",
     "searchPlaceholder": "Search installed mods... Press Enter to search",
     "filter": {
@@ -70,7 +70,9 @@
       "affectsGameplay": "Affects Multiplayer",
       "unknownAuthor": "Unknown author",
       "selectTag": "Select tag",
-      "confirmUninstall": "Are you sure you want to uninstall \"{name}\"? This cannot be undone."
+      "confirmUninstall": "Are you sure you want to uninstall \"{name}\"? This cannot be undone.",
+      "note": "Note",
+      "notePlaceholder": "Add note..."
     },
     "savePreset": {
       "title": "Save as Preset",
@@ -230,23 +232,13 @@
     "jumpTo": "Jump to",
     "unknownAuthor": "Unknown",
     "details": "Details",
-    "install": "Install",
     "empty": {
       "notFound": "No mods found",
       "needsApiKey": "Tip: Configure your Nexus Mods API Key in Settings first",
       "startSearch": "Enter a keyword to search, or search with no keyword to browse all mods"
     },
-    "success": {
-      "installed": "Installed: {name}"
-    },
-    "info": {
-      "downloadViaBrowser": "Please download in your browser: {name}"
-    },
     "error": {
-      "searchFailed": "Search failed: {e}",
-      "invalidModId": "Invalid Mod ID",
-      "noDownloadableFile": "This mod has no downloadable files",
-      "downloadFailed": "Download failed: {e}"
+      "searchFailed": "Search failed: {e}"
     }
   },
 
@@ -387,7 +379,6 @@
   "profiles": {
     "title": "Preset Management",
     "subtitle": "Manage mod presets — switch combinations with one click",
-    "saveCurrent": "Save Current",
     "importBundle": "Import Bundle",
     "create": "New Preset",
     "builtin": "Built-in",

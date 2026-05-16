@@ -3,10 +3,10 @@ import { ref, computed, onMounted, onBeforeUnmount } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
-  NCard, NButton, NInput, NIcon, NSpace, NSelect, NPagination, NInputNumber, useMessage,
+  NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, useMessage,
 } from "naive-ui"
-import { Search, Download, ExternalLink, ThumbsUp, PackageOpen, ArrowDown } from "lucide-vue-next"
-import type { RemoteMod, RemoteModSearchResult, ModFileInfo } from "../types"
+import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown } from "lucide-vue-next"
+import type { RemoteMod, RemoteModSearchResult } from "../types"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -29,7 +29,6 @@ const pageSize = 10
 const loading = ref(false)
 const initialLoading = ref(true)
 const searched = ref(false)
-const downloading = ref<Record<string, boolean>>({})
 
 // --- 组件生命周期守卫（防止切换页面时异步回调卡死）---
 const isActive = ref(true)
@@ -81,49 +80,6 @@ function jumpToPage() {
   if (p == null || p < 1 || p > totalPages.value) return
   onPageChange(p)
   jumpPage.value = null
-}
-
-// --- 下载 ---
-async function downloadMod(mod: RemoteMod) {
-  const modId = parseInt(mod.remoteId)
-  if (isNaN(modId)) {
-    message.error(t("discover.error.invalidModId"))
-    return
-  }
-
-  downloading.value[mod.remoteId] = true
-  try {
-    // 1. 获取文件列表
-    const files = await invoke<ModFileInfo[]>("get_nexus_mod_files", { modId })
-
-    // 2. 选文件：优先主文件 + MAIN 分类
-    const mainFile =
-      files.find((f) => f.isPrimary && f.category === "MAIN") ??
-      files.find((f) => f.category === "MAIN") ??
-      files[0]
-
-    if (!mainFile) {
-      message.error(t("discover.error.noDownloadableFile"))
-      return
-    }
-
-    // 3. 下载并安装
-    await invoke("download_and_install_mod", {
-      modId,
-      fileId: mainFile.fileId,
-      enableAfterInstall: true,
-    })
-    message.success(t("discover.success.installed", { name: mod.name }))
-  } catch (e: any) {
-    if (String(e).includes("免费用户") || String(e).includes("403")) {
-      message.info(t("discover.info.downloadViaBrowser", { name: mod.name }))
-      openModPage(mod.detailUrl)
-    } else {
-      message.error(t("discover.error.downloadFailed") + ": " + e)
-    }
-  } finally {
-    downloading.value[mod.remoteId] = false
-  }
 }
 
 function openModPage(url: string) {
@@ -188,7 +144,7 @@ function formatCount(n: number): string {
         {{ t("discover.resultCount", { total: totalCount }) }}
       </div>
 
-      <div class="grid grid-cols-1 gap-3 mb-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-6">
         <NCard
           v-for="mod in results"
           :key="mod.remoteId"
@@ -241,21 +197,10 @@ function formatCount(n: number): string {
             </div>
 
             <!-- 操作 -->
-            <NSpace :size="4" class="flex-shrink-0">
-              <NButton size="tiny" secondary @click="openModPage(mod.detailUrl)">
-                <template #icon><NIcon :size="12"><ExternalLink /></NIcon></template>
-                {{ t("discover.details") }}
-              </NButton>
-              <NButton
-                size="tiny"
-                type="primary"
-                :loading="downloading[mod.remoteId]"
-                @click="downloadMod(mod)"
-              >
-                <template #icon><NIcon :size="12"><Download /></NIcon></template>
-                {{ t("discover.install") }}
-              </NButton>
-            </NSpace>
+            <NButton size="tiny" secondary @click="openModPage(mod.detailUrl)">
+              <template #icon><NIcon :size="12"><ExternalLink /></NIcon></template>
+              {{ t("discover.details") }}
+            </NButton>
           </div>
         </NCard>
       </div>

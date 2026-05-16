@@ -37,7 +37,7 @@
     "launching": "启动中...",
     "quickPresetPlaceholder": "快速预设...",
     "openModsDir": "打开模组目录",
-    "saveAsPreset": "保存为预设",
+    "newPreset": "新增预设",
     "importMod": "导入 Mod",
     "searchPlaceholder": "搜索已安装的 Mod... 按 Enter 搜索",
     "filter": {
@@ -70,7 +70,9 @@
       "affectsGameplay": "影响联机",
       "unknownAuthor": "未知作者",
       "selectTag": "选择标签",
-      "confirmUninstall": "确定要卸载「{name}」吗？此操作不可撤销。"
+      "confirmUninstall": "确定要卸载「{name}」吗？此操作不可撤销。",
+      "note": "备注",
+      "notePlaceholder": "添加备注..."
     },
     "savePreset": {
       "title": "保存为预设",
@@ -230,23 +232,13 @@
     "jumpTo": "跳至",
     "unknownAuthor": "未知",
     "details": "详情",
-    "install": "安装",
     "empty": {
       "notFound": "未找到相关 Mod",
       "needsApiKey": "提示：需要先在设置中配置 Nexus Mods API Key",
       "startSearch": "输入关键词开始搜索，或直接搜索浏览全部 Mod"
     },
-    "success": {
-      "installed": "安装成功: {name}"
-    },
-    "info": {
-      "downloadViaBrowser": "请在浏览器中下载: {name}"
-    },
     "error": {
-      "searchFailed": "搜索失败: {e}",
-      "invalidModId": "无效的 Mod ID",
-      "noDownloadableFile": "该 Mod 没有可下载的文件",
-      "downloadFailed": "下载失败: {e}"
+      "searchFailed": "搜索失败: {e}"
     }
   },
 
@@ -387,7 +379,6 @@
   "profiles": {
     "title": "预设管理",
     "subtitle": "管理 Mod 组合预设，一键切换",
-    "saveCurrent": "保存当前",
     "importBundle": "导入整合包",
     "create": "新建预设",
     "builtin": "内置",
