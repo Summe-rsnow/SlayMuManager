@@ -28,6 +28,11 @@ const message = useMessage()
 type Stage = "idle" | "previewing" | "ready" | "installing" | "done"
 const stage = ref<Stage>("idle")
 const loading = ref(false)
+
+// 反重入保护：扫描/安装中阻止新的拖放触发
+const isBusy = computed(() =>
+  stage.value === "previewing" || stage.value === "installing",
+)
 const preview = ref<BatchImportPreview | null>(null)
 
 // 用户选择
@@ -275,7 +280,7 @@ function statusText(status: string) {
       <!-- === 阶段 1: 选择导入方式 === -->
       <template v-if="stage === 'idle'">
         <NSpace vertical :size="16" class="py-4">
-          <DropZone @files-dropped="handleDropFiles" />
+          <DropZone :busy="isBusy" @files-dropped="handleDropFiles" />
           <div class="flex items-center justify-center">
             <NButton
               size="large"
@@ -395,7 +400,7 @@ function statusText(status: string) {
             {{ t("import.enableAfterInstall") }}
           </NCheckbox>
           <NSpace>
-            <NButton @click="handleClose">{{ t("import.common.cancel") }}</NButton>
+            <NButton @click="handleClose">{{ t("common.cancel") }}</NButton>
             <NButton
               type="primary"
               :disabled="selectedIds.size === 0"
@@ -429,7 +434,7 @@ function statusText(status: string) {
         <div class="flex flex-col items-center py-8 gap-3">
           <NIcon :size="48" color="#18a058"><CheckCircle2 /></NIcon>
           <p class="text-lg font-medium">{{ t("import.done") }}</p>
-          <NButton type="primary" @click="handleClose">{{ t("import.common.close") }}</NButton>
+          <NButton type="primary" @click="handleClose">{{ t("common.close") }}</NButton>
         </div>
       </template>
     </NCard>

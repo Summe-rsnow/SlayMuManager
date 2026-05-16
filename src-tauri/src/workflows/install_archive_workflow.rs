@@ -6,12 +6,20 @@ use crate::integrations::manifest::ModManifest;
 use crate::services::mod_service;
 use crate::utils::error::AppError;
 use serde::Serialize;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use tauri::Emitter;
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
-// 归档格式检测
+// 常量
+// ---------------------------------------------------------------------------
+
+/// 递归扫描最大深度（对齐 SlaySP2Manager）
+const MAX_DISCOVERY_DEPTH: u32 = 3;
+
+// ---------------------------------------------------------------------------
+// 归档格式检测（magic bytes + 扩展名兜底）
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -20,7 +28,26 @@ pub enum ArchiveFormat {
     SevenZ,
 }
 
+/// 检测归档格式：优先魔数，其次扩展名
 pub fn detect_archive_format(path: &Path) -> Option<ArchiveFormat> {
+    // 1. 魔数检测
+    if let Ok(mut file) = std::fs::File::open(path) {
+        let mut buf = [0u8; 8];
+        if file.read_exact(&mut buf).is_ok() {
+            // ZIP: 50 4B 03 04 | 50 4B 05 06 (empty) | 50 4B 07 08 (spanned)
+            if buf[0] == 0x50 && buf[1] == 0x4B {
+                return Some(ArchiveFormat::Zip);
+            }
+            // 7z: 37 7A BC AF 27 1C
+            if buf[0] == 0x37 && buf[1] == 0x7A && buf[2] == 0xBC
+                && buf[3] == 0xAF && buf[4] == 0x27 && buf[5] == 0x1C
+            {
+                return Some(ArchiveFormat::SevenZ);
+            }
+        }
+    }
+
+    // 2. 扩展名兜底
     let ext = path.extension()?.to_str()?.to_lowercase();
     match ext.as_str() {
         "zip" => Some(ArchiveFormat::Zip),
@@ -88,33 +115,148 @@ fn extract_7z(archive_path: &Path, output_dir: &Path) -> Result<(), AppError> {
 }
 
 // ---------------------------------------------------------------------------
-// Mod 发现：在解压内容中查找 Mod 文件夹
+// Mod 发现：在目录中递归发现所有 Mod 文件夹
+// 对齐 SlaySP2Manager recursive_discover_from_dir：
+//   manifest → mods/ → 子文件夹递归 → 嵌套压缩包自动解压 → 回退推理
 // ---------------------------------------------------------------------------
 
-/// 在目录中递归发现所有 Mod 文件夹
-/// 策略：mods/ 结构 → manifest.json 文件夹 → 回退推理
+/// 入口：触发 3 层深度限制的递归 Mod 发现
 pub fn discover_mods_in_dir(
     root: &Path,
     source_archive: Option<&str>,
     source_type: DiscoveredModSourceType,
 ) -> Vec<DiscoveredMod> {
-    // 1. 检查是否有 mods/ 结构
-    let bepinex_plugins = root.join("mods");
-    if bepinex_plugins.is_dir() {
-        let mods = discover_from_plugins_dir(&bepinex_plugins, source_archive, source_type);
-        if !mods.is_empty() {
-            return mods;
+    recursive_discover_from_dir(root, source_archive, source_type, 0)
+}
+
+/// 递归扫描目录：每层检测 manifest / mods/ 结构 / 嵌套压缩包
+fn recursive_discover_from_dir(
+    dir: &Path,
+    source_archive: Option<&str>,
+    source_type: DiscoveredModSourceType,
+    depth: u32,
+) -> Vec<DiscoveredMod> {
+    if depth > MAX_DISCOVERY_DEPTH {
+        return Vec::new();
+    }
+
+    let mut mods: Vec<DiscoveredMod> = Vec::new();
+
+    // 1. 当前目录自身就是 Mod（直接包含 manifest）
+    if has_manifest(dir) {
+        let folder_name = dir
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("unknown")
+            .to_string();
+        let manifest = find_manifest_path(dir).and_then(|p| ModManifest::from_file(&p));
+        mods.push(build_discovered_mod(
+            &manifest,
+            &folder_name,
+            source_archive,
+            source_type,
+        ));
+        return mods;
+    }
+
+    // 2. 扫描子条目
+    let entries = match std::fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return mods,
+    };
+
+    for entry in entries.filter_map(|e| e.ok()) {
+        let path = entry.path();
+
+        if path.is_dir() {
+            // 2a. mods/ 特殊目录：其子文件夹都是 Mod
+            if path.file_name().and_then(|n| n.to_str()) == Some("mods") {
+                mods.extend(discover_from_plugins_dir(
+                    &path,
+                    source_archive,
+                    source_type,
+                ));
+            }
+            // 2b. 带 manifest 的子目录 → 识别为 Mod
+            else if has_manifest(&path) {
+                let folder_name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                let manifest = find_manifest_path(&path)
+                    .and_then(|p| ModManifest::from_file(&p));
+                mods.push(build_discovered_mod(
+                    &manifest,
+                    &folder_name,
+                    source_archive,
+                    source_type,
+                ));
+            }
+            // 2c. 普通子目录 → 递归深入
+            else {
+                mods.extend(recursive_discover_from_dir(
+                    &path,
+                    source_archive,
+                    source_type,
+                    depth + 1,
+                ));
+            }
+        } else if path.is_file() {
+            // 2d. 嵌套压缩包 → 自动解压后递归扫描
+            if detect_archive_format(&path).is_some() {
+                let archive_name = path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown");
+                match extract_archive(&path) {
+                    Ok(temp_dir) => {
+                        let nested = recursive_discover_from_dir(
+                            &temp_dir,
+                            Some(archive_name),
+                            DiscoveredModSourceType::Archive,
+                            depth + 1,
+                        );
+                        mods.extend(nested);
+                        cleanup_extract_dir(&temp_dir);
+                    }
+                    Err(_) => {
+                        // 解压失败的嵌套压缩包静默跳过
+                    }
+                }
+            }
         }
     }
 
-    // 2. 递归查找所有 manifest.json
-    let manifest_mods = find_mod_folders_by_manifest(root, source_archive, source_type);
-    if !manifest_mods.is_empty() {
-        return manifest_mods;
+    // 3. 一无所获 → 回退推理
+    if mods.is_empty() {
+        return fallback_discovery(dir, source_archive, source_type);
     }
 
-    // 3. 回退：分析顶层结构
-    fallback_discovery(root, source_archive, source_type)
+    mods
+}
+
+/// 检查目录是否包含 mod manifest（多文件名兼容）
+fn has_manifest(dir: &Path) -> bool {
+    let folder_name = dir.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    dir.join(format!("{}.json", folder_name)).exists()
+        || dir.join("mod_manifest.json").exists()
+        || dir.join("manifest.json").exists()
+        || dir
+            .read_dir()
+            .map(|mut rd| {
+                rd.any(|e| {
+                    e.as_ref().map_or(false, |entry| {
+                        entry.path().extension().map_or(false, |ext| ext == "json")
+                    })
+                })
+            })
+            .unwrap_or(false)
+}
+
+/// 在目录中找到 manifest 文件路径（优先级对齐 ModManifest::find_in_dir）
+fn find_manifest_path(dir: &Path) -> Option<PathBuf> {
+    ModManifest::find_in_dir(dir).map(|(p, _)| p)
 }
 
 fn discover_from_plugins_dir(
@@ -150,48 +292,6 @@ fn discover_from_plugins_dir(
     }
 
     mods
-}
-
-fn find_mod_folders_by_manifest(
-    root: &Path,
-    source_archive: Option<&str>,
-    source_type: DiscoveredModSourceType,
-) -> Vec<DiscoveredMod> {
-    let mut mods = Vec::new();
-    find_manifests_recursive(root, source_archive, source_type, &mut mods);
-    mods
-}
-
-fn find_manifests_recursive(
-    current: &Path,
-    source_archive: Option<&str>,
-    source_type: DiscoveredModSourceType,
-    out: &mut Vec<DiscoveredMod>,
-) {
-    if let Ok(entries) = std::fs::read_dir(current) {
-        for entry in entries.filter_map(|e| e.ok()) {
-            let path = entry.path();
-            if !path.is_dir() {
-                continue;
-            }
-            if path.join("manifest.json").exists() {
-                let folder_name = path
-                    .file_name()
-                    .and_then(|n| n.to_str())
-                    .unwrap_or("unknown")
-                    .to_string();
-                let manifest = ModManifest::from_file(&path.join("manifest.json"));
-                out.push(build_discovered_mod(
-                    &manifest,
-                    &folder_name,
-                    source_archive,
-                    source_type,
-                ));
-            } else {
-                find_manifests_recursive(&path, source_archive, source_type, out);
-            }
-        }
-    }
 }
 
 fn fallback_discovery(
@@ -344,12 +444,14 @@ pub fn detect_conflicts_full(discovered: &mut [DiscoveredMod], game_root: &Path)
 // ---------------------------------------------------------------------------
 
 /// 将发现的 Mod 从解压目录安装到 plugins/ 或 mods_disabled/
+/// 仅安装 selected_ids 中勾选的 Mod（空列表 = 安装全部）
 pub fn install_discovered_mods(
     extracted_root: &Path,
     discovered: &[DiscoveredMod],
     game_root: &Path,
     enable: bool,
     resolutions: &[(String, ConflictResolution)],
+    selected_ids: &[String],
     _source_archive: Option<&str>,
 ) -> Result<Vec<InstalledMod>, AppError> {
     let target_dir = if enable {
@@ -359,6 +461,7 @@ pub fn install_discovered_mods(
     };
     std::fs::create_dir_all(&target_dir).map_err(AppError::Io)?;
 
+    let filter_by_selection = !selected_ids.is_empty();
     let mut installed = Vec::new();
 
     for dmod in discovered {
@@ -366,6 +469,11 @@ pub fn install_discovered_mods(
             dmod.status,
             DiscoveredModStatus::Ready | DiscoveredModStatus::Conflict
         ) {
+            continue;
+        }
+
+        // 用户勾选过滤（仅当有 selected_ids 时启用）
+        if filter_by_selection && !selected_ids.contains(&dmod.mod_id) {
             continue;
         }
 
@@ -558,6 +666,7 @@ pub fn execute_install(
         game_root,
         enable,
         &resolutions,
+        &[],               // 无勾选过滤 → 安装全部
         Some(archive_name),
     )?;
     cleanup_extract_dir(&temp_dir);
@@ -651,13 +760,14 @@ pub fn batch_preview(
     })
 }
 
-/// 批量安装：对所有 ready 状态的 Mod 执行安装
+/// 批量安装：仅安装 selected_ids 中勾选的 Mod（空列表 = 安装全部）
 pub fn batch_install(
     app_handle: &tauri::AppHandle,
     paths: &[String],
     game_root: &Path,
     enable: bool,
     resolutions: &[(String, ConflictResolution)],
+    selected_ids: &[String],
 ) -> Result<BatchInstallResult, AppError> {
     #[derive(Serialize, Clone)]
     struct InstallProgress<'a> {
@@ -700,9 +810,9 @@ pub fn batch_install(
         }
 
         let outcome = if path.is_dir() {
-            install_from_folder(path, game_root, enable, resolutions)
+            install_from_folder(path, game_root, enable, resolutions, selected_ids)
         } else if detect_archive_format(path).is_some() {
-            install_single_archive(path, game_root, enable, resolutions)
+            install_single_archive(path, game_root, enable, resolutions, selected_ids)
         } else {
             Err(AppError::Other("不支持的格式".to_string()))
         };
@@ -750,6 +860,7 @@ fn install_from_folder(
     game_root: &Path,
     enable: bool,
     resolutions: &[(String, ConflictResolution)],
+    selected_ids: &[String],
 ) -> Result<Vec<BatchInstallItem>, AppError> {
     let folder_name = folder_path
         .file_name()
@@ -768,6 +879,7 @@ fn install_from_folder(
         game_root,
         enable,
         resolutions,
+        selected_ids,
         Some(folder_name),
     )?;
 
@@ -787,6 +899,7 @@ fn install_single_archive(
     game_root: &Path,
     enable: bool,
     resolutions: &[(String, ConflictResolution)],
+    selected_ids: &[String],
 ) -> Result<Vec<BatchInstallItem>, AppError> {
     let archive_name = archive_path
         .file_name()
@@ -806,6 +919,7 @@ fn install_single_archive(
         game_root,
         enable,
         resolutions,
+        selected_ids,
         Some(archive_name),
     )?;
     cleanup_extract_dir(&temp_dir);

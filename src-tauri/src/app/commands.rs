@@ -13,7 +13,6 @@ use crate::repositories::settings_repo;
 use crate::services::{
     backup_service, discover_service, game_service, mod_service, profile_service, save_service,
 };
-use crate::integrations::nexus_client;
 use crate::workflows::install_archive_workflow;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -158,22 +157,30 @@ pub fn update_app_locale(locale: String, state: State<AppState>) {
 // =========================================================================
 
 #[tauri::command]
-pub fn launch_game(state: State<AppState>) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+pub fn launch_game() -> Result<(), String> {
+    let steam_url = "steam://rungameid/2868840";
 
-    let exe_path = game_service::game_exe_path(Path::new(game_root));
-    if !exe_path.exists() {
-        return Err(format!("找不到游戏可执行文件: {}", exe_path.display()));
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", steam_url])
+            .spawn()
+            .map_err(|e| format!("启动游戏失败: {}", e))?;
     }
-
-    std::process::Command::new("cmd")
-        .args(["/C", "start", "", &exe_path.to_string_lossy()])
-        .spawn()
-        .map_err(|e| format!("启动游戏失败: {}", e))?;
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(steam_url)
+            .spawn()
+            .map_err(|e| format!("启动游戏失败: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(steam_url)
+            .spawn()
+            .map_err(|e| format!("启动游戏失败: {}", e))?;
+    }
 
     Ok(())
 }
@@ -504,8 +511,19 @@ pub fn batch_install_mods(
         Path::new(game_root),
         enable_now,
         &parsed_resolutions,
+        &selected_ids,
     )
     .map_err(|e| e.to_string())?;
+
+    // Save Guard：从 0 个 Mod → N 个 Mod 时自动触发存档备份 + 同步
+    if enable_now && result.success_count > 0 {
+        let sync_pairs = settings.save_sync_pairs.clone();
+        let installed_count = mod_service::scan_enabled_mods(Path::new(game_root)).len();
+        // 仅当安装前 mods/ 为空时才触发（first-time activation）
+        if installed_count == result.success_count as usize {
+            let _ = save_service::sync_saves(Path::new(game_root), &sync_pairs);
+        }
+    }
 
     // 记录日志
     let mut activity = state.recent_activity.write().unwrap();
