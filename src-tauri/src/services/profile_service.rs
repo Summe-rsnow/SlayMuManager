@@ -1,0 +1,540 @@
+use crate::domain::profile::{ApplyProfileResult, ModProfile};
+use crate::repositories::profile_repo;
+use crate::services::mod_service;
+use crate::utils::error::AppError;
+use serde::{Deserialize, Serialize};
+use std::path::Path;
+
+// ---------------------------------------------------------------------------
+// CRUD
+// ---------------------------------------------------------------------------
+
+pub fn list_profiles() -> Vec<ModProfile> {
+    profile_repo::load_profiles()
+}
+
+pub fn create_profile(
+    name: String,
+    description: Option<String>,
+    mod_ids: Vec<String>,
+) -> Result<ModProfile, AppError> {
+    let mut profiles = profile_repo::load_profiles();
+
+    let now = chrono::Utc::now().to_rfc3339();
+    let profile = ModProfile {
+        id: uuid::Uuid::new_v4().to_string(),
+        name,
+        description,
+        mod_ids,
+        created_at: now.clone(),
+        updated_at: now,
+        builtin: false,
+    };
+
+    profiles.push(profile.clone());
+    profile_repo::save_profiles(&profiles).map_err(|e| AppError::Other(e))?;
+
+    Ok(profile)
+}
+
+pub fn update_profile(
+    id: String,
+    name: String,
+    description: Option<String>,
+    mod_ids: Vec<String>,
+) -> Result<ModProfile, AppError> {
+    let mut profiles = profile_repo::load_profiles();
+
+    let idx = profiles
+        .iter()
+        .position(|p| p.id == id)
+        .ok_or_else(|| AppError::Other(format!("预设不存在: {}", id)))?;
+
+    // 内置预设不可编辑
+    if profiles[idx].builtin {
+        return Err(AppError::Other("内置预设不可编辑".to_string()));
+    }
+
+    let now = chrono::Utc::now().to_rfc3339();
+    let updated = ModProfile {
+        id,
+        name,
+        description,
+        mod_ids,
+        created_at: profiles[idx].created_at.clone(),
+        updated_at: now,
+        builtin: false,
+    };
+
+    profiles[idx] = updated.clone();
+    profile_repo::save_profiles(&profiles).map_err(|e| AppError::Other(e))?;
+
+    Ok(updated)
+}
+
+pub fn delete_profile(id: &str) -> Result<(), AppError> {
+    let mut profiles = profile_repo::load_profiles();
+
+    let idx = profiles
+        .iter()
+        .position(|p| p.id == id)
+        .ok_or_else(|| AppError::Other(format!("预设不存在: {}", id)))?;
+
+    // 内置预设不可删除
+    if profiles[idx].builtin {
+        return Err(AppError::Other("内置预设不可删除".to_string()));
+    }
+
+    profiles.remove(idx);
+    profile_repo::save_profiles(&profiles).map_err(|e| AppError::Other(e))?;
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// 应用预设
+// ---------------------------------------------------------------------------
+
+pub fn apply_profile(
+    id: &str,
+    game_root: &Path,
+    sync_pairs: &[crate::app::state::SaveSyncPair],
+) -> Result<ApplyProfileResult, AppError> {
+    let profiles = profile_repo::load_profiles();
+    let profile = profiles
+        .iter()
+        .find(|p| p.id == id)
+        .cloned()
+        .ok_or_else(|| AppError::Other(format!("预设不存在: {}", id)))?;
+
+    let enabled = mod_service::scan_enabled_mods(game_root);
+    let disabled = mod_service::scan_disabled_mods(game_root);
+
+    let enabled_ids: Vec<String> = enabled.iter().map(|m| m.id.clone()).collect();
+    let disabled_ids: Vec<String> = disabled.iter().map(|m| m.id.clone()).collect();
+    let _all_installed_ids: Vec<String> =
+        enabled_ids.iter().chain(disabled_ids.iter()).cloned().collect();
+
+    let mut enabled_list = Vec::new();
+    let mut disabled_list = Vec::new();
+    let mut missing_list = Vec::new();
+
+    for mod_id in &profile.mod_ids {
+        if enabled_ids.contains(mod_id) {
+            // 已经在启用状态，不需要动
+            enabled_list.push(mod_id.clone());
+        } else if disabled_ids.contains(mod_id) {
+            // 需要启用
+            mod_service::enable_mod(game_root, mod_id, sync_pairs)?;
+            enabled_list.push(mod_id.clone());
+        } else {
+            // 未安装
+            missing_list.push(mod_id.clone());
+        }
+    }
+
+    // 禁用不在预设中的已启用 Mod
+    for mod_id in &enabled_ids {
+        if !profile.mod_ids.contains(mod_id) {
+            mod_service::disable_mod(game_root, mod_id, sync_pairs)?;
+            disabled_list.push(mod_id.clone());
+        }
+    }
+
+    // 更新 active_profile_name
+    let mut settings = crate::repositories::settings_repo::load_settings()
+        .unwrap_or_default();
+    settings.active_profile_name = profile.name.clone();
+    let _ = crate::repositories::settings_repo::save_settings(&settings);
+
+    Ok(ApplyProfileResult {
+        profile,
+        enabled_mod_ids: enabled_list,
+        disabled_mod_ids: disabled_list,
+        missing_mod_ids: missing_list,
+    })
+}
+
+// ---------------------------------------------------------------------------
+// 整合包格式 (.spm)
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleManifest {
+    pub format: String,
+    pub profile: BundleProfileInfo,
+    pub mods: Vec<BundleModInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleProfileInfo {
+    pub name: String,
+    pub description: Option<String>,
+    pub mod_ids: Vec<String>,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleModInfo {
+    pub mod_id: String,
+    pub name: String,
+    pub version: Option<String>,
+    pub folder_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BundlePreview {
+    pub manifest: BundleManifest,
+    pub conflicts: Vec<BundleConflict>,
+    pub missing_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleConflict {
+    pub mod_id: String,
+    pub name: String,
+    pub reason: String,
+}
+
+// ---------------------------------------------------------------------------
+// 导出整合包
+// ---------------------------------------------------------------------------
+
+pub fn export_bundle(profile_id: &str, output_path: &str, game_root: &Path) -> Result<String, AppError> {
+    let profiles = profile_repo::load_profiles();
+    let profile = profiles
+        .iter()
+        .find(|p| p.id == profile_id)
+        .cloned()
+        .ok_or_else(|| AppError::Other(format!("预设不存在: {}", profile_id)))?;
+
+    let plugins_dir = game_root.join("mods");
+    let temp_dir = std::env::temp_dir()
+        .join("slaymumanager")
+        .join("bundle")
+        .join(uuid::Uuid::new_v4().to_string());
+
+    std::fs::create_dir_all(&temp_dir).map_err(AppError::Io)?;
+
+    let mut bundle_mods = Vec::new();
+
+    // 复制每个 Mod 目录
+    for mod_id in &profile.mod_ids {
+        match mod_service::find_mod_folder(&plugins_dir, mod_id) {
+            Ok(mod_folder) => {
+                let folder_name = mod_folder
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+                let dest = temp_dir.join(&folder_name);
+                copy_dir_recursive(&mod_folder, &dest)?;
+
+                let manifest = crate::integrations::manifest::ModManifest::from_file(
+                    &mod_folder.join("manifest.json"),
+                );
+                bundle_mods.push(BundleModInfo {
+                    mod_id: mod_id.clone(),
+                    name: manifest
+                        .as_ref()
+                        .and_then(|m| m.name.clone())
+                        .unwrap_or_else(|| folder_name.clone()),
+                    version: manifest.as_ref().and_then(|m| m.version.clone()),
+                    folder_name,
+                });
+            }
+            Err(_) => {
+                // Mod 未安装，不包含在整合包中但仍记录
+            }
+        }
+    }
+
+    // 生成 .spm 文件
+    let manifest = BundleManifest {
+        format: "spm-1".to_string(),
+        profile: BundleProfileInfo {
+            name: profile.name.clone(),
+            description: profile.description.clone(),
+            mod_ids: profile.mod_ids.clone(),
+            created_at: profile.created_at.clone(),
+        },
+        mods: bundle_mods,
+    };
+
+    let spm_json = serde_json::to_string_pretty(&manifest)
+        .map_err(|e| AppError::Other(format!("序列化失败: {}", e)))?;
+    std::fs::write(temp_dir.join("bundle.spm"), &spm_json).map_err(AppError::Io)?;
+
+    // 打包为 ZIP
+    zip_dir(&temp_dir, Path::new(output_path))?;
+
+    // 清理临时目录
+    let _ = std::fs::remove_dir_all(&temp_dir);
+
+    Ok(output_path.to_string())
+}
+
+// ---------------------------------------------------------------------------
+// 导入整合包
+// ---------------------------------------------------------------------------
+
+pub fn preview_bundle(bundle_path: &str, game_root: &Path) -> Result<BundlePreview, AppError> {
+    let temp_dir = std::env::temp_dir()
+        .join("slaymumanager")
+        .join("bundle_preview")
+        .join(uuid::Uuid::new_v4().to_string());
+
+    std::fs::create_dir_all(&temp_dir).map_err(AppError::Io)?;
+
+    // 解压
+    crate::workflows::install_archive_workflow::extract_archive(Path::new(bundle_path))
+        .map_err(|_| AppError::Other("解压整合包失败".to_string()))?;
+
+    // 实际上 extract_archive 返回的是另一个 temp dir...让我直接解压
+    let file = std::fs::File::open(bundle_path).map_err(AppError::Io)?;
+    let mut archive = zip::ZipArchive::new(file)
+        .map_err(|e| AppError::Other(format!("ZIP 读取失败: {}", e)))?;
+
+    for i in 0..archive.len() {
+        let mut entry = archive
+            .by_index(i)
+            .map_err(|e| AppError::Other(format!("ZIP 条目读取失败: {}", e)))?;
+        let name = entry.name().to_string();
+        let out_path = temp_dir.join(&name);
+        if entry.is_dir() {
+            std::fs::create_dir_all(&out_path).map_err(AppError::Io)?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                std::fs::create_dir_all(parent).map_err(AppError::Io)?;
+            }
+            let mut out_file = std::fs::File::create(&out_path).map_err(AppError::Io)?;
+            std::io::copy(&mut entry, &mut out_file).map_err(AppError::Io)?;
+        }
+    }
+
+    // 读取 bundle.spm
+    let spm_path = temp_dir.join("bundle.spm");
+    let spm_content = std::fs::read_to_string(&spm_path)
+        .map_err(|_| AppError::Other("整合包缺少 bundle.spm 文件".to_string()))?;
+    let manifest: BundleManifest = serde_json::from_str(&spm_content)
+        .map_err(|e| AppError::Other(format!("bundle.spm 解析失败: {}", e)))?;
+
+    // 冲突检测
+    let installed = mod_service::scan_enabled_mods(game_root);
+    let disabled = mod_service::scan_disabled_mods(game_root);
+
+    let mut conflicts = Vec::new();
+    let mut missing_ids = Vec::new();
+
+    for mod_id in &manifest.profile.mod_ids {
+        // 检查是否在已安装 Mod 中
+        let installed_exists = installed.iter().any(|m| &m.id == mod_id);
+        let disabled_exists = disabled.iter().any(|m| &m.id == mod_id);
+        // 检查 bundle 中是否有该 mod 的文件
+        let in_bundle = manifest.mods.iter().any(|m| &m.mod_id == mod_id);
+
+        if installed_exists || disabled_exists {
+            conflicts.push(BundleConflict {
+                mod_id: mod_id.clone(),
+                name: manifest
+                    .mods
+                    .iter()
+                    .find(|m| &m.mod_id == mod_id)
+                    .map(|m| m.name.clone())
+                    .unwrap_or_else(|| mod_id.clone()),
+                reason: "已安装此 Mod，导入时将覆盖".to_string(),
+            });
+        }
+
+        if !in_bundle {
+            missing_ids.push(mod_id.clone());
+        }
+    }
+
+    // 清理
+    let _ = std::fs::remove_dir_all(&temp_dir);
+
+    Ok(BundlePreview {
+        manifest,
+        conflicts,
+        missing_ids,
+    })
+}
+
+pub fn import_bundle(
+    bundle_path: &str,
+    game_root: &Path,
+    should_apply: bool,
+    resolutions: &[(String, String)], // (modId, "skip"|"replace")
+    sync_pairs: &[crate::app::state::SaveSyncPair],
+) -> Result<ApplyProfileResult, AppError> {
+    // 解压
+    let temp_dir = std::env::temp_dir()
+        .join("slaymumanager")
+        .join("bundle_import")
+        .join(uuid::Uuid::new_v4().to_string());
+
+    std::fs::create_dir_all(&temp_dir).map_err(AppError::Io)?;
+
+    let file = std::fs::File::open(bundle_path).map_err(AppError::Io)?;
+    let mut archive = zip::ZipArchive::new(file)
+        .map_err(|e| AppError::Other(format!("ZIP 读取失败: {}", e)))?;
+
+    for i in 0..archive.len() {
+        let mut entry = archive
+            .by_index(i)
+            .map_err(|e| AppError::Other(format!("ZIP 条目读取失败: {}", e)))?;
+        let name = entry.name().to_string();
+        let out_path = temp_dir.join(&name);
+        if entry.is_dir() {
+            std::fs::create_dir_all(&out_path).map_err(AppError::Io)?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                std::fs::create_dir_all(parent).map_err(AppError::Io)?;
+            }
+            let mut out_file = std::fs::File::create(&out_path).map_err(AppError::Io)?;
+            std::io::copy(&mut entry, &mut out_file).map_err(AppError::Io)?;
+        }
+    }
+
+    // 读取 manifest
+    let spm_path = temp_dir.join("bundle.spm");
+    let spm_content = std::fs::read_to_string(&spm_path)
+        .map_err(|_| AppError::Other("整合包缺少 bundle.spm 文件".to_string()))?;
+    let manifest: BundleManifest = serde_json::from_str(&spm_content)
+        .map_err(|e| AppError::Other(format!("bundle.spm 解析失败: {}", e)))?;
+
+    // 构建冲突解析映射
+    let skip_ids: Vec<&str> = resolutions
+        .iter()
+        .filter(|(_, r)| r == "skip")
+        .map(|(id, _)| id.as_str())
+        .collect();
+
+    let plugins_dir = game_root.join("mods");
+    std::fs::create_dir_all(&plugins_dir).map_err(AppError::Io)?;
+
+    // 安装 Mod
+    for bundle_mod in &manifest.mods {
+        if skip_ids.contains(&bundle_mod.mod_id.as_str()) {
+            continue;
+        }
+        let source = temp_dir.join(&bundle_mod.folder_name);
+        if source.is_dir() {
+            let dest = plugins_dir.join(&bundle_mod.folder_name);
+            if dest.exists() {
+                std::fs::remove_dir_all(&dest).map_err(AppError::Io)?;
+            }
+            copy_dir_recursive(&source, &dest)?;
+        }
+    }
+
+    // 保存预设（如果需要）
+    if should_apply && !manifest.profile.mod_ids.is_empty() {
+        let mut profiles = profile_repo::load_profiles();
+        let existing = profiles.iter().position(|p| p.name == manifest.profile.name);
+        let now = chrono::Utc::now().to_rfc3339();
+        let new_profile = ModProfile {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: manifest.profile.name.clone(),
+            description: manifest.profile.description.clone(),
+            mod_ids: manifest.profile.mod_ids.clone(),
+            created_at: now.clone(),
+            updated_at: now,
+            builtin: false,
+        };
+
+        if let Some(idx) = existing {
+            profiles[idx] = new_profile.clone();
+        } else {
+            profiles.push(new_profile.clone());
+        }
+        profile_repo::save_profiles(&profiles).map_err(|e| AppError::Other(e))?;
+        return apply_profile(&new_profile.id, game_root, sync_pairs);
+    }
+
+    // 返回结果
+    let enabled = mod_service::scan_enabled_mods(game_root);
+    Ok(ApplyProfileResult {
+        profile: ModProfile {
+            id: String::new(),
+            name: manifest.profile.name,
+            description: manifest.profile.description,
+            mod_ids: manifest.profile.mod_ids.clone(),
+            created_at: manifest.profile.created_at,
+            updated_at: chrono::Utc::now().to_rfc3339(),
+            builtin: false,
+        },
+        enabled_mod_ids: enabled.iter().map(|m| m.id.clone()).collect(),
+        disabled_mod_ids: Vec::new(),
+        missing_mod_ids: Vec::new(),
+    })
+}
+
+// ---------------------------------------------------------------------------
+// 工具
+// ---------------------------------------------------------------------------
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), AppError> {
+    std::fs::create_dir_all(dst).map_err(AppError::Io)?;
+    for entry in std::fs::read_dir(src).map_err(AppError::Io)? {
+        let entry = entry.map_err(AppError::Io)?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            std::fs::copy(&src_path, &dst_path).map_err(AppError::Io)?;
+        }
+    }
+    Ok(())
+}
+
+fn zip_dir(src_dir: &Path, output_path: &Path) -> Result<(), AppError> {
+    let file = std::fs::File::create(output_path).map_err(AppError::Io)?;
+    let mut zip_writer = zip::ZipWriter::new(file);
+    let options = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+
+    add_dir_to_zip(src_dir, src_dir, &mut zip_writer, options)?;
+    zip_writer
+        .finish()
+        .map_err(|e| AppError::Other(format!("ZIP 打包失败: {}", e)))?;
+    Ok(())
+}
+
+fn add_dir_to_zip(
+    base: &Path,
+    current: &Path,
+    writer: &mut zip::ZipWriter<std::fs::File>,
+    options: zip::write::SimpleFileOptions,
+) -> Result<(), AppError> {
+    for entry in std::fs::read_dir(current).map_err(AppError::Io)? {
+        let entry = entry.map_err(AppError::Io)?;
+        let path = entry.path();
+        let name = path
+            .strip_prefix(base)
+            .map_err(|_| AppError::Other("路径解析失败".to_string()))?
+            .to_string_lossy()
+            .to_string();
+
+        if path.is_dir() {
+            writer
+                .add_directory(&name, options)
+                .map_err(|e| AppError::Other(format!("ZIP 添加目录失败: {}", e)))?;
+            add_dir_to_zip(base, &path, writer, options)?;
+        } else {
+            writer
+                .start_file(&name, options)
+                .map_err(|e| AppError::Other(format!("ZIP 添加文件失败: {}", e)))?;
+            let content = std::fs::read(&path).map_err(AppError::Io)?;
+            std::io::Write::write_all(writer, &content).map_err(AppError::Io)?;
+        }
+    }
+    Ok(())
+}

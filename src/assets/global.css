@@ -1,0 +1,8 @@
+/* 全局隐藏滚动条（保持滚动功能） */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}

@@ -1,0 +1,429 @@
+{
+  "app": {
+    "title": "SlayMuManager"
+  },
+
+  "nav": {
+    "library": "模组库",
+    "discover": "发现",
+    "profiles": "预设",
+    "saves": "存档",
+    "settings": "设置"
+  },
+
+  "common": {
+    "loading": "加载中...",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确定",
+    "delete": "删除",
+    "close": "关闭",
+    "refresh": "刷新",
+    "back": "返回",
+    "search": "搜索",
+    "noData": "暂无数据",
+    "ok": "知道了",
+    "unknown": "未知",
+    "enabled": "已启用",
+    "disabled": "已禁用"
+  },
+
+  "library": {
+    "title": "模组库",
+    "enabledCountLabel": "已启用:",
+    "disabledCountLabel": "已禁用:",
+    "refreshing": "刷新中...",
+    "launchGame": "启动游戏",
+    "launching": "启动中...",
+    "quickPresetPlaceholder": "快速预设...",
+    "openModsDir": "打开插件目录",
+    "saveAsPreset": "保存为预设",
+    "importMod": "导入 Mod",
+    "searchPlaceholder": "搜索已安装的 Mod... 按 Enter 搜索",
+    "filter": {
+      "title": "筛选",
+      "clear": "清除",
+      "show": "显示",
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "attributes": "属性",
+      "affectsGameplay": "影响联机",
+      "tags": "标签",
+      "activeFilterCount": "{n} 个筛选项"
+    },
+    "empty": {
+      "noMods": "暂无 Mod",
+      "noModsHint": "点击\"导入 Mod\"或从发现页面搜索并安装",
+      "filterNoResults": "筛选无结果",
+      "clearAllFilters": "清除所有筛选",
+      "searchNoMatch": "未找到匹配「{q}」的 Mod",
+      "clearSearch": "清除搜索",
+      "noEnabledMods": "暂无已启用的 Mod",
+      "noDisabledMods": "暂无已禁用的 Mod"
+    },
+    "section": {
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "count": "{n} 个"
+    },
+    "mod": {
+      "affectsGameplay": "影响联机",
+      "unknownAuthor": "未知作者",
+      "selectTag": "选择标签",
+      "confirmUninstall": "确定要卸载「{name}」吗？此操作不可撤销。"
+    },
+    "savePreset": {
+      "title": "保存为预设",
+      "nameLabel": "预设名称",
+      "namePlaceholder": "输入预设名称",
+      "descriptionLabel": "备注（可选）",
+      "descriptionPlaceholder": "简要描述此预设",
+      "willSave": "将保存 {n} 个已启用 Mod 到预设",
+      "defaultName": "当前配置",
+      "defaultDescription": "从当前已启用 Mod 保存"
+    },
+    "saveGuard": {
+      "title": "存档路径变更提醒",
+      "pathSwitchWarning": "启用此 Mod 将切换存档目录（原版 → Mod 版）。游戏会使用不同的存档位置。",
+      "syncResult": "检测到存档同步配对，已自动同步 {synced} 个存档（创建 {backups} 个备份）。",
+      "gotIt": "知道了"
+    },
+    "success": {
+      "enabled": "已启用「{name}」",
+      "disabled": "已禁用「{name}」",
+      "toggle": "已{action}「{name}」",
+      "uninstalled": "已卸载「{name}」",
+      "presetSaved": "预设「{name}」已保存",
+      "presetApplied": "已应用预设「{name}」",
+      "gameLaunched": "游戏已启动"
+    },
+    "warning": {
+      "noEnabledMods": "当前没有已启用的 Mod",
+      "enterPresetName": "请输入预设名称",
+      "gamePathNotSet": "请先在设置中配置游戏路径"
+    },
+    "error": {
+      "operationFailed": "操作失败: {e}",
+      "uninstallFailed": "卸载失败: {e}",
+      "openFailed": "打开失败: {e}",
+      "saveFailed": "保存失败: {e}",
+      "launchFailed": "启动游戏失败: {e}"
+    }
+  },
+
+  "import": {
+    "title": "导入 Mod",
+    "singleZip": "导入单个 ZIP",
+    "multiZip": "导入多个 ZIP",
+    "fromFolder": "从文件夹导入",
+    "scanning": "正在扫描归档文件...",
+    "preview": {
+      "foundMods": "发现 {ready} 个 Mod",
+      "errorCount": "{count} 个异常"
+    },
+    "selectAll": "全选",
+    "deselectAll": "取消全选",
+    "conflict": {
+      "detected": "检测到冲突，请为每个冲突 Mod 选择处理策略",
+      "details": "冲突详情：",
+      "skip": "跳过",
+      "replace": "覆盖",
+      "rename": "重命名"
+    },
+    "enableAfterInstall": "安装后启用",
+    "installWithCount": "安装 ({count})",
+    "status": {
+      "ready": "就绪",
+      "conflict": "冲突",
+      "error": "错误",
+      "unsupportedFormat": "格式不支持"
+    },
+    "progress": {
+      "preparing": "准备中...",
+      "installing": "正在安装 Mod..."
+    },
+    "done": "安装完成",
+    "dropZoneHint": "拖放 .zip / .7z 文件或文件夹到此处",
+    "dropZoneDropHint": "松开以导入文件",
+    "dropZoneOrUseButton": "或使用下方按钮选择文件",
+    "success": {
+      "installedCount": "成功安装 {count} 个 Mod"
+    },
+    "warning": {
+      "failedCount": "{count} 个安装失败"
+    },
+    "error": {
+      "previewFailed": "预览失败: {e}",
+      "installFailed": "安装失败: {e}"
+    }
+  },
+
+  "settings": {
+    "title": "设置",
+    "gamePath": {
+      "title": "游戏路径",
+      "placeholder": "游戏安装目录",
+      "autoDetect": "自动检测",
+      "valid": "✓ 路径有效",
+      "invalid": "✗ 路径无效（未找到 SlayTheSpire2.exe）"
+    },
+    "nexus": {
+      "title": "Nexus Mods",
+      "apiKeyPlaceholder": "输入 Nexus Mods API Key",
+      "hint": "在 nexusmods.com 注册后获取免费 API Key"
+    },
+    "proxy": {
+      "title": "代理",
+      "testConnection": "测试连接"
+    },
+    "appearance": {
+      "title": "外观",
+      "language": "语言"
+    },
+    "backup": {
+      "title": "备份",
+      "autoKeepCount": "自动备份保留数量"
+    },
+    "language": {
+      "zhCN": "简体中文",
+      "en": "English"
+    },
+    "success": {
+      "gameDetected": "已找到游戏: {from}",
+      "gamePathUpdated": "游戏路径已更新",
+      "apiKeySaved": "API Key 已保存",
+      "proxySaved": "代理已保存",
+      "proxyOk": "代理连接成功"
+    },
+    "warning": {
+      "gameNotFound": "未找到 Slay the Spire 2",
+      "proxyUrlRequired": "请先输入代理地址"
+    },
+    "error": {
+      "detectFailed": "检测失败: {e}",
+      "saveFailed": "保存失败: {e}",
+      "proxyFail": "代理连接失败",
+      "testFailed": "测试失败: {e}"
+    }
+  },
+
+  "discover": {
+    "title": "发现",
+    "subtitle": "在 Nexus Mods 上搜索 Slay the Spire 2 模组",
+    "searchPlaceholder": "搜索模组（留空浏览全部）...",
+    "sort": {
+      "latestAdded": "最新发布",
+      "latestUpdated": "最近更新",
+      "trending": "最热门",
+      "downloads": "下载最多"
+    },
+    "resultCount": "共 {total} 个结果",
+    "unknownAuthor": "未知",
+    "details": "详情",
+    "install": "安装",
+    "empty": {
+      "notFound": "未找到相关 Mod",
+      "needsApiKey": "提示：需要先在设置中配置 Nexus Mods API Key",
+      "startSearch": "输入关键词开始搜索，或直接搜索浏览全部 Mod"
+    },
+    "success": {
+      "installed": "安装成功: {name}"
+    },
+    "info": {
+      "downloadViaBrowser": "请在浏览器中下载: {name}"
+    },
+    "error": {
+      "searchFailed": "搜索失败: {e}",
+      "invalidModId": "无效的 Mod ID",
+      "noDownloadableFile": "该 Mod 没有可下载的文件",
+      "downloadFailed": "下载失败: {e}"
+    }
+  },
+
+  "saves": {
+    "title": "存档管理",
+    "subtitle": "管理原版与模组版存档，支持双向传输与配对同步",
+    "sync": "同步",
+    "empty": {
+      "setGamePath": "请先设置游戏路径",
+      "empty": "空"
+    },
+    "unknown": "未知",
+    "backup": "备份",
+    "currentRun": "当前局",
+    "kind": {
+      "vanilla": "原版",
+      "modded": "模组版"
+    },
+    "slotCount": "{n} 个槽位",
+    "slotIndex": "槽位 {i}",
+    "fileCount": "{n} 文件",
+    "transferToModded": "→模组{i}",
+    "transferToVanilla": "→原版{i}",
+    "pairSync": {
+      "title": "配对同步",
+      "autoSyncing": "自动同步中",
+      "manual": "手动同步",
+      "on": "开",
+      "off": "关",
+      "description": "设置原版与模组版槽位的对应关系，同步时较新的覆盖较旧的（双向）",
+      "vanillaSlot": "原版存档",
+      "moddedSlot": "模组版存档",
+      "paired": "已配对",
+      "unpaired": "待配对",
+      "noPair": "不配对",
+      "slotWithNumber": "槽位 {n}",
+      "chooseSlot": "选择槽位",
+      "pairCount": "{n} 对已配对",
+      "savePairs": "保存配对"
+    },
+    "cloud": {
+      "title": "Steam 云存档",
+      "description": "Steam 云存档同步（需要安装 Steam 客户端）",
+      "viewStatus": "查看状态",
+      "uploadAll": "上传全部",
+      "downloadAll": "下载全部",
+      "cleanupArtifacts": "清理制品",
+      "localFiles": "本地文件",
+      "cloudFiles": "云端文件",
+      "differences": "差异",
+      "unavailable": "云存档不可用",
+      "cloudLabel": "云端:",
+      "localLabel": "本地:",
+      "ascend": "全量上传",
+      "descend": "全量下载",
+      "toCloud": "→云端",
+      "toLocal": "→本地",
+      "inSync": "没有差异，云端和本地完全同步",
+      "synced": "已同步",
+      "diffKind": {
+        "inSync": "同步",
+        "different": "差异",
+        "localOnly": "仅本地",
+        "cloudOnly": "仅云端"
+      },
+      "mismatch": {
+        "different": "{n} 内容不同",
+        "localOnly": "{n} 仅本地",
+        "cloudOnly": "{n} 仅云端",
+        "other": "有不一致"
+      }
+    },
+    "backups": {
+      "title": "存档备份",
+      "empty": "暂无备份",
+      "restore": "恢复",
+      "confirmDelete": "确定要删除此备份？",
+      "manualReason": "手动备份"
+    },
+    "transfer": {
+      "title": "确认存档传输",
+      "source": "源",
+      "target": "目标",
+      "hasData": "有数据",
+      "noData": "无数据",
+      "autoBackupWarning": "⚠ 目标有数据，传输前将自动备份",
+      "confirm": "传输"
+    },
+    "success": {
+      "transferDone": "存档传输完成",
+      "slotBackedUp": "槽位 {i} 已备份",
+      "backupRestored": "备份已恢复",
+      "backupDeleted": "备份已删除",
+      "syncPairsDone": "{n} 对已同步",
+      "syncPairsSaved": "同步配对已保存",
+      "copied": "已复制",
+      "ascended": "已全量上传到 Steam 云",
+      "descended": "已从 Steam 云全量下载",
+      "artifactsCleaned": "制品已清理"
+    },
+    "info": {
+      "noSyncNeeded": "没有需要同步的存档"
+    },
+    "error": {
+      "transferFailed": "传输失败: {e}",
+      "loadBackupsFailed": "加载备份列表失败: {e}",
+      "backupFailed": "备份失败: {e}",
+      "restoreFailed": "恢复失败: {e}",
+      "backupDeleteFailed": "删除失败: {e}",
+      "syncFailed": "同步失败: {e}",
+      "toggleFailed": "切换失败: {e}",
+      "pairSaveFailed": "保存失败: {e}",
+      "cloudUnavailable": "云存档不可用: {e}",
+      "copyFailed": "复制失败: {e}",
+      "ascendFailed": "上传失败: {e}",
+      "descendFailed": "下载失败: {e}",
+      "cleanupFailed": "清理失败: {e}"
+    }
+  },
+
+  "profiles": {
+    "title": "预设管理",
+    "subtitle": "管理 Mod 组合预设，一键切换",
+    "saveCurrent": "保存当前",
+    "importBundle": "导入整合包",
+    "create": "新建预设",
+    "builtin": "内置",
+    "modCount": "{n} 个 Mod",
+    "confirmDelete": "确定要删除「{name}」？",
+    "empty": {
+      "noProfiles": "暂无预设",
+      "noProfilesHint": "在模组库保存当前 Mod 组合，或点击上方新建"
+    },
+    "form": {
+      "editTitle": "编辑预设",
+      "createTitle": "新建预设",
+      "name": "名称",
+      "namePlaceholder": "例如：原版体验、Mod 挑战",
+      "description": "描述（可选）",
+      "descriptionPlaceholder": "简短描述这个预设的用途",
+      "modList": "选择 Mod",
+      "searchMods": "搜索 Mod...",
+      "selectAll": "全选",
+      "deselectAll": "取消全选",
+      "noModsMatch": "无匹配 Mod",
+      "loadingMods": "加载 Mod 列表中...",
+      "selectedCount": "已选 {n} 个",
+      "updateBtn": "更新",
+      "createBtn": "创建",
+      "defaultName": "当前配置",
+      "defaultDescription": "从当前已启用 Mod 保存"
+    },
+    "apply": {
+      "applied": "已应用「{name}」",
+      "enabled": "个 Mod 已启用",
+      "disabled": "个 Mod 已禁用",
+      "missing": "个 Mod 未安装",
+      "ok": "确定"
+    },
+    "importBundle": {
+      "title": "导入「{name}」",
+      "summary": "{n1} 个 Mod · {n2} 个预设条目",
+      "conflictCount": "检测到 {n} 个冲突：",
+      "conflictHint": "冲突 Mod 默认跳过，取消勾选不会安装",
+      "missingHint": "整合包中 {n} 个 Mod 没有附带文件，不会安装",
+      "importBtn": "导入"
+    },
+    "success": {
+      "updated": "预设已更新",
+      "created": "预设已创建",
+      "deleted": "已删除「{name}」",
+      "exported": "已导出到 {path}",
+      "bundleImported": "整合包已导入，启用 {n} 个 Mod"
+    },
+    "warning": {
+      "nameRequired": "请输入预设名称",
+      "noEnabledMods": "当前没有已启用的 Mod"
+    },
+    "error": {
+      "loadFailed": "加载预设失败: {e}",
+      "saveFailed": "保存失败: {e}",
+      "deleteFailed": "删除失败: {e}",
+      "applyFailed": "应用失败: {e}",
+      "exportFailed": "导出失败: {e}",
+      "importPreviewFailed": "导入预览失败: {e}",
+      "importFailed": "导入失败: {e}",
+      "readModsFailed": "读取 Mod 列表失败: {e}"
+    }
+  }
+}

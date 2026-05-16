@@ -1,0 +1,429 @@
+{
+  "app": {
+    "title": "SlayMuManager"
+  },
+
+  "nav": {
+    "library": "Library",
+    "discover": "Discover",
+    "profiles": "Profiles",
+    "saves": "Saves",
+    "settings": "Settings"
+  },
+
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "close": "Close",
+    "refresh": "Refresh",
+    "back": "Back",
+    "search": "Search",
+    "noData": "No data",
+    "ok": "OK",
+    "unknown": "Unknown",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+
+  "library": {
+    "title": "Library",
+    "enabledCountLabel": "Enabled:",
+    "disabledCountLabel": "Disabled:",
+    "refreshing": "Refreshing...",
+    "launchGame": "Launch Game",
+    "launching": "Launching...",
+    "quickPresetPlaceholder": "Quick Preset...",
+    "openModsDir": "Open Mods Folder",
+    "saveAsPreset": "Save as Preset",
+    "importMod": "Import Mod",
+    "searchPlaceholder": "Search installed mods... Press Enter to search",
+    "filter": {
+      "title": "Filter",
+      "clear": "Clear",
+      "show": "Show",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "attributes": "Attributes",
+      "affectsGameplay": "Affects Multiplayer",
+      "tags": "Tags",
+      "activeFilterCount": "{n} active filter(s)"
+    },
+    "empty": {
+      "noMods": "No mods",
+      "noModsHint": "Click \"Import Mod\" or search and install from the Discover page",
+      "filterNoResults": "No results for current filters",
+      "clearAllFilters": "Clear all filters",
+      "searchNoMatch": "No mods matching \"{q}\"",
+      "clearSearch": "Clear search",
+      "noEnabledMods": "No enabled mods",
+      "noDisabledMods": "No disabled mods"
+    },
+    "section": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "count": "{n} mod(s)"
+    },
+    "mod": {
+      "affectsGameplay": "Affects Multiplayer",
+      "unknownAuthor": "Unknown author",
+      "selectTag": "Select tag",
+      "confirmUninstall": "Are you sure you want to uninstall \"{name}\"? This cannot be undone."
+    },
+    "savePreset": {
+      "title": "Save as Preset",
+      "nameLabel": "Preset Name",
+      "namePlaceholder": "Enter preset name",
+      "descriptionLabel": "Notes (optional)",
+      "descriptionPlaceholder": "Briefly describe this preset",
+      "willSave": "Will save {n} enabled mod(s) to preset",
+      "defaultName": "Current Config",
+      "defaultDescription": "Saved from currently enabled mods"
+    },
+    "saveGuard": {
+      "title": "Save Path Change Notice",
+      "pathSwitchWarning": "Enabling this mod will switch the save directory (vanilla → modded). The game will use a different save location.",
+      "syncResult": "Save sync pairs detected, automatically synced {synced} save(s) (created {backups} backup(s)).",
+      "gotIt": "Got it"
+    },
+    "success": {
+      "enabled": "Enabled \"{name}\"",
+      "disabled": "Disabled \"{name}\"",
+      "toggle": "{action} \"{name}\"",
+      "uninstalled": "Uninstalled \"{name}\"",
+      "presetSaved": "Preset \"{name}\" saved",
+      "presetApplied": "Applied preset \"{name}\"",
+      "gameLaunched": "Game launched"
+    },
+    "warning": {
+      "noEnabledMods": "No mods are currently enabled",
+      "enterPresetName": "Please enter a preset name",
+      "gamePathNotSet": "Please configure the game path in Settings first"
+    },
+    "error": {
+      "operationFailed": "Operation failed: {e}",
+      "uninstallFailed": "Uninstall failed: {e}",
+      "openFailed": "Open failed: {e}",
+      "saveFailed": "Save failed: {e}",
+      "launchFailed": "Failed to launch game: {e}"
+    }
+  },
+
+  "import": {
+    "title": "Import Mod",
+    "singleZip": "Import Single ZIP",
+    "multiZip": "Import Multiple ZIPs",
+    "fromFolder": "Import from Folder",
+    "scanning": "Scanning archives...",
+    "preview": {
+      "foundMods": "Found {ready} mod(s)",
+      "errorCount": "{count} error(s)"
+    },
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "conflict": {
+      "detected": "Conflicts detected — choose a strategy for each conflicting mod",
+      "details": "Conflict details:",
+      "skip": "Skip",
+      "replace": "Replace",
+      "rename": "Rename"
+    },
+    "enableAfterInstall": "Enable after install",
+    "installWithCount": "Install ({count})",
+    "status": {
+      "ready": "Ready",
+      "conflict": "Conflict",
+      "error": "Error",
+      "unsupportedFormat": "Unsupported format"
+    },
+    "progress": {
+      "preparing": "Preparing...",
+      "installing": "Installing mods..."
+    },
+    "done": "Installation complete",
+    "dropZoneHint": "Drag and drop .zip / .7z files or folders here",
+    "dropZoneDropHint": "Release to import files",
+    "dropZoneOrUseButton": "or use the buttons below to select files",
+    "success": {
+      "installedCount": "Successfully installed {count} mod(s)"
+    },
+    "warning": {
+      "failedCount": "{count} installation(s) failed"
+    },
+    "error": {
+      "previewFailed": "Preview failed: {e}",
+      "installFailed": "Installation failed: {e}"
+    }
+  },
+
+  "settings": {
+    "title": "Settings",
+    "gamePath": {
+      "title": "Game Path",
+      "placeholder": "Game installation directory",
+      "autoDetect": "Auto Detect",
+      "valid": "✓ Path valid",
+      "invalid": "✗ Path invalid (SlayTheSpire2.exe not found)"
+    },
+    "nexus": {
+      "title": "Nexus Mods",
+      "apiKeyPlaceholder": "Enter Nexus Mods API Key",
+      "hint": "Get a free API Key after registering at nexusmods.com"
+    },
+    "proxy": {
+      "title": "Proxy",
+      "testConnection": "Test Connection"
+    },
+    "appearance": {
+      "title": "Appearance",
+      "language": "Language"
+    },
+    "backup": {
+      "title": "Backup",
+      "autoKeepCount": "Auto-backup retention count"
+    },
+    "language": {
+      "zhCN": "简体中文",
+      "en": "English"
+    },
+    "success": {
+      "gameDetected": "Game found: {from}",
+      "gamePathUpdated": "Game path updated",
+      "apiKeySaved": "API Key saved",
+      "proxySaved": "Proxy saved",
+      "proxyOk": "Proxy connection succeeded"
+    },
+    "warning": {
+      "gameNotFound": "Slay the Spire 2 not found",
+      "proxyUrlRequired": "Please enter a proxy URL first"
+    },
+    "error": {
+      "detectFailed": "Detection failed: {e}",
+      "saveFailed": "Save failed: {e}",
+      "proxyFail": "Proxy connection failed",
+      "testFailed": "Test failed: {e}"
+    }
+  },
+
+  "discover": {
+    "title": "Discover",
+    "subtitle": "Search Slay the Spire 2 mods on Nexus Mods",
+    "searchPlaceholder": "Search mods (leave empty to browse all)...",
+    "sort": {
+      "latestAdded": "Latest Added",
+      "latestUpdated": "Latest Updated",
+      "trending": "Trending",
+      "downloads": "Most Downloaded"
+    },
+    "resultCount": "{total} result(s)",
+    "unknownAuthor": "Unknown",
+    "details": "Details",
+    "install": "Install",
+    "empty": {
+      "notFound": "No mods found",
+      "needsApiKey": "Tip: Configure your Nexus Mods API Key in Settings first",
+      "startSearch": "Enter a keyword to search, or search with no keyword to browse all mods"
+    },
+    "success": {
+      "installed": "Installed: {name}"
+    },
+    "info": {
+      "downloadViaBrowser": "Please download in your browser: {name}"
+    },
+    "error": {
+      "searchFailed": "Search failed: {e}",
+      "invalidModId": "Invalid Mod ID",
+      "noDownloadableFile": "This mod has no downloadable files",
+      "downloadFailed": "Download failed: {e}"
+    }
+  },
+
+  "saves": {
+    "title": "Save Management",
+    "subtitle": "Manage vanilla and modded saves with bidirectional transfer and pair sync",
+    "sync": "Sync",
+    "empty": {
+      "setGamePath": "Please set the game path first",
+      "empty": "Empty"
+    },
+    "unknown": "Unknown",
+    "backup": "Backup",
+    "currentRun": "Current Run",
+    "kind": {
+      "vanilla": "Vanilla",
+      "modded": "Modded"
+    },
+    "slotCount": "{n} slot(s)",
+    "slotIndex": "Slot {i}",
+    "fileCount": "{n} file(s)",
+    "transferToModded": "→Modded{i}",
+    "transferToVanilla": "→Vanilla{i}",
+    "pairSync": {
+      "title": "Pair Sync",
+      "autoSyncing": "Auto-syncing",
+      "manual": "Manual Sync",
+      "on": "On",
+      "off": "Off",
+      "description": "Map vanilla slots to modded slots. Newer saves overwrite older ones (bidirectional).",
+      "vanillaSlot": "Vanilla Save",
+      "moddedSlot": "Modded Save",
+      "paired": "Paired",
+      "unpaired": "Unpaired",
+      "noPair": "No Pair",
+      "slotWithNumber": "Slot {n}",
+      "chooseSlot": "Choose slot",
+      "pairCount": "{n} pair(s) configured",
+      "savePairs": "Save Pairs"
+    },
+    "cloud": {
+      "title": "Steam Cloud Saves",
+      "description": "Steam Cloud save sync (requires Steam client installed)",
+      "viewStatus": "View Status",
+      "uploadAll": "Upload All",
+      "downloadAll": "Download All",
+      "cleanupArtifacts": "Clean Up Artifacts",
+      "localFiles": "Local Files",
+      "cloudFiles": "Cloud Files",
+      "differences": "Differences",
+      "unavailable": "Cloud saves unavailable",
+      "cloudLabel": "Cloud:",
+      "localLabel": "Local:",
+      "ascend": "Upload All",
+      "descend": "Download All",
+      "toCloud": "→Cloud",
+      "toLocal": "→Local",
+      "inSync": "No differences — cloud and local are fully synced",
+      "synced": "Synced",
+      "diffKind": {
+        "inSync": "In Sync",
+        "different": "Differs",
+        "localOnly": "Local Only",
+        "cloudOnly": "Cloud Only"
+      },
+      "mismatch": {
+        "different": "{n} file(s) differ",
+        "localOnly": "{n} local only",
+        "cloudOnly": "{n} cloud only",
+        "other": "Mismatch detected"
+      }
+    },
+    "backups": {
+      "title": "Save Backups",
+      "empty": "No backups",
+      "restore": "Restore",
+      "confirmDelete": "Delete this backup?",
+      "manualReason": "Manual backup"
+    },
+    "transfer": {
+      "title": "Confirm Save Transfer",
+      "source": "Source",
+      "target": "Target",
+      "hasData": "Has data",
+      "noData": "No data",
+      "autoBackupWarning": "⚠ Target has data — will auto-backup before transfer",
+      "confirm": "Transfer"
+    },
+    "success": {
+      "transferDone": "Save transfer complete",
+      "slotBackedUp": "Slot {i} backed up",
+      "backupRestored": "Backup restored",
+      "backupDeleted": "Backup deleted",
+      "syncPairsDone": "{n} pair(s) synced",
+      "syncPairsSaved": "Sync pairs saved",
+      "copied": "Copied",
+      "ascended": "Uploaded to Steam Cloud",
+      "descended": "Downloaded from Steam Cloud",
+      "artifactsCleaned": "Artifacts cleaned"
+    },
+    "info": {
+      "noSyncNeeded": "No saves need syncing"
+    },
+    "error": {
+      "transferFailed": "Transfer failed: {e}",
+      "loadBackupsFailed": "Failed to load backups: {e}",
+      "backupFailed": "Backup failed: {e}",
+      "restoreFailed": "Restore failed: {e}",
+      "backupDeleteFailed": "Delete failed: {e}",
+      "syncFailed": "Sync failed: {e}",
+      "toggleFailed": "Toggle failed: {e}",
+      "pairSaveFailed": "Save failed: {e}",
+      "cloudUnavailable": "Cloud saves unavailable: {e}",
+      "copyFailed": "Copy failed: {e}",
+      "ascendFailed": "Upload failed: {e}",
+      "descendFailed": "Download failed: {e}",
+      "cleanupFailed": "Cleanup failed: {e}"
+    }
+  },
+
+  "profiles": {
+    "title": "Preset Management",
+    "subtitle": "Manage mod presets — switch combinations with one click",
+    "saveCurrent": "Save Current",
+    "importBundle": "Import Bundle",
+    "create": "New Preset",
+    "builtin": "Built-in",
+    "modCount": "{n} mod(s)",
+    "confirmDelete": "Delete \"{name}\"?",
+    "empty": {
+      "noProfiles": "No presets",
+      "noProfilesHint": "Save your current mod configuration from the Library, or click New Preset above"
+    },
+    "form": {
+      "editTitle": "Edit Preset",
+      "createTitle": "New Preset",
+      "name": "Name",
+      "namePlaceholder": "e.g. Vanilla Experience, Mod Challenge",
+      "description": "Description (optional)",
+      "descriptionPlaceholder": "Briefly describe what this preset is for",
+      "modList": "Select Mods",
+      "searchMods": "Search mods...",
+      "selectAll": "Select All",
+      "deselectAll": "Deselect All",
+      "noModsMatch": "No matching mods",
+      "loadingMods": "Loading mods...",
+      "selectedCount": "{n} selected",
+      "updateBtn": "Update",
+      "createBtn": "Create",
+      "defaultName": "Current Config",
+      "defaultDescription": "Saved from currently enabled mods"
+    },
+    "apply": {
+      "applied": "Applied \"{name}\"",
+      "enabled": " mod(s) enabled",
+      "disabled": " mod(s) disabled",
+      "missing": " mod(s) not installed",
+      "ok": "OK"
+    },
+    "importBundle": {
+      "title": "Import \"{name}\"",
+      "summary": "{n1} mod(s) · {n2} preset entry/entries",
+      "conflictCount": "{n} conflict(s) detected:",
+      "conflictHint": "Conflicting mods are skipped by default; uncheck to skip installation",
+      "missingHint": "{n} mod(s) in the bundle have no attached files and will not be installed",
+      "importBtn": "Import"
+    },
+    "success": {
+      "updated": "Preset updated",
+      "created": "Preset created",
+      "deleted": "Deleted \"{name}\"",
+      "exported": "Exported to {path}",
+      "bundleImported": "Bundle imported, {n} mod(s) enabled"
+    },
+    "warning": {
+      "nameRequired": "Please enter a preset name",
+      "noEnabledMods": "No mods are currently enabled"
+    },
+    "error": {
+      "loadFailed": "Failed to load presets: {e}",
+      "saveFailed": "Save failed: {e}",
+      "deleteFailed": "Delete failed: {e}",
+      "applyFailed": "Apply failed: {e}",
+      "exportFailed": "Export failed: {e}",
+      "importPreviewFailed": "Import preview failed: {e}",
+      "importFailed": "Import failed: {e}",
+      "readModsFailed": "Failed to read mod list: {e}"
+    }
+  }
+}
