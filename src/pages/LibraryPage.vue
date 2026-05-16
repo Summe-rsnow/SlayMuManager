@@ -320,8 +320,8 @@ async function handleToggle(mod: InstalledMod) {
       isEnabling ? "enable_mod" : "disable_mod",
       { modId: mod.id },
     )
-    // Save Guard 检查：路径切换或有配对时弹窗提醒
-    if (result.saveGuard.pathSwitched || result.saveGuard.hadPairs) {
+    // Save Guard 检查：仅路径切换时弹窗提醒
+    if (result.saveGuard.pathSwitched) {
       saveGuardInfo.value = result
       showSaveGuardDialog.value = true
     } else {

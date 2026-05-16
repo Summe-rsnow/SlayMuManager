@@ -134,6 +134,11 @@ fn toggle_mod(
         (&plugins_dir, &disabled_dir, InstalledModState::Disabled)
     };
 
+    // 在 rename 之前记录 mods/ 是否为空（用于 Save Guard 路径切换检测）
+    let plugins_was_empty = std::fs::read_dir(&plugins_dir)
+        .map(|mut rd| rd.next().is_none())
+        .unwrap_or(true);
+
     // 查找 source 中的 mod 文件夹
     let mod_folder = find_mod_folder(source_dir, mod_id)?;
 
@@ -187,22 +192,24 @@ fn toggle_mod(
     };
 
     // Save Guard：检测 mods/ 空↔非空切换 + 自动同步存档
-    let mut path_switched = false;
-    let direction: Option<String>;
-    if enable {
-        // 启用：检查 mods/ 之前是否为空
-        if let Ok(mut rd) = std::fs::read_dir(target_dir) {
-            path_switched = rd.next().is_none(); // 之前为空 → 路径切换
-        }
-        direction = if path_switched {
-            Some("vanilla_to_modded".to_string())
+    let (path_switched, direction): (bool, Option<String>) = if enable {
+        // 启用：rename 之前已检查 mods/ 是否为空
+        if plugins_was_empty {
+            (true, Some("vanilla_to_modded".to_string()))
         } else {
-            None
-        };
+            (false, None)
+        }
     } else {
-        // 禁用：检查移除后 mods/ 是否变空
-        direction = None; // 禁用通常不触发路径切换
-    }
+        // 禁用：rename 之后 mods/ 是否变空（mod 已移出）
+        let is_now_empty = std::fs::read_dir(&plugins_dir)
+            .map(|mut rd| rd.next().is_none())
+            .unwrap_or(true);
+        if is_now_empty {
+            (true, Some("modded_to_vanilla".to_string()))
+        } else {
+            (false, None)
+        }
+    };
 
     let had_pairs = !sync_pairs.is_empty();
     let (saves_synced, backups_created) = if had_pairs && path_switched {
