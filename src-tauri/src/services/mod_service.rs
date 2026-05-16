@@ -156,35 +156,31 @@ fn toggle_mod(
         std::fs::remove_dir_all(&mod_folder).map_err(AppError::Io)?;
     }
 
-    // 重新读取移动后的 mod 信息
-    let manifest_path = target_path.join("manifest.json");
-    let manifest = ModManifest::from_file(&manifest_path);
+    // 重新读取移动后的 mod 信息（兼容多种 manifest 文件名）
+    let manifest_found = ModManifest::find_in_dir(&target_path);
+    let manifest = manifest_found.as_ref().map(|(_, m)| m);
     let final_folder_name = folder_name.to_string_lossy().to_string();
 
     let id = manifest
-        .as_ref()
         .and_then(|m| m.id.clone())
         .unwrap_or_else(|| format!("unknown:{}", final_folder_name));
 
     let name = manifest
-        .as_ref()
         .and_then(|m| m.name.clone())
         .unwrap_or_else(|| final_folder_name.clone());
 
     let mod_item = InstalledMod {
         id,
         name,
-        version: manifest.as_ref().and_then(|m| m.version.clone()),
-        author: manifest.as_ref().and_then(|m| m.author.clone()),
+        version: manifest.and_then(|m| m.version.clone()),
+        author: manifest.and_then(|m| m.author.clone()),
         folder_name: final_folder_name,
         install_dir: target_path.to_string_lossy().to_string(),
-        manifest_path: if manifest_path.exists() {
-            Some(manifest_path.to_string_lossy().to_string())
-        } else {
-            None
-        },
-        affects_gameplay: manifest
+        manifest_path: manifest_found
             .as_ref()
+            .map(|(p, _)| Some(p.to_string_lossy().to_string()))
+            .unwrap_or(None),
+        affects_gameplay: manifest
             .map(|m| m.affects_gameplay)
             .unwrap_or(false),
         state: new_state,
@@ -268,9 +264,8 @@ pub fn find_mod_folder(base_dir: &Path, mod_id: &str) -> Result<PathBuf, AppErro
             continue;
         }
 
-        // 按 manifest.json 的 id 匹配
-        let manifest_path = path.join("manifest.json");
-        if let Some(manifest) = ModManifest::from_file(&manifest_path) {
+        // 按 manifest 中的 id 匹配（兼容多种 manifest 文件名）
+        if let Some((_, manifest)) = ModManifest::find_in_dir(&path) {
             if manifest.id.as_deref() == Some(mod_id) {
                 return Ok(path);
             }

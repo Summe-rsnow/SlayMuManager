@@ -235,9 +235,8 @@ pub fn export_bundle(profile_id: &str, output_path: &str, game_root: &Path) -> R
                 let dest = temp_dir.join(&folder_name);
                 copy_dir_recursive(&mod_folder, &dest)?;
 
-                let manifest = crate::integrations::manifest::ModManifest::from_file(
-                    &mod_folder.join("manifest.json"),
-                );
+                let manifest = crate::integrations::manifest::ModManifest::find_in_dir(&mod_folder)
+                    .map(|(_, m)| m);
                 bundle_mods.push(BundleModInfo {
                     mod_id: mod_id.clone(),
                     name: manifest
