@@ -95,7 +95,9 @@
       "uninstalled": "已卸载「{name}」",
       "presetSaved": "预设「{name}」已保存",
       "presetApplied": "已应用预设「{name}」",
-      "gameLaunched": "游戏已启动"
+      "gameLaunched": "游戏已启动",
+      "presetDirty": "已修改",
+      "presetDirtyTip": "当前模组配置已偏离预设「{name}」，可保存为新预设"
     },
     "warning": {
       "noEnabledMods": "当前没有已启用的 Mod",

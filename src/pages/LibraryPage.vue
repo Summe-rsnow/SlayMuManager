@@ -15,7 +15,7 @@ import ImportDialog from "../components/ImportDialog.vue"
 import { useModCache } from "../composables/useModCache"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
 import { useRouter } from "vue-router"
-import type { InstalledMod, ModProfile, ModToggleResult, CloudSaveStatus } from "../types"
+import type { InstalledMod, ModProfile, ModToggleResult, CloudSaveStatus, AppBootstrap } from "../types"
 import "../assets/library-effects.css"
 
 const { t } = useI18n()
@@ -100,9 +100,18 @@ async function handleQuickPreset(presetId: string) {
     const label = quickPresetOptions.value.find(p => p.value === presetId)?.label ?? presetId
     await invoke("apply_profile", { id: presetId })
     if (!isActive.value) return
-    quickPresetId.value = null
+    // 记录激活预设，下拉框保持选中
+    activePresetId.value = presetId
+    activePresetName.value = label
+    quickPresetId.value = presetId
     message.success(t("library.success.presetApplied", { name: label }))
     await fetchMods()
+    // 快照预设声明的 mod ID（用于脏检测）
+    try {
+      const profiles = await invoke<ModProfile[]>("list_profiles")
+      const profile = profiles.find(p => p.id === presetId)
+      if (profile) presetSnapshot.value = new Set(profile.modIds)
+    } catch { /* ignore */ }
   } catch (e: any) {
     if (!isActive.value) return
     message.error(`${t("profiles.error.applyFailed")}: ${e}`)
@@ -111,6 +120,22 @@ async function handleQuickPreset(presetId: string) {
 
 // --- 对话框 ---
 const showImportDialog = ref(false)
+
+// --- 当前激活预设跟踪 ---
+const activePresetId = ref<string | null>(null)
+const activePresetName = ref("")
+const presetSnapshot = ref<Set<string>>(new Set())
+
+/** 当前启用的 mod 是否偏离了激活预设 */
+const isPresetDirty = computed(() => {
+  if (!activePresetId.value) return false
+  const currentIds = new Set(enabledMods.value.map(m => m.id))
+  if (currentIds.size !== presetSnapshot.value.size) return true
+  for (const id of currentIds) {
+    if (!presetSnapshot.value.has(id)) return true
+  }
+  return false
+})
 
 // --- 保存为预设 ---
 const showSavePresetDialog = ref(false)
@@ -370,6 +395,20 @@ let unlistenModsChanged: (() => void) | null = null
 onMounted(async () => {
   await fetchMods()
   loadQuickPresets()
+  // 恢复上次激活的预设状态
+  try {
+    const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+    if (bootstrap.activeProfileName && bootstrap.activeProfileName !== "No active profile") {
+      const profiles = await invoke<ModProfile[]>("list_profiles")
+      const active = profiles.find(p => p.name === bootstrap.activeProfileName)
+      if (active) {
+        activePresetId.value = active.id
+        activePresetName.value = active.name
+        quickPresetId.value = active.id
+        presetSnapshot.value = new Set(active.modIds)
+      }
+    }
+  } catch { /* ignore */ }
   unlistenModsChanged = (await listen("slaymgr:mods-changed", () => {
     if (isActive.value) fetchMods()
   }).catch(() => null)) as (() => void) | null
@@ -408,6 +447,14 @@ onUnmounted(() => {
           :disabled="quickPresetOptions.length === 0"
           @update:value="handleQuickPreset"
         />
+        <NPopover v-if="isPresetDirty" trigger="hover" placement="bottom">
+          <template #trigger>
+            <NTag type="warning" size="tiny" :bordered="false" class="cursor-default">
+              {{ t("library.presetDirty") }}
+            </NTag>
+          </template>
+          <span class="text-xs">{{ t("library.presetDirtyTip", { name: activePresetName }) }}</span>
+        </NPopover>
         <NButton type="success" @click="handleLaunchGame" :loading="launchingGame">
           <template #icon><NIcon :size="16"><Play /></NIcon></template>
           {{ t("library.launchGame") }}

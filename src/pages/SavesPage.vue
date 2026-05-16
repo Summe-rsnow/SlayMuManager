@@ -13,7 +13,7 @@ import {
 } from "lucide-vue-next"
 import type {
   SaveSlot, SaveTransferPreview, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
-  CloudSaveStatus, CloudSaveDiffEntry,
+  CloudSaveStatus, CloudSaveDiffEntry, AppBootstrap,
 } from "../types"
 
 const { t } = useI18n()
@@ -331,7 +331,15 @@ function mismatchLabel(s: CloudSaveStatus): string {
   return parts.join(" + ") || t("saves.cloud.mismatch.other")
 }
 
-onMounted(loadSlots)
+onMounted(async () => {
+  await loadSlots()
+  // 恢复上次保存的配对同步配置
+  try {
+    const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+    syncPairs.value = bootstrap.saveSyncPairs ?? []
+    autoSync.value = bootstrap.saveAutoSync ?? false
+  } catch { /* ignore */ }
+})
 </script>
 
 <template>
@@ -384,10 +392,11 @@ onMounted(loadSlots)
             <div
               v-for="slot in vanillaSlots"
               :key="`v-${slot.slotIndex}`"
-              class="p-3 rounded-lg border border-gray-100"
-              :class="slot.hasData ? 'bg-white' : 'bg-gray-50'"
+              :class="slot.hasData
+                ? 'p-3 rounded-lg border border-gray-100 bg-white'
+                : 'p-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/70'"
             >
-              <div class="flex items-center justify-between mb-2">
+              <div :class="slot.hasData ? 'flex items-center justify-between mb-2' : 'flex items-center justify-between'">
                 <span class="font-medium text-sm text-gray-700">
                   {{ t("saves.slotIndex", { i: slot.slotIndex }) }}
                 </span>
@@ -410,8 +419,8 @@ onMounted(loadSlots)
                 {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("common.unknown") }}
               </div>
 
-              <!-- 操作按钮行 -->
-              <NSpace :size="4">
+              <!-- 操作按钮行（仅存档时显示） -->
+              <NSpace v-if="slot.hasData" :size="4">
                 <NButton size="tiny" secondary @click="createBackup(slot)">
                   {{ t("saves.backup") }}
                 </NButton>
@@ -471,10 +480,11 @@ onMounted(loadSlots)
             <div
               v-for="slot in moddedSlots"
               :key="`m-${slot.slotIndex}`"
-              class="p-3 rounded-lg border border-gray-100"
-              :class="slot.hasData ? 'bg-white' : 'bg-gray-50'"
+              :class="slot.hasData
+                ? 'p-3 rounded-lg border border-gray-100 bg-white'
+                : 'p-2 rounded-lg border border-dashed border-gray-200 bg-gray-50/70'"
             >
-              <div class="flex items-center justify-between mb-2">
+              <div :class="slot.hasData ? 'flex items-center justify-between mb-2' : 'flex items-center justify-between'">
                 <span class="font-medium text-sm text-gray-700">
                   {{ t("saves.slotIndex", { i: slot.slotIndex }) }}
                 </span>
@@ -497,7 +507,7 @@ onMounted(loadSlots)
                 {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString("zh-CN") : t("common.unknown") }}
               </div>
 
-              <NSpace :size="4">
+              <NSpace v-if="slot.hasData" :size="4">
                 <NButton size="tiny" secondary @click="createBackup(slot)">
                   {{ t("saves.backup") }}
                 </NButton>

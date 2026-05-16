@@ -95,7 +95,9 @@
       "uninstalled": "Uninstalled \"{name}\"",
       "presetSaved": "Preset \"{name}\" saved",
       "presetApplied": "Applied preset \"{name}\"",
-      "gameLaunched": "Game launched"
+      "gameLaunched": "Game launched",
+      "presetDirty": "Modified",
+      "presetDirtyTip": "Current mod setup differs from preset \"{name}\". Save as a new preset?"
     },
     "warning": {
       "noEnabledMods": "No mods are currently enabled",
