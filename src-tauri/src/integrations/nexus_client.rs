@@ -30,20 +30,20 @@ pub fn search_mods(
     let offset = (page.max(1) - 1) * page_size;
     let sort = graphql_sort_clause(sort_by);
 
-    // 构建 GraphQL 过滤器
+    // 构建 GraphQL 过滤器（Nexus API v2 ModsFilter input 格式）
     let filter = if query.is_empty() {
-        format!("filter: {{ gameId: {{ value: \"{}\", op: EQUALS }} }}", NEXUS_GAME_ID)
+        format!("gameId: [{{ value: \"{}\", op: EQUALS }}]", NEXUS_GAME_ID)
     } else {
         // 转义查询中的双引号和反斜杠
         let escaped = query.replace('\\', "\\\\").replace('"', "\\\"");
         format!(
-            "filter: {{ gameId: {{ value: \"{}\", op: EQUALS }}, OR: [{{ name: {{ value: \"{}\", op: EQUALS }} }}, {{ description: {{ value: \"{}\", op: MATCHES }} }}] }}",
+            "op: AND, filter: [{{ gameId: [{{ value: \"{}\", op: EQUALS }}] }}, {{ op: OR, filter: [{{ name: [{{ value: \"{}\", op: WILDCARD }}] }}, {{ description: [{{ value: \"{}\", op: MATCHES }}] }}] }}]",
             NEXUS_GAME_ID, escaped, escaped
         )
     };
 
     let gql_query = format!(
-        "{{ mods({}, sort: [{}], offset: {}, count: {}) {{ totalCount nodes {{ modId name summary author version pictureUrl thumbnailUrl thumbnailLargeUrl endorsements downloads }} }} }}",
+        "{{ mods(filter: {{ {} }}, sort: [{}], offset: {}, count: {}) {{ totalCount nodes {{ modId name summary author version pictureUrl thumbnailUrl thumbnailLargeUrl endorsements downloads }} }} }}",
         filter, sort, offset, page_size
     );
 
