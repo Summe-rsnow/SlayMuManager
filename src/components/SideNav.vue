@@ -3,7 +3,7 @@ import { h, computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { NMenu, NIcon, NSelect, NButton, NModal, NCard, NSpace, type MenuOption } from "naive-ui"
-import { Library, Compass, FolderHeart, Save, Settings, Play, AlertTriangle } from "lucide-vue-next"
+import { Library, Compass, FolderHeart, Save, Settings, Play, AlertTriangle, Menu } from "lucide-vue-next"
 import { useSidebarActions } from "../composables/useSidebarActions"
 
 const { t } = useI18n()
@@ -21,6 +21,7 @@ const {
   quickPresetOptions,
   loadQuickPresets,
   handleQuickPreset,
+  sidebarCollapsed,
 } = useSidebarActions()
 
 const menuOptions = computed<MenuOption[]>(() => [
@@ -69,102 +70,147 @@ onMounted(() => {
 </script>
 
 <template>
-  <nav
-    class="w-52 flex-shrink-0 flex flex-col p-3"
-    :style="{
-      borderRight: '1px solid var(--color-border)',
-      backgroundColor: 'var(--color-bg-sidebar)',
-    }"
-  >
-    <NMenu
-      :value="activeKey"
-      :options="menuOptions"
-      :indent="16"
-      :default-expanded-keys="[]"
-      @update:value="handleUpdateValue"
-    />
-
-    <!-- 底部操作区 -->
-    <div class="mt-auto space-y-2 pt-4" :style="{ borderTop: '1px solid var(--color-border)' }">
-      <!-- 预设快速切换 -->
-      <NSelect
-        v-model:value="quickPresetId"
-        :options="quickPresetOptions"
-        :placeholder="t('library.quickPresetPlaceholder')"
-        size="small"
-        :disabled="quickPresetOptions.length === 0"
-        @update:value="handleQuickPreset"
-      />
-
-      <!-- 启动游戏 -->
-      <NButton
-        block
-        size="large"
-        strong
-        :loading="launchingGame"
-        @click="handleLaunchGame"
-        class="launch-btn"
+  <!-- ============ 左下浮动按钮组 ============ -->
+  <div class="absolute left-8 bottom-8 z-30 flex flex-col gap-3">
+    <!-- 菜单面板（展开时在按钮上方淡入） -->
+    <Transition name="menu">
+      <div
+        v-if="!sidebarCollapsed"
+        class="absolute left-0 z-20 flex flex-col w-52 rounded-2xl border shadow-lg backdrop-blur-xl overflow-hidden"
+        :style="{
+          backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 60%, transparent)',
+          borderColor: 'var(--color-border)',
+          bottom: 'calc(100% + 8px)',
+          maxHeight: 'calc(100vh - 140px)',
+        }"
       >
-        <template #icon>
-          <NIcon :size="20"><Play /></NIcon>
-        </template>
-        {{ t("library.launchGame") }}
-      </NButton>
-    </div>
+        <div class="flex-1 overflow-y-auto p-3 pb-0">
+          <NMenu
+            :value="activeKey"
+            :options="menuOptions"
+            :indent="16"
+            :default-expanded-keys="[]"
+            @update:value="handleUpdateValue"
+          />
+        </div>
+        <div class="flex-shrink-0 px-3 pb-3">
+          <NSelect
+            v-model:value="quickPresetId"
+            :options="quickPresetOptions"
+            :placeholder="t('library.quickPresetPlaceholder')"
+            size="small"
+            :disabled="quickPresetOptions.length === 0"
+            @update:value="handleQuickPreset"
+          />
+        </div>
+      </div>
+    </Transition>
 
-    <!-- 云存档差异确认弹窗 -->
-    <NModal
-      :show="showLaunchMismatchDialog"
-      @update:show="(v: boolean) => !v && (showLaunchMismatchDialog = false)"
+    <!-- 「菜单」按钮（主色调） -->
+    <button
+      class="flex items-center gap-2 rounded-xl shadow-lg px-6 py-3 cursor-pointer select-none outline-none border-0 transition-all duration-200 hover:scale-105 active:scale-95 text-sm font-medium whitespace-nowrap"
+      :style="{
+        backgroundColor: 'var(--primary-color)',
+        color: '#fff',
+      }"
+      @click="sidebarCollapsed = !sidebarCollapsed"
     >
-      <NCard style="width: 440px" :bordered="false" role="dialog">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
-            <span class="font-semibold">{{ t("library.launchMismatch.title") }}</span>
+      <NIcon :size="20" color="#fff"><Menu /></NIcon>
+      <span>{{ t("nav.menu") }}</span>
+    </button>
+
+    <!-- 「启动游戏」按钮（高斯模糊玻璃药丸） -->
+    <button
+      class="flex items-center gap-2 rounded-xl shadow-lg backdrop-blur-xl px-6 py-3 cursor-pointer select-none outline-none border-0 transition-all duration-200 hover:scale-105 active:scale-95 text-sm font-medium whitespace-nowrap"
+      :style="{
+        backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 65%, transparent)',
+        color: 'var(--color-text-primary)',
+      }"
+      :disabled="launchingGame"
+      @click="handleLaunchGame"
+    >
+      <NIcon :size="20" :color="'var(--primary-color)'"><Play /></NIcon>
+      <span>{{ t("library.launchGame") }}</span>
+    </button>
+  </div>
+
+  <!-- ============ 云存档差异确认弹窗 ============ -->
+  <NModal
+    :show="showLaunchMismatchDialog"
+    @update:show="(v: boolean) => { if (!v) { showLaunchMismatchDialog = false; launchingGame = false } }"
+  >
+    <NCard style="width: 440px" :bordered="false" role="dialog">
+      <template #header>
+        <div class="flex items-center gap-2">
+          <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
+          <span class="font-semibold">{{ t("library.launchMismatch.title") }}</span>
+        </div>
+      </template>
+      <NSpace v-if="launchMismatchStatus" vertical :size="8">
+        <p class="text-sm text-c-secondary">{{ t("library.launchMismatch.warning") }}</p>
+        <div class="text-xs text-c-secondary bg-amber-50 rounded p-2 space-y-1">
+          <div class="flex justify-between" v-if="launchMismatchStatus.differentCount > 0">
+            <span>{{ t("saves.cloud.mismatch.different", { n: launchMismatchStatus.differentCount }) }}</span>
           </div>
-        </template>
-        <NSpace v-if="launchMismatchStatus" vertical :size="8">
-          <p class="text-sm text-c-secondary">{{ t("library.launchMismatch.warning") }}</p>
-          <div class="text-xs text-c-secondary bg-amber-50 rounded p-2 space-y-1">
-            <div class="flex justify-between" v-if="launchMismatchStatus.differentCount > 0">
-              <span>{{ t("saves.cloud.mismatch.different", { n: launchMismatchStatus.differentCount }) }}</span>
-            </div>
-            <div class="flex justify-between" v-if="launchMismatchStatus.localOnlyCount > 0">
-              <span>{{ t("saves.cloud.mismatch.localOnly", { n: launchMismatchStatus.localOnlyCount }) }}</span>
-            </div>
-            <div class="flex justify-between" v-if="launchMismatchStatus.cloudOnlyCount > 0">
-              <span>{{ t("saves.cloud.mismatch.cloudOnly", { n: launchMismatchStatus.cloudOnlyCount }) }}</span>
-            </div>
+          <div class="flex justify-between" v-if="launchMismatchStatus.localOnlyCount > 0">
+            <span>{{ t("saves.cloud.mismatch.localOnly", { n: launchMismatchStatus.localOnlyCount }) }}</span>
           </div>
-          <div class="flex justify-between mt-2 gap-2">
-            <NButton secondary size="small" @click="handleGoToSaves">
-              {{ t("library.launchMismatch.goToSaves") }}
-            </NButton>
-            <NButton type="warning" size="small" @click="handleLaunchAnyway">
-              {{ t("library.launchMismatch.forceLaunch") }}
-            </NButton>
+          <div class="flex justify-between" v-if="launchMismatchStatus.cloudOnlyCount > 0">
+            <span>{{ t("saves.cloud.mismatch.cloudOnly", { n: launchMismatchStatus.cloudOnlyCount }) }}</span>
           </div>
-        </NSpace>
-      </NCard>
-    </NModal>
-  </nav>
+        </div>
+        <div class="flex justify-between mt-2 gap-2">
+          <NButton secondary size="small" @click="handleGoToSaves">
+            {{ t("library.launchMismatch.goToSaves") }}
+          </NButton>
+          <NButton type="warning" size="small" @click="handleLaunchAnyway">
+            {{ t("library.launchMismatch.forceLaunch") }}
+          </NButton>
+        </div>
+      </NSpace>
+    </NCard>
+  </NModal>
 </template>
 
 <style scoped>
-.launch-btn {
-  --n-color: var(--primary-color) !important;
-  --n-color-hover: var(--primary-color-hover) !important;
-  --n-color-pressed: var(--primary-color-pressed) !important;
-  --n-color-active: var(--primary-color) !important;
-  --n-height: 44px;
-  font-size: 15px;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-color) 40%, transparent);
+/* 去除 NMenu 选中项的左侧默认指示条 */
+:deep(.n-menu-item-content::before) {
+  display: none !important;
+}
+
+/* 菜单项左侧光源效果 —— 主题色自左向右渐变辉光 */
+:deep(.n-menu-item-content) {
+  position: relative;
   transition: all 0.2s ease;
 }
-.launch-btn:hover {
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary-color) 50%, transparent);
-  transform: translateY(-1px);
+:deep(.n-menu-item-content:hover) {
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--primary-color) 6%, transparent),
+    transparent 80%
+  ) !important;
+}
+:deep(.n-menu-item-content--selected) {
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--primary-color) 14%, transparent),
+    transparent 65%
+  ) !important;
+}
+
+/* 菜单面板展开/收起过渡动画 */
+.menu-enter-active {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.menu-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.menu-enter-from {
+  opacity: 0;
+  transform: translateY(16px);
+}
+.menu-leave-to {
+  opacity: 0;
+  transform: translateY(16px);
 }
 </style>

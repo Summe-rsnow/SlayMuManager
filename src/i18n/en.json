@@ -8,7 +8,10 @@
     "discover": "Discover",
     "profiles": "Profiles",
     "saves": "Saves",
-    "settings": "Settings"
+    "settings": "Settings",
+    "menu": "Menu",
+    "expand": "Expand",
+    "collapse": "Collapse"
   },
 
   "common": {

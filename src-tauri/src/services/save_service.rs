@@ -23,7 +23,7 @@ pub fn vanilla_saves_root() -> PathBuf {
 
 /// 备份根目录
 fn backups_root(game_root: &Path) -> PathBuf {
-    game_root.join("BepInEx").join("spm_backups")
+    game_root.join("BepInEx").join("save_backups")
 }
 
 /// 构造存档槽位的完整路径

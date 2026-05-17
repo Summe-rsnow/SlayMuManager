@@ -301,7 +301,7 @@ pub fn descend_from_cloud_full(game_root: &Path) -> Result<(), AppError> {
 fn artifacts_dir() -> PathBuf {
     let base = dirs_next::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("com.slay.mumanager")
+        .join("slaymumanager")
         .join("cloud_artifacts");
     std::fs::create_dir_all(&base).ok();
     base

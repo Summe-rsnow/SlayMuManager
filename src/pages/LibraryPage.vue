@@ -454,6 +454,10 @@ watch(presetAppliedTick, () => {
             <span class="w-2 h-2 rounded-full inline-block" :style="{ backgroundColor: 'var(--color-text-muted)' }" />
             {{ t("library.disabledCountLabel") }} {{ disabledMods.length }}
           </span>
+          <span v-if="activePresetName" class="flex items-center gap-1 text-c-muted">
+            <NIcon :size="14"><Bookmark /></NIcon>
+            <span>{{ activePresetName }}</span>
+          </span>
           <span v-if="loading" class="text-xs text-c-muted animate-pulse">{{ t("library.refreshing") }}</span>
         </div>
       </div>

@@ -76,7 +76,7 @@ const { minimize, toggleMaximize, close } = useWindow()
                 </NButton>
               </div>
             </div>
-            <div class="flex flex-1 overflow-hidden">
+            <div class="flex flex-1 overflow-hidden relative">
               <SideNav />
               <main
                 class="flex-1 overflow-auto p-6"

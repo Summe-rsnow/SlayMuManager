@@ -13,7 +13,7 @@ struct ProfileStore {
 fn profiles_path() -> PathBuf {
     let base = dirs_next::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("com.slay.mumanager");
+        .join("slaymumanager");
     std::fs::create_dir_all(&base).ok();
     base.join("profiles.json")
 }

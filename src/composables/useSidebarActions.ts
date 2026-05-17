@@ -15,6 +15,7 @@ export const activePresetName = ref("")
 export const activePresetId = ref<string | null>(null)
 export const presetSnapshot = ref<Set<string>>(new Set())
 export const presetAppliedTick = ref(0)
+export const sidebarCollapsed = ref(true)
 
 export function useSidebarActions() {
   const { t } = useI18n()
@@ -107,5 +108,6 @@ export function useSidebarActions() {
     activePresetId,
     presetSnapshot,
     presetAppliedTick,
+    sidebarCollapsed,
   }
 }

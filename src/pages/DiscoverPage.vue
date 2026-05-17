@@ -293,8 +293,14 @@ onUnmounted(() => {
     </NCard>
     </div>
 
-    <!-- 分页 + 每页条数 -->
-    <div v-if="!initialLoading && results.length > 0 && totalCount > pageSize" class="flex justify-center items-center gap-3 pt-4 pb-2 sticky bottom-0 z-10" :style="{ backgroundColor: 'var(--color-bg-primary)', borderTop: '1px solid var(--color-border)' }">
+    <!-- 分页 + 每页条数（浮动药丸） -->
+    <div v-if="!initialLoading && results.length > 0 && totalCount > pageSize" class="flex justify-center sticky bottom-0 z-10 py-4">
+      <div class="discover-pagination-bar flex items-center gap-3 px-5 py-2.5 rounded-full border shadow-lg backdrop-blur-xl"
+        :style="{
+          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 70%, transparent)',
+          borderColor: 'var(--color-border)',
+        }"
+      >
         <div class="flex items-center gap-1.5">
           <NIcon :size="14" :style="{ color: 'var(--color-text-muted)' }"><List /></NIcon>
           <NSelect
@@ -305,6 +311,7 @@ onUnmounted(() => {
             @update:value="onPageSizeChange"
           />
         </div>
+        <div class="discover-pagination">
         <NPagination
           :page="page"
           :page-size="pageSize"
@@ -312,6 +319,7 @@ onUnmounted(() => {
           @update:page="onPageChange"
           size="small"
         />
+        </div>
         <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("discover.jumpTo") }}</span>
         <NInputNumber
           v-model:value="jumpPage"
@@ -323,6 +331,7 @@ onUnmounted(() => {
           @keyup.enter="jumpToPage"
         />
         <NButton size="tiny" secondary @click="jumpToPage">{{ t("discover.jumpToBtn") }}</NButton>
+      </div>
     </div>
 
     <!-- 图片放大预览 -->
@@ -346,5 +355,13 @@ onUnmounted(() => {
 <style scoped>
 .discover-card {
   --n-border-color: color-mix(in srgb, var(--color-border), var(--color-text-muted) 50%);
+}
+
+/* 分页按钮药丸形状 */
+.discover-pagination :deep(.n-pagination-item) {
+  border-radius: 9999px !important;
+}
+.discover-pagination :deep(.n-pagination-item.n-pagination-item--active) {
+  border-radius: 9999px !important;
 }
 </style>
