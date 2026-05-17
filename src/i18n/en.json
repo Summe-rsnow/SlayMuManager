@@ -227,6 +227,16 @@
       "direct": "Direct EXE",
       "checkCloudSave": "Check cloud saves"
     },
+    "about": {
+      "title": "About",
+      "bilibili": "B站 Homepage",
+      "github": "GitHub Repository",
+      "open": "Open",
+      "checkUpdate": "Check for Updates",
+      "checking": "Checking...",
+      "upToDate": "Up to date",
+      "newVersion": "New version: {ver}"
+    },
     "language": {
       "zhCN": "简体中文",
       "en": "English"

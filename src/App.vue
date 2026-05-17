@@ -62,7 +62,7 @@ const { minimize, toggleMaximize, close } = useWindow()
                   <text x="64" y="84" font-family="system-ui,sans-serif" font-size="58" font-weight="800" fill="#fff" text-anchor="middle">S</text>
                 </svg>
                 <span class="text-sm font-semibold" :style="{ color: 'var(--color-text-primary)' }">SlayMuManager</span>
-                <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">v1.3.0</span>
+                <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">v1.3.1</span>
               </div>
               <div class="flex items-center -mr-2 h-full">
                 <NButton text class="h-full! w-11! rounded-none!" :style="{ color: 'var(--color-text-muted)' }" @click="minimize">

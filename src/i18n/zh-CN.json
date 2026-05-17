@@ -227,6 +227,16 @@
       "direct": "直接启动 exe",
       "checkCloudSave": "检测云存档"
     },
+    "about": {
+      "title": "关于",
+      "bilibili": "B站主页",
+      "github": "GitHub 仓库",
+      "open": "打开",
+      "checkUpdate": "检测更新",
+      "checking": "检查中...",
+      "upToDate": "已是最新版本",
+      "newVersion": "新版本: {ver}"
+    },
     "language": {
       "zhCN": "简体中文",
       "en": "English"
