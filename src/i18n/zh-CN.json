@@ -410,7 +410,7 @@
   "profiles": {
     "title": "预设",
     "subtitle": "Mod 组合预设，一键切换",
-    "importBundle": "导入整合包",
+    "importBundle": "导入预设",
     "create": "新建预设",
     "builtin": "内置",
     "builtinVanilla": "原版",
@@ -453,7 +453,7 @@
       "title": "导入「{name}」",
       "summary": "{n1} 个 Mod · {n2} 个预设条目",
       "conflictCount": "检测到 {n} 个冲突：",
-      "conflictHint": "冲突 Mod 默认跳过，取消勾选不会安装",
+      "conflictHint": "已安装的 Mod 默认跳过，不会覆盖已有文件",
       "missingHint": "整合包中 {n} 个 Mod 没有附带文件，不会安装",
       "importBtn": "导入"
     },

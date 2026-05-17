@@ -60,10 +60,6 @@ pnpm tauri build
 
 - Inspired by [SlaySP2Manger](https://github.com/wakaka6/SlaySP2Manger) — thanks to the open source community
 
-## Version
-
-Current version: **1.3.1**
-
 ## License
 
 Apache License 2.0 — see [LICENSE](./LICENSE)

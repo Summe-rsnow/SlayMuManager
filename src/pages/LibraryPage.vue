@@ -10,7 +10,7 @@ import {
 } from "naive-ui"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
-  AlertTriangle, Filter, X, Tag, PackageOpen, Check,
+  AlertTriangle, Filter, X, PackageOpen, Check,
 } from "lucide-vue-next"
 import ImportDialog from "../components/ImportDialog.vue"
 import ModCard from "../components/ModCard.vue"
@@ -141,6 +141,7 @@ async function disableAllMods() {
 }
 
 // --- 侧边栏筛选 ---
+const showFilterPanel = ref(false)
 const filterAffectsGameplay = ref(false)
 const filterShowEnabled = ref(true)
 const filterShowDisabled = ref(true)
@@ -393,46 +394,44 @@ watch(presetAppliedTick, () => {
   <div>
     <!-- 头部 -->
     <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-c-primary">{{ t("library.title") }}</h1>
-        <div class="flex items-center gap-4 mt-1 text-sm text-c-secondary">
-          <span class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-green-500 inline-block" />
-            {{ t("library.enabledCountLabel") }} {{ enabledMods.length }}
-          </span>
-          <span class="flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full inline-block" :style="{ backgroundColor: 'var(--color-text-muted)' }" />
-            {{ t("library.disabledCountLabel") }} {{ disabledMods.length }}
-          </span>
-          <span v-if="activePresetName" class="flex items-center gap-1 text-c-muted">
-            <NIcon :size="14"><Bookmark /></NIcon>
-            <span>{{ activePresetName }}</span>
-          </span>
-          <span v-if="loading" class="text-xs text-c-muted animate-pulse">{{ t("library.refreshing") }}</span>
+      <h1 class="text-2xl font-bold text-c-primary">{{ t("library.title") }}</h1>
+      <div class="flex items-center gap-4 text-sm text-c-secondary">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-green-500 inline-block" />
+          {{ t("library.enabledCountLabel") }} {{ enabledMods.length }}
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full inline-block" :style="{ backgroundColor: 'var(--color-text-muted)' }" />
+          {{ t("library.disabledCountLabel") }} {{ disabledMods.length }}
+        </span>
+        <span v-if="activePresetName" class="flex items-center gap-1 text-c-muted">
+          <NIcon :size="14"><Bookmark /></NIcon>
+          <span>{{ activePresetName }}</span>
+        </span>
+        <span v-if="loading" class="text-xs text-c-muted animate-pulse">{{ t("library.refreshing") }}</span>
+        <div class="flex gap-2 ml-4">
+          <NButton size="small" secondary @click="handleOpenModsDir">
+            <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
+            {{ t("library.openModsDir") }}
+          </NButton>
+          <NButton size="small" secondary @click="openNewPreset">
+            <template #icon><NIcon :size="14"><Bookmark /></NIcon></template>
+            {{ t("library.newPreset") }}
+          </NButton>
+          <NButton size="small" secondary :loading="loading" @click="fetchMods">
+            <template #icon><NIcon :size="14"><RefreshCw /></NIcon></template>
+            {{ t("common.refresh") }}
+          </NButton>
+          <NButton size="small" type="primary" @click="handleImport">
+            <template #icon><NIcon :size="14"><Download /></NIcon></template>
+            {{ t("library.importMod") }}
+          </NButton>
         </div>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <NButton size="small" secondary @click="handleOpenModsDir">
-          <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
-          {{ t("library.openModsDir") }}
-        </NButton>
-        <NButton size="small" secondary @click="openNewPreset">
-          <template #icon><NIcon :size="14"><Bookmark /></NIcon></template>
-          {{ t("library.newPreset") }}
-        </NButton>
-        <NButton size="small" secondary :loading="loading" @click="fetchMods">
-          <template #icon><NIcon :size="14"><RefreshCw /></NIcon></template>
-          {{ t("common.refresh") }}
-        </NButton>
-        <NButton size="small" type="primary" @click="handleImport">
-          <template #icon><NIcon :size="14"><Download /></NIcon></template>
-          {{ t("library.importMod") }}
-        </NButton>
       </div>
     </div>
 
-    <!-- 搜索栏 -->
-    <div class="mb-4">
+    <!-- 搜索栏 + 筛选 -->
+    <div class="relative mb-4">
       <NInput
         v-model:value="searchInput"
         :placeholder="t('library.searchPlaceholder')"
@@ -443,197 +442,199 @@ watch(presetAppliedTick, () => {
         <template #prefix>
           <NIcon :size="16"><Search /></NIcon>
         </template>
-      </NInput>
-    </div>
-
-    <!-- 主布局：侧边栏 + 内容 -->
-    <div class="flex gap-4">
-      <!-- 侧边栏筛选 -->
-      <div class="w-48 flex-shrink-0">
-        <div class="sticky top-4 space-y-3 p-3 rounded-lg border border-c-default bg-c-secondary">
-          <div class="flex items-center justify-between">
-            <span class="text-sm font-medium text-c-secondary flex items-center gap-1.5">
-              <NIcon :size="14"><Filter /></NIcon>
-              {{ t("library.filter.title") }}
-            </span>
-            <NButton
+        <template #suffix>
+          <div class="flex items-center gap-0.5">
+            <button
               v-if="activeFilterCount > 0"
-              text
-              size="tiny"
-              type="warning"
+              class="filter-btn"
               @click="clearFilters"
+              :title="t('library.filter.clear')"
             >
-              <template #icon><NIcon :size="12"><X /></NIcon></template>
-              {{ t("library.filter.clear") }}
-            </NButton>
+              <NIcon :size="14"><X /></NIcon>
+            </button>
+            <button
+              class="filter-btn"
+              :class="{ active: showFilterPanel }"
+              @click="showFilterPanel = !showFilterPanel"
+            >
+              <NIcon :size="16"><Filter /></NIcon>
+            </button>
           </div>
+        </template>
+      </NInput>
 
-          <div class="space-y-2">
-            <div class="text-xs text-c-secondary font-medium">{{ t("library.filter.show") }}</div>
-            <NCheckbox v-model:checked="filterShowEnabled" size="small">
-              <span class="text-xs">{{ t("library.filter.enabled") }}</span>
-            </NCheckbox>
-            <NCheckbox v-model:checked="filterShowDisabled" size="small">
-              <span class="text-xs">{{ t("library.filter.disabled") }}</span>
-            </NCheckbox>
-          </div>
-
-          <div class="space-y-2">
-            <div class="text-xs text-c-secondary font-medium">{{ t("library.filter.attributes") }}</div>
+      <!-- 浮动筛选面板 -->
+      <Transition name="filter-dropdown">
+        <div
+          v-if="showFilterPanel"
+          class="absolute right-0 top-full mt-1 z-50 w-64 p-3 rounded-xl border shadow-lg backdrop-blur-xl"
+          :style="{
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 95%, transparent)',
+            borderColor: 'var(--color-border)',
+          }"
+        >
+          <div class="flex flex-col gap-3">
+            <!-- 显示 -->
+            <div>
+              <div class="text-xs font-medium mb-1.5" :style="{ color: 'var(--color-text-secondary)' }">{{ t("library.filter.show") }}</div>
+              <div class="flex gap-3">
+                <NCheckbox v-model:checked="filterShowEnabled" size="small">
+                  <span class="text-xs">{{ t("library.filter.enabled") }}</span>
+                </NCheckbox>
+                <NCheckbox v-model:checked="filterShowDisabled" size="small">
+                  <span class="text-xs">{{ t("library.filter.disabled") }}</span>
+                </NCheckbox>
+              </div>
+            </div>
+            <!-- 影响联机 -->
             <NCheckbox v-model:checked="filterAffectsGameplay" size="small">
               <span class="text-xs">{{ t("library.filter.affectsGameplay") }}</span>
             </NCheckbox>
-          </div>
-
-          <!-- 标签筛选 -->
-          <div class="space-y-2">
-            <div class="text-xs text-c-secondary font-medium flex items-center gap-1">
-              <NIcon :size="12"><Tag /></NIcon>
-              {{ t("library.filter.tags") }}
+            <!-- 标签 -->
+            <div v-if="usedPresetTags.length > 0">
+              <div class="text-xs font-medium mb-1.5" :style="{ color: 'var(--color-text-secondary)' }">{{ t("library.filter.tags") }}</div>
+              <div class="flex flex-wrap gap-x-3 gap-y-1">
+                <NCheckbox
+                  v-for="tag in usedPresetTags"
+                  :key="tag.id"
+                  :checked="filterTagIds.has(tag.id)"
+                  size="small"
+                  @update:checked="() => toggleFilterTag(tag.id)"
+                >
+                  <span class="text-xs">{{ getTagLabel(tag.id, currentLocale) }}</span>
+                </NCheckbox>
+              </div>
             </div>
-            <template v-if="usedPresetTags.length > 0">
-              <NCheckbox
-                v-for="t in usedPresetTags"
-                :key="t.id"
-                :checked="filterTagIds.has(t.id)"
-                size="small"
-                @update:checked="() => toggleFilterTag(t.id)"
-              >
-                <span class="text-xs">{{ getTagLabel(t.id, currentLocale) }}</span>
-              </NCheckbox>
-            </template>
-            <p v-else class="text-xs text-c-muted italic">{{ t("library.filter.noTags") }}</p>
-          </div>
-
-          <!-- 筛选计数徽章 -->
-          <div v-if="activeFilterCount > 0" class="pt-2 border-t border-c-default">
-            <NTag type="warning" size="tiny" :bordered="false">
-              {{ t("library.filter.activeFilterCount", { n: activeFilterCount }) }}
-            </NTag>
+            <span v-else class="text-xs italic" :style="{ color: 'var(--color-text-muted)' }">{{ t("library.filter.noTags") }}</span>
+            <!-- 计数 + 清除 -->
+            <div v-if="activeFilterCount > 0" class="flex justify-between items-center pt-2 border-t" :style="{ borderColor: 'var(--color-border)' }">
+              <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("library.filter.activeFilterCount", { n: activeFilterCount }) }}</span>
+              <NButton text size="tiny" type="warning" @click="clearFilters">
+                <template #icon><NIcon :size="12"><X /></NIcon></template>
+                {{ t("library.filter.clear") }}
+              </NButton>
+            </div>
           </div>
         </div>
-      </div>
+      </Transition>
+    </div>
 
-      <!-- 内容区 -->
-      <div class="flex-1 min-w-0">
-        <Transition name="preset-fade" mode="out-in">
-          <div :key="presetAppliedTick">
-            <!-- 三层空状态 -->
-            <div v-if="emptyReason" class="text-center py-16 text-c-muted">
-              <template v-if="emptyReason === 'noMods'">
-                <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
-                <p class="text-lg">{{ t("library.empty.noMods") }}</p>
-                <p class="text-sm mt-1">{{ t("library.empty.noModsHint") }}</p>
-              </template>
-              <template v-else-if="emptyReason === 'filtered'">
-                <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Filter /></NIcon>
-                <p>{{ t("library.empty.filterNoResults") }}</p>
-                <p class="text-sm mt-1">
-                  <NButton text size="tiny" @click="clearFilters">{{ t("library.empty.clearAllFilters") }}</NButton>
-                </p>
-              </template>
-              <template v-else-if="emptyReason === 'search'">
-                <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Search /></NIcon>
-                <p>{{ t("library.empty.searchNoMatch", { q: searchQuery }) }}</p>
-                <p class="text-sm mt-1">
-                  <NButton text size="tiny" @click="clearSearch">{{ t("library.empty.clearSearch") }}</NButton>
-                </p>
-              </template>
+    <Transition name="preset-fade" mode="out-in">
+      <div :key="presetAppliedTick">
+        <!-- 三层空状态 -->
+        <div v-if="emptyReason" class="text-center py-16 text-c-muted">
+          <template v-if="emptyReason === 'noMods'">
+            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
+            <p class="text-lg">{{ t("library.empty.noMods") }}</p>
+            <p class="text-sm mt-1">{{ t("library.empty.noModsHint") }}</p>
+          </template>
+          <template v-else-if="emptyReason === 'filtered'">
+            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Filter /></NIcon>
+            <p>{{ t("library.empty.filterNoResults") }}</p>
+            <p class="text-sm mt-1">
+              <NButton text size="tiny" @click="clearFilters">{{ t("library.empty.clearAllFilters") }}</NButton>
+            </p>
+          </template>
+          <template v-else-if="emptyReason === 'search'">
+            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Search /></NIcon>
+            <p>{{ t("library.empty.searchNoMatch", { q: searchQuery }) }}</p>
+            <p class="text-sm mt-1">
+              <NButton text size="tiny" @click="clearSearch">{{ t("library.empty.clearSearch") }}</NButton>
+            </p>
+          </template>
+        </div>
+
+        <template v-else>
+          <!-- 已启用 Mod -->
+          <NCard v-if="filterShowEnabled" size="small" class="mb-4">
+            <template #header>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span>{{ t("library.section.enabled") }}</span>
+                  <NTag :type="filteredEnabled.length > 0 ? 'success' : 'default'" size="small" round>
+                    {{ t("library.section.count", { n: filteredEnabled.length }) }}
+                  </NTag>
+                </div>
+                <NButton
+                  v-if="filteredEnabled.length > 0 && !isActivePresetBuiltin"
+                  size="small"
+                  secondary
+                  :disabled="batchBusy"
+                  :loading="batchBusy"
+                  @click="disableAllMods"
+                >
+                  <template #icon><NIcon :size="12"><X /></NIcon></template>
+                  {{ t("library.disableAll") }}
+                </NButton>
+              </div>
+            </template>
+
+            <div v-if="filteredEnabled.length === 0" class="text-center py-8 text-c-muted">
+              <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
+              <p v-else>{{ t("library.empty.noEnabledMods") }}</p>
             </div>
 
-            <template v-else>
-              <!-- 已启用 Mod -->
-              <NCard v-if="filterShowEnabled" size="small" class="mb-4">
-                <template #header>
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <span>{{ t("library.section.enabled") }}</span>
-                      <NTag :type="filteredEnabled.length > 0 ? 'success' : 'default'" size="small" round>
-                        {{ t("library.section.count", { n: filteredEnabled.length }) }}
-                      </NTag>
-                    </div>
-                    <NButton
-                      v-if="filteredEnabled.length > 0 && !isActivePresetBuiltin"
-                      size="small"
-                      secondary
-                      :disabled="batchBusy"
-                      :loading="batchBusy"
-                      @click="disableAllMods"
-                    >
-                      <template #icon><NIcon :size="12"><X /></NIcon></template>
-                      {{ t("library.disableAll") }}
-                    </NButton>
-                  </div>
-                </template>
+            <NSpace v-else vertical :size="8">
+              <ModCard
+                v-for="mod in filteredEnabled"
+                :key="mod.id"
+                :mod="mod"
+                :enabled="true"
+                :busy="busyId === mod.id"
+                :toggle-disabled="isActivePresetBuiltin"
+                @toggle="handleToggle"
+                @open-folder="handleOpenFolder"
+                @uninstall="handleUninstall"
+              />
+            </NSpace>
+          </NCard>
 
-                <div v-if="filteredEnabled.length === 0" class="text-center py-8 text-c-muted">
-                  <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
-                  <p v-else>{{ t("library.empty.noEnabledMods") }}</p>
+          <!-- 已禁用 Mod -->
+          <NCard v-if="filterShowDisabled" size="small">
+            <template #header>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span>{{ t("library.section.disabled") }}</span>
+                  <NTag type="default" size="small" round>
+                    {{ t("library.section.count", { n: filteredDisabled.length }) }}
+                  </NTag>
                 </div>
-
-                <NSpace v-else vertical :size="8">
-                  <ModCard
-                    v-for="mod in filteredEnabled"
-                    :key="mod.id"
-                    :mod="mod"
-                    :enabled="true"
-                    :busy="busyId === mod.id"
-                    :toggle-disabled="isActivePresetBuiltin"
-                    @toggle="handleToggle"
-                    @open-folder="handleOpenFolder"
-                    @uninstall="handleUninstall"
-                  />
-                </NSpace>
-              </NCard>
-
-              <!-- 已禁用 Mod -->
-              <NCard v-if="filterShowDisabled" size="small">
-                <template #header>
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <span>{{ t("library.section.disabled") }}</span>
-                      <NTag type="default" size="small" round>
-                        {{ t("library.section.count", { n: filteredDisabled.length }) }}
-                      </NTag>
-                    </div>
-                    <NButton
-                      v-if="filteredDisabled.length > 0 && !isActivePresetBuiltin"
-                      size="small"
-                      secondary
-                      :disabled="batchBusy"
-                      :loading="batchBusy"
-                      @click="enableAllMods"
-                    >
-                      <template #icon><NIcon :size="12"><Check /></NIcon></template>
-                      {{ t("library.enableAll") }}
-                    </NButton>
-                  </div>
-                </template>
-
-                <div v-if="filteredDisabled.length === 0" class="text-center py-8 text-c-muted">
-                  <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
-                  <p v-else>{{ t("library.empty.noDisabledMods") }}</p>
-                </div>
-
-                <NSpace v-else vertical :size="8">
-                  <ModCard
-                    v-for="mod in filteredDisabled"
-                    :key="mod.id"
-                    :mod="mod"
-                    :enabled="false"
-                    :busy="busyId === mod.id"
-                    :toggle-disabled="isActivePresetBuiltin"
-                    @toggle="handleToggle"
-                    @open-folder="handleOpenFolder"
-                    @uninstall="handleUninstall"
-                  />
-                </NSpace>
-              </NCard>
+                <NButton
+                  v-if="filteredDisabled.length > 0 && !isActivePresetBuiltin"
+                  size="small"
+                  secondary
+                  :disabled="batchBusy"
+                  :loading="batchBusy"
+                  @click="enableAllMods"
+                >
+                  <template #icon><NIcon :size="12"><Check /></NIcon></template>
+                  {{ t("library.enableAll") }}
+                </NButton>
+              </div>
             </template>
-          </div>
-        </Transition>
+
+            <div v-if="filteredDisabled.length === 0" class="text-center py-8 text-c-muted">
+              <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
+              <p v-else>{{ t("library.empty.noDisabledMods") }}</p>
+            </div>
+
+            <NSpace v-else vertical :size="8">
+              <ModCard
+                v-for="mod in filteredDisabled"
+                :key="mod.id"
+                :mod="mod"
+                :enabled="false"
+                :busy="busyId === mod.id"
+                :toggle-disabled="isActivePresetBuiltin"
+                @toggle="handleToggle"
+                @open-folder="handleOpenFolder"
+                @uninstall="handleUninstall"
+              />
+            </NSpace>
+          </NCard>
+        </template>
       </div>
-    </div>
+    </Transition>
 
     <!-- 导入对话框 -->
     <ImportDialog
@@ -692,3 +693,43 @@ watch(presetAppliedTick, () => {
 
   </div>
 </template>
+
+<style scoped>
+.filter-btn {
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.filter-btn:hover {
+  background-color: color-mix(in srgb, var(--color-text-secondary) 8%, transparent);
+  color: var(--color-text-secondary);
+}
+.filter-btn.active {
+  color: var(--primary-color);
+  background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+
+/* 筛选面板下拉动画 */
+.filter-dropdown-enter-active {
+  transition: all 0.2s ease-out;
+}
+.filter-dropdown-leave-active {
+  transition: all 0.15s ease-in;
+}
+.filter-dropdown-enter-from {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.97);
+}
+.filter-dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px) scale(0.97);
+}
+</style>

@@ -60,10 +60,6 @@ pnpm tauri build
 
 - 灵感来源于 [SlaySP2Manger](https://github.com/wakaka6/SlaySP2Manger) — 感谢开源社区的启发
 
-## 版本
-
-当前版本: **1.3.1**
-
 ## 许可证
 
 Apache License 2.0 - 详见 [LICENSE](./LICENSE)

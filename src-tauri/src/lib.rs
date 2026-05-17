@@ -64,6 +64,7 @@ pub fn run() {
             app::commands::export_preset_bundle,
             app::commands::preview_preset_bundle,
             app::commands::confirm_import_preset_bundle,
+            app::commands::pick_save_bundle_path,
             app::commands::pick_preset_bundle,
             // 5.7 存档管理
             app::commands::list_save_slots,

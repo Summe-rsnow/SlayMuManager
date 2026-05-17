@@ -410,7 +410,7 @@
   "profiles": {
     "title": "Profiles",
     "subtitle": "Switch mod combinations with one click",
-    "importBundle": "Import Bundle",
+    "importBundle": "Import Preset",
     "create": "New Preset",
     "builtin": "Built-in",
     "builtinVanilla": "Vanilla",
@@ -453,7 +453,7 @@
       "title": "Import \"{name}\"",
       "summary": "{n1} mod(s) · {n2} preset entry/entries",
       "conflictCount": "{n} conflict(s) detected:",
-      "conflictHint": "Conflicting mods are skipped by default; uncheck to skip installation",
+      "conflictHint": "Already installed mods are skipped by default; existing files will not be overwritten",
       "missingHint": "{n} mod(s) in the bundle have no attached files and will not be installed",
       "importBtn": "Import"
     },

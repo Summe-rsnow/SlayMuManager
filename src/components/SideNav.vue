@@ -108,7 +108,7 @@ onMounted(() => {
 
     <!-- 「菜单」按钮（主色调） -->
     <button
-      class="group relative w-12 hover:w-44 h-12 rounded-xl shadow-lg cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out hover:shadow-xl active:scale-95"
+      class="group relative w-12 hover:w-36 h-12 rounded-xl shadow-lg cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out hover:shadow-xl active:scale-95"
       :style="{
         backgroundColor: 'var(--primary-color)',
         color: '#fff',
@@ -122,13 +122,13 @@ onMounted(() => {
       <!-- 展开态：图标 + 文字 -->
       <div class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100">
         <NIcon :size="24" color="#fff" class="flex-shrink-0"><Menu /></NIcon>
-        <span class="text-base font-medium whitespace-nowrap">{{ t("nav.menu") }}</span>
+        <span class="text-[17px] font-medium whitespace-nowrap">{{ t("nav.menu") }}</span>
       </div>
     </button>
 
     <!-- 「启动游戏」按钮（高斯模糊玻璃药丸） -->
     <button
-      class="group relative w-12 hover:w-48 h-12 rounded-xl shadow-lg backdrop-blur-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out hover:shadow-xl active:scale-95"
+      class="group relative w-12 hover:w-42 h-12 rounded-xl shadow-lg backdrop-blur-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out hover:shadow-xl active:scale-95"
       :style="{
         backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 65%, transparent)',
         color: 'var(--color-text-primary)',
@@ -149,7 +149,7 @@ onMounted(() => {
           <Play v-if="!launchingGame" />
           <LoaderCircle v-else class="animate-spin" />
         </NIcon>
-        <span class="text-base font-medium whitespace-nowrap">{{ t("library.launchGame") }}</span>
+        <span class="text-[17px] font-medium whitespace-nowrap">{{ t("library.launchGame") }}</span>
       </div>
     </button>
   </div>

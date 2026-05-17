@@ -268,8 +268,9 @@ pub fn export_bundle(profile_id: &str, output_path: &str, game_root: &Path) -> R
         .map_err(|e| AppError::Other(format!("序列化失败: {}", e)))?;
     std::fs::write(temp_dir.join("bundle.spm"), &spm_json).map_err(AppError::Io)?;
 
-    // 打包为 ZIP
-    zip_dir(&temp_dir, Path::new(output_path))?;
+    // 打包为 7z（默认 LZMA，后台执行不卡 UI）
+    sevenz_rust::compress_to_path(&temp_dir, Path::new(output_path))
+        .map_err(|e| AppError::Other(format!("7z 打包失败: {}", e)))?;
 
     // 清理临时目录
     let _ = std::fs::remove_dir_all(&temp_dir);
@@ -316,7 +317,7 @@ pub fn preview_bundle(bundle_path: &str, game_root: &Path) -> Result<BundlePrevi
                     .find(|m| &m.mod_id == mod_id)
                     .map(|m| m.name.clone())
                     .unwrap_or_else(|| mod_id.clone()),
-                reason: "已安装此 Mod，导入时将覆盖".to_string(),
+                reason: "已安装此 Mod，默认跳过".to_string(),
             });
         }
 
@@ -423,49 +424,3 @@ pub fn import_bundle(
 // ---------------------------------------------------------------------------
 // 工具
 // ---------------------------------------------------------------------------
-
-
-
-fn zip_dir(src_dir: &Path, output_path: &Path) -> Result<(), AppError> {
-    let file = std::fs::File::create(output_path).map_err(AppError::Io)?;
-    let mut zip_writer = zip::ZipWriter::new(file);
-    let options = zip::write::SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated);
-
-    add_dir_to_zip(src_dir, src_dir, &mut zip_writer, options)?;
-    zip_writer
-        .finish()
-        .map_err(|e| AppError::Other(format!("ZIP 打包失败: {}", e)))?;
-    Ok(())
-}
-
-fn add_dir_to_zip(
-    base: &Path,
-    current: &Path,
-    writer: &mut zip::ZipWriter<std::fs::File>,
-    options: zip::write::SimpleFileOptions,
-) -> Result<(), AppError> {
-    for entry in std::fs::read_dir(current).map_err(AppError::Io)? {
-        let entry = entry.map_err(AppError::Io)?;
-        let path = entry.path();
-        let name = path
-            .strip_prefix(base)
-            .map_err(|_| AppError::Other("路径解析失败".to_string()))?
-            .to_string_lossy()
-            .to_string();
-
-        if path.is_dir() {
-            writer
-                .add_directory(&name, options)
-                .map_err(|e| AppError::Other(format!("ZIP 添加目录失败: {}", e)))?;
-            add_dir_to_zip(base, &path, writer, options)?;
-        } else {
-            writer
-                .start_file(&name, options)
-                .map_err(|e| AppError::Other(format!("ZIP 添加文件失败: {}", e)))?;
-            let content = std::fs::read(&path).map_err(AppError::Io)?;
-            std::io::Write::write_all(writer, &content).map_err(AppError::Io)?;
-        }
-    }
-    Ok(())
-}

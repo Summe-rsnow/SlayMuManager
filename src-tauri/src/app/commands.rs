@@ -740,19 +740,22 @@ pub fn apply_profile(id: String, state: State<AppState>) -> Result<ApplyProfileR
 // =========================================================================
 
 #[tauri::command]
-pub fn export_preset_bundle(
+pub async fn export_preset_bundle(
     profile_id: String,
     output_path: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<String, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let game_root = {
+        let settings = state.settings.read().unwrap();
+        settings.game_root_dir.clone().ok_or("游戏目录未设置")?
+    };
 
-    profile_service::export_bundle(&profile_id, &output_path, Path::new(game_root))
-        .map_err(|e| e.to_string())
+    tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
+        profile_service::export_bundle(&profile_id, &output_path, Path::new(&game_root))
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))?
 }
 
 #[tauri::command]
@@ -795,9 +798,25 @@ pub fn confirm_import_preset_bundle(
 }
 
 #[tauri::command]
+pub async fn pick_save_bundle_path(default_name: String) -> Result<Option<String>, String> {
+    // 过滤掉 Windows 文件名非法字符，保留中文等 Unicode
+    let safe_name: String = default_name
+        .chars()
+        .map(|c| if matches!(c, '\\' | '/' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { '_' } else { c })
+        .collect();
+    let file_name = format!("{}.7z", safe_name.trim());
+    let file = rfd::AsyncFileDialog::new()
+        .add_filter("预设整合包", &["7z"])
+        .set_file_name(&file_name)
+        .save_file()
+        .await;
+    Ok(file.map(|f| f.path().to_string_lossy().to_string()))
+}
+
+#[tauri::command]
 pub async fn pick_preset_bundle() -> Result<Option<String>, String> {
     let file = rfd::AsyncFileDialog::new()
-        .add_filter("整合包", &["zip", "spm"])
+        .add_filter("预设整合包", &["7z"])
         .pick_file()
         .await;
     Ok(file.map(|f| f.path().to_string_lossy().to_string()))

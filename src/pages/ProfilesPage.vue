@@ -7,11 +7,12 @@ import {
   NPopconfirm, NCheckbox, NPopover, useMessage,
 } from "naive-ui"
 import {
-  Plus, FolderHeart, Edit3, Trash2, Play, Download, Upload, Search,
+  Plus, FolderHeart, Edit3, Trash2, Play, Download, Upload, Search, Loader2,
 } from "lucide-vue-next"
 import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import { useSidebarActions } from "../composables/useSidebarActions"
+import { useExportState } from "../composables/useExportState"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -86,6 +87,8 @@ function selectAllMods() {
 function deselectAllMods() {
   selectedModIds.value = []
 }
+
+const { exportingId } = useExportState()
 
 // 整合包导入
 const bundlePath = ref("")
@@ -198,11 +201,13 @@ async function handleApply(profile: ModProfile) {
 
 // --- 导出 ---
 async function handleExport(profile: ModProfile) {
-  // 使用 rfd 选择保存路径
   try {
-    const path = await invoke<string | null>("pick_archive_file")
+    const path = await invoke<string | null>("pick_save_bundle_path", {
+      defaultName: profile.name,
+    })
     if (!path) return
 
+    exportingId.value = profile.id
     await invoke("export_preset_bundle", {
       profileId: profile.id,
       outputPath: path,
@@ -210,6 +215,8 @@ async function handleExport(profile: ModProfile) {
     message.success(t("profiles.success.exported", { path }))
   } catch (e: any) {
     message.error(`${t("profiles.error.exportFailed")}: ${e}`)
+  } finally {
+    exportingId.value = null
   }
 }
 
@@ -339,7 +346,7 @@ watch(presetAppliedTick, () => {
                 <NButton text size="tiny" @click="() => handleApply(p)">
                   <template #icon><NIcon :size="14"><Play /></NIcon></template>
                 </NButton>
-                <NButton v-if="!p.builtin" text size="tiny" @click="() => handleExport(p)">
+                <NButton v-if="!p.builtin" text size="tiny" :loading="exportingId === p.id" @click="() => handleExport(p)">
                   <template #icon><NIcon :size="14"><Download /></NIcon></template>
                 </NButton>
                 <NButton v-if="!p.builtin" text size="tiny" @click="() => openEdit(p)">
@@ -495,7 +502,19 @@ watch(presetAppliedTick, () => {
       </NCard>
     </NModal>
 
-    <!-- 导入整合包对话框 -->
+    <!-- 分析导入文件时的加载遮罩 -->
+    <div
+      v-if="loading && !showImportDialog"
+      class="fixed inset-0 z-50 flex items-center justify-center"
+      style="background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);"
+    >
+      <div class="flex flex-col items-center gap-3">
+        <NIcon :size="32" class="animate-spin text-white"><Loader2 /></NIcon>
+        <span class="text-sm text-white/90">{{ t("common.loading") }}</span>
+      </div>
+    </div>
+
+    <!-- 导入预设对话框 -->
     <NModal
       :show="showImportDialog"
       :mask-closable="false"
