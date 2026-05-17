@@ -106,8 +106,6 @@
       "presetSaved": "Preset \"{name}\" saved",
       "presetApplied": "Applied preset \"{name}\"",
       "gameLaunched": "Game launched",
-      "presetDirty": "Modified",
-      "presetDirtyTip": "Current mod setup differs from preset \"{name}\". Save as a new preset?",
       "batchEnabled": "Enabled {n} mod(s)",
       "batchDisabled": "Disabled {n} mod(s)"
     },
@@ -200,6 +198,7 @@
         "step1": "Open Nexus Mods website",
         "step2": "Log into your Nexus account",
         "step3": "Go to Account Details → API tab",
+        "step3Btn": "Open →",
         "step4": "Scroll to the bottom of the page",
         "step5": "Copy the text in the \"Personal API Key\" field",
         "step6": "Go back to SlayMuManager → Settings → Paste and save"
@@ -221,6 +220,12 @@
     "backup": {
       "title": "Backup",
       "autoKeepCount": "Auto-backup retention count"
+    },
+    "launch": {
+      "mode": "Launch Mode",
+      "steam": "Steam Protocol",
+      "direct": "Direct EXE",
+      "checkCloudSave": "Check cloud saves"
     },
     "language": {
       "zhCN": "简体中文",
@@ -398,6 +403,7 @@
     "importBundle": "Import Bundle",
     "create": "New Preset",
     "builtin": "Built-in",
+    "builtinVanilla": "Vanilla",
     "active": "Active",
     "noDescription": "No description",
     "modCount": "{n} mod(s)",

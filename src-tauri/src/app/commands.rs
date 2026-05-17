@@ -40,6 +40,8 @@ pub struct AppBootstrap {
     pub auto_backup_keep_count: usize,
     pub theme_mode: String,
     pub theme_color: String,
+    pub launch_mode: String,
+    pub launch_check_cloud_save: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,6 +99,8 @@ pub fn get_app_bootstrap(state: State<AppState>) -> AppBootstrap {
         auto_backup_keep_count: settings.auto_backup_keep_count,
         theme_mode: settings.theme_mode.clone(),
         theme_color: settings.theme_color.clone(),
+        launch_mode: settings.launch_mode.clone(),
+        launch_check_cloud_save: settings.launch_check_cloud_save,
     }
 }
 
@@ -161,7 +165,25 @@ pub fn update_app_locale(locale: String, state: State<AppState>) {
 // =========================================================================
 
 #[tauri::command]
-pub fn launch_game() -> Result<(), String> {
+pub fn launch_game(state: State<AppState>) -> Result<(), String> {
+    let settings = state.settings.read().unwrap();
+
+    if settings.launch_mode == "direct" {
+        // 直接启动 exe
+        let exe_path = settings
+            .game_root_dir
+            .as_ref()
+            .map(|d| std::path::Path::new(d).join("SlayTheSpire2.exe"))
+            .filter(|p| p.exists())
+            .ok_or_else(|| "游戏路径未设置或 SlayTheSpire2.exe 不存在".to_string())?;
+
+        std::process::Command::new(&exe_path)
+            .spawn()
+            .map_err(|e| format!("启动游戏失败: {}", e))?;
+        return Ok(());
+    }
+
+    // Steam 协议启动
     let steam_url = "steam://rungameid/2868840";
 
     #[cfg(target_os = "windows")]
@@ -1217,6 +1239,22 @@ pub fn update_theme_mode(mode: String, state: State<AppState>) -> Result<(), Str
 pub fn update_theme_color(color: String, state: State<AppState>) -> Result<(), String> {
     let mut settings = state.settings.write().unwrap();
     settings.theme_color = color;
+    let _ = settings_repo::save_settings(&settings);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_launch_mode(mode: String, state: State<AppState>) -> Result<(), String> {
+    let mut settings = state.settings.write().unwrap();
+    settings.launch_mode = mode;
+    let _ = settings_repo::save_settings(&settings);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_launch_check_cloud_save(check: bool, state: State<AppState>) -> Result<(), String> {
+    let mut settings = state.settings.write().unwrap();
+    settings.launch_check_cloud_save = check;
     let _ = settings_repo::save_settings(&settings);
     Ok(())
 }

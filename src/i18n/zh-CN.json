@@ -106,8 +106,6 @@
       "presetSaved": "预设「{name}」已保存",
       "presetApplied": "已应用预设「{name}」",
       "gameLaunched": "游戏已启动",
-      "presetDirty": "已修改",
-      "presetDirtyTip": "当前模组配置已偏离预设「{name}」，可保存为新预设",
       "batchEnabled": "已启用 {n} 个 Mod",
       "batchDisabled": "已禁用 {n} 个 Mod"
     },
@@ -200,6 +198,7 @@
         "step1": "打开 Nexus Mods 官网",
         "step2": "登录你的 Nexus 账号",
         "step3": "进入账号详情页 → API 标签页",
+        "step3Btn": "打开 →",
         "step4": "滚动到页面底部",
         "step5": "复制「Personal API Key」框内的文本",
         "step6": "回到 SlayMuManager → 设置页 → 粘贴并保存"
@@ -221,6 +220,12 @@
     "backup": {
       "title": "备份",
       "autoKeepCount": "自动备份保留数量"
+    },
+    "launch": {
+      "mode": "启动方式",
+      "steam": "Steam 协议",
+      "direct": "直接启动 exe",
+      "checkCloudSave": "检测云存档"
     },
     "language": {
       "zhCN": "简体中文",
@@ -398,6 +403,7 @@
     "importBundle": "导入整合包",
     "create": "新建预设",
     "builtin": "内置",
+    "builtinVanilla": "原版",
     "active": "当前生效",
     "noDescription": "暂无描述",
     "modCount": "{n} 个 Mod",

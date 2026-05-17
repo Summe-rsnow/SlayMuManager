@@ -6,7 +6,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import {
   NSpace, NCard, NTag, NButton, NInput, NIcon,
-  NModal, NCheckbox, NPopover, useMessage,
+  NModal, NCheckbox, useMessage,
 } from "naive-ui"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
@@ -46,17 +46,6 @@ const showImportDialog = ref(false)
 
 /** 当前激活预设是否为原版（内置） */
 const isActivePresetBuiltin = computed(() => activePresetId.value === BUILTIN_VANILLA_ID)
-
-/** 当前启用的 mod 是否偏离了激活预设 */
-const isPresetDirty = computed(() => {
-  if (!activePresetId.value || isActivePresetBuiltin.value) return false
-  const currentIds = new Set(enabledMods.value.map(m => m.id))
-  if (currentIds.size !== presetSnapshot.value.size) return true
-  for (const id of currentIds) {
-    if (!presetSnapshot.value.has(id)) return true
-  }
-  return false
-})
 
 // --- 新增预设（空预设 + 切换）---
 const showNewPresetDialog = ref(false)
@@ -103,45 +92,6 @@ async function handleCreateNewPreset() {
     message.error(`${t("profiles.error.applyFailed")}: ${e}`)
   } finally {
     creatingNewPreset.value = false
-  }
-}
-
-// --- 保存为预设 ---
-const showSavePresetDialog = ref(false)
-const presetName = ref("")
-const presetDescription = ref("")
-const savingPreset = ref(false)
-
-function openSavePreset() {
-  if (enabledMods.value.length === 0) {
-    message.warning(t("library.warning.noEnabledMods"))
-    return
-  }
-  presetName.value = t("library.savePreset.defaultName") + " " + new Date().toLocaleDateString(currentLocale.value)
-  presetDescription.value = t("library.savePreset.defaultDescription")
-  showSavePresetDialog.value = true
-}
-
-async function handleSavePreset() {
-  const name = presetName.value.trim()
-  if (!name) {
-    message.warning(t("library.warning.enterPresetName"))
-    return
-  }
-  savingPreset.value = true
-  try {
-    await invoke("create_profile", {
-      name,
-      description: presetDescription.value.trim() || null,
-      modIds: enabledMods.value.map((m) => m.id),
-    })
-    message.success(t("library.success.presetSaved", { name }))
-    showSavePresetDialog.value = false
-    loadQuickPresets()
-  } catch (e: any) {
-    message.error(t("library.error.saveFailed", { e }))
-  } finally {
-    savingPreset.value = false
   }
 }
 
@@ -418,7 +368,7 @@ onMounted(async () => {
       const active = profiles.find(p => p.name === bootstrap.activeProfileName)
       if (active) {
         activePresetId.value = active.id
-        activePresetName.value = active.name
+        activePresetName.value = active.id === "__builtin__vanilla" ? t("profiles.builtinVanilla") : active.name
         quickPresetId.value = active.id
         presetSnapshot.value = new Set(active.modIds)
       }
@@ -462,19 +412,6 @@ watch(presetAppliedTick, () => {
         </div>
       </div>
       <div class="flex flex-wrap gap-2">
-        <NPopover v-if="isPresetDirty" trigger="hover" placement="bottom">
-          <template #trigger>
-            <NTag type="warning" size="tiny" :bordered="false" class="cursor-default">
-              {{ t("library.success.presetDirty") }}
-            </NTag>
-          </template>
-          <div class="text-xs max-w-48 space-y-2">
-            <p>{{ t("library.success.presetDirtyTip", { name: activePresetName }) }}</p>
-            <NButton size="tiny" secondary @click="openSavePreset">
-              {{ t("library.savePreset.title") }}
-            </NButton>
-          </div>
-        </NPopover>
         <NButton size="small" secondary @click="handleOpenModsDir">
           <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
           {{ t("library.openModsDir") }}
@@ -562,7 +499,7 @@ watch(presetAppliedTick, () => {
                 size="small"
                 @update:checked="() => toggleFilterTag(t.id)"
               >
-                <span class="text-xs">{{ getTagLabel(t.id) }}</span>
+                <span class="text-xs">{{ getTagLabel(t.id, currentLocale) }}</span>
               </NCheckbox>
             </template>
             <p v-else class="text-xs text-c-muted italic">{{ t("library.filter.noTags") }}</p>
@@ -724,31 +661,6 @@ watch(presetAppliedTick, () => {
             <NButton @click="showNewPresetDialog = false">{{ t("common.cancel") }}</NButton>
             <NButton type="primary" :loading="creatingNewPreset" @click="handleCreateNewPreset">
               {{ t("common.confirm") }}
-            </NButton>
-          </div>
-        </NSpace>
-      </NCard>
-    </NModal>
-
-    <!-- 保存为预设对话框 -->
-    <NModal :show="showSavePresetDialog" @update:show="(v: boolean) => !v && (showSavePresetDialog = false)">
-      <NCard style="width: 480px" :bordered="false" role="dialog" :title="t('library.savePreset.title')">
-        <NSpace vertical :size="12">
-          <div>
-            <label class="text-sm text-c-secondary mb-1 block">{{ t("library.savePreset.nameLabel") }}</label>
-            <NInput v-model:value="presetName" :placeholder="t('library.savePreset.namePlaceholder')" />
-          </div>
-          <div>
-            <label class="text-sm text-c-secondary mb-1 block">{{ t("library.savePreset.descriptionLabel") }}</label>
-            <NInput v-model:value="presetDescription" :placeholder="t('library.savePreset.descriptionPlaceholder')" />
-          </div>
-          <div class="text-xs text-c-muted">
-            {{ t("library.savePreset.willSave", { n: enabledMods.length }) }}
-          </div>
-          <div class="flex justify-end gap-2">
-            <NButton @click="showSavePresetDialog = false">{{ t("common.cancel") }}</NButton>
-            <NButton type="primary" :loading="savingPreset" @click="handleSavePreset">
-              {{ t("common.save") }}
             </NButton>
           </div>
         </NSpace>

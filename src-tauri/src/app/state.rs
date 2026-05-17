@@ -45,6 +45,10 @@ pub struct AppSettings {
     pub theme_mode: String,
     #[serde(default = "default_theme_color")]
     pub theme_color: String,
+    #[serde(default = "default_launch_mode")]
+    pub launch_mode: String,
+    #[serde(default = "default_launch_check_cloud_save")]
+    pub launch_check_cloud_save: bool,
 }
 
 impl Default for AppSettings {
@@ -62,6 +66,8 @@ impl Default for AppSettings {
             auto_backup_keep_count: default_auto_backup_keep_count(),
             theme_mode: default_theme_mode(),
             theme_color: default_theme_color(),
+            launch_mode: default_launch_mode(),
+            launch_check_cloud_save: default_launch_check_cloud_save(),
         }
     }
 }
@@ -84,6 +90,14 @@ fn default_theme_mode() -> String {
 
 fn default_theme_color() -> String {
     "indigo".to_string()
+}
+
+fn default_launch_mode() -> String {
+    "steam".to_string()
+}
+
+fn default_launch_check_cloud_save() -> bool {
+    true
 }
 
 // --- 存档同步配对 ---

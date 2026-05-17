@@ -3,7 +3,7 @@ import { h, computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { NMenu, NIcon, NSelect, NButton, NModal, NCard, NSpace, type MenuOption } from "naive-ui"
-import { Library, Compass, FolderHeart, Save, Settings, Play, AlertTriangle, Menu } from "lucide-vue-next"
+import { Library, Compass, FolderHeart, Save, Settings, Play, LoaderCircle, AlertTriangle, Menu } from "lucide-vue-next"
 import { useSidebarActions } from "../composables/useSidebarActions"
 
 const { t } = useI18n()
@@ -108,20 +108,27 @@ onMounted(() => {
 
     <!-- 「菜单」按钮（主色调） -->
     <button
-      class="flex items-center gap-2 rounded-xl shadow-lg px-6 py-3 cursor-pointer select-none outline-none border-0 transition-all duration-200 hover:scale-105 active:scale-95 text-sm font-medium whitespace-nowrap"
+      class="group relative w-12 hover:w-44 h-12 rounded-xl shadow-lg cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out hover:shadow-xl active:scale-95"
       :style="{
         backgroundColor: 'var(--primary-color)',
         color: '#fff',
       }"
       @click="sidebarCollapsed = !sidebarCollapsed"
     >
-      <NIcon :size="20" color="#fff"><Menu /></NIcon>
-      <span>{{ t("nav.menu") }}</span>
+      <!-- 闭合态：纯图标居中 -->
+      <div class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75">
+        <NIcon :size="24" color="#fff"><Menu /></NIcon>
+      </div>
+      <!-- 展开态：图标 + 文字 -->
+      <div class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100">
+        <NIcon :size="24" color="#fff" class="flex-shrink-0"><Menu /></NIcon>
+        <span class="text-base font-medium whitespace-nowrap">{{ t("nav.menu") }}</span>
+      </div>
     </button>
 
     <!-- 「启动游戏」按钮（高斯模糊玻璃药丸） -->
     <button
-      class="flex items-center gap-2 rounded-xl shadow-lg backdrop-blur-xl px-6 py-3 cursor-pointer select-none outline-none border-0 transition-all duration-200 hover:scale-105 active:scale-95 text-sm font-medium whitespace-nowrap"
+      class="group relative w-12 hover:w-48 h-12 rounded-xl shadow-lg backdrop-blur-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out hover:shadow-xl active:scale-95"
       :style="{
         backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 65%, transparent)',
         color: 'var(--color-text-primary)',
@@ -129,8 +136,21 @@ onMounted(() => {
       :disabled="launchingGame"
       @click="handleLaunchGame"
     >
-      <NIcon :size="20" :color="'var(--primary-color)'"><Play /></NIcon>
-      <span>{{ t("library.launchGame") }}</span>
+      <!-- 闭合态 -->
+      <div class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75">
+        <NIcon :size="24" :color="'var(--primary-color)'">
+          <Play v-if="!launchingGame" />
+          <LoaderCircle v-else class="animate-spin" />
+        </NIcon>
+      </div>
+      <!-- 展开态 -->
+      <div class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100">
+        <NIcon :size="24" :color="'var(--primary-color)'" class="flex-shrink-0">
+          <Play v-if="!launchingGame" />
+          <LoaderCircle v-else class="animate-spin" />
+        </NIcon>
+        <span class="text-base font-medium whitespace-nowrap">{{ t("library.launchGame") }}</span>
+      </div>
     </button>
   </div>
 

@@ -234,4 +234,6 @@ export interface AppBootstrap {
   autoBackupKeepCount: number
   themeMode: string
   themeColor: string
+  launchMode: string
+  launchCheckCloudSave: boolean
 }

@@ -3,9 +3,10 @@ import { invoke } from "@tauri-apps/api/core"
 import { useMessage } from "naive-ui"
 import { useI18n } from "vue-i18n"
 import { useRouter } from "vue-router"
-import type { CloudSaveStatus, ModProfile } from "../types"
+import type { CloudSaveStatus, ModProfile, AppBootstrap } from "../types"
 
 // --- 模块级共享状态（SideNav + LibraryPage 共用同一实例）---
+const BUILTIN_VANILLA_ID = "__builtin__vanilla"
 export const launchingGame = ref(false)
 export const showLaunchMismatchDialog = ref(false)
 export const launchMismatchStatus = ref<CloudSaveStatus | null>(null)
@@ -37,11 +38,19 @@ export function useSidebarActions() {
   async function handleLaunchGame() {
     launchingGame.value = true
     try {
-      const cloudStatus = await invoke<CloudSaveStatus>("get_cloud_save_status")
-      if (cloudStatus.isAvailable && cloudStatus.hasMismatch) {
-        launchMismatchStatus.value = cloudStatus
-        showLaunchMismatchDialog.value = true
-        return
+      // 从后端读取当前设置（避免模块级 ref 不同步）
+      const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+      if (bootstrap.launchCheckCloudSave) {
+        try {
+          const cloudStatus = await invoke<CloudSaveStatus>("get_cloud_save_status")
+          if (cloudStatus.isAvailable && cloudStatus.hasMismatch) {
+            launchMismatchStatus.value = cloudStatus
+            showLaunchMismatchDialog.value = true
+            return
+          }
+        } catch {
+          // 云存档检查失败，继续启动
+        }
       }
       await doLaunchGame()
     } catch {
@@ -67,7 +76,14 @@ export function useSidebarActions() {
   async function loadQuickPresets() {
     try {
       const profiles = await invoke<ModProfile[]>("list_profiles")
-      quickPresetOptions.value = profiles.map((p) => ({ label: p.name, value: p.id }))
+      quickPresetOptions.value = profiles.map((p) => ({
+        label: p.id === BUILTIN_VANILLA_ID ? t("profiles.builtinVanilla") : p.name,
+        value: p.id,
+      }))
+      // 默认选中第一个（始终是原版）
+      if (!quickPresetId.value && profiles.length > 0) {
+        quickPresetId.value = profiles[0].id
+      }
     } catch { /* ignore */ }
   }
 

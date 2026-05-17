@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NCard, NSpace, NInput, NButton, NSelect, NIcon, NInputNumber, NRadioGroup, NRadio, useMessage } from "naive-ui"
+import { NCard, NSpace, NInput, NButton, NSelect, NIcon, NInputNumber, NRadioGroup, NRadio, NSwitch, useMessage } from "naive-ui"
 import { FolderSearch, Key, Globe, ChevronDown } from "lucide-vue-next"
 import { setLocale } from "../i18n"
 import { displayMode, setDisplayMode, themeColorKey, setThemeColor, colorPalettes, type ThemeColorKey, type DisplayMode } from "../theme"
@@ -39,6 +39,8 @@ const nexusKey = ref("")
 const proxyUrl = ref("")
 const locale = ref("zh-CN")
 const backupCount = ref(5)
+const launchMode = ref("steam")
+const launchCheckCloudSave = ref(true)
 const loading = ref(false)
 const proxyTesting = ref(false)
 
@@ -53,6 +55,8 @@ async function loadSettings() {
     locale.value = bootstrap.locale
     setLocale(bootstrap.locale)
     backupCount.value = bootstrap.autoBackupKeepCount
+    launchMode.value = bootstrap.launchMode
+    launchCheckCloudSave.value = bootstrap.launchCheckCloudSave
   } catch (e: any) {
     // 静默处理
   }
@@ -152,6 +156,21 @@ async function updateLocale(val: string) {
   } catch {}
 }
 
+// --- 启动 ---
+async function handleLaunchModeChange(val: string) {
+  launchMode.value = val
+  try {
+    await invoke("update_launch_mode", { mode: val })
+  } catch {}
+}
+
+async function handleLaunchCheckCloudSaveChange(val: boolean) {
+  launchCheckCloudSave.value = val
+  try {
+    await invoke("update_launch_check_cloud_save", { check: val })
+  } catch {}
+}
+
 // --- 显示模式 ---
 async function handleDisplayModeChange(val: DisplayMode) {
   setDisplayMode(val)
@@ -214,6 +233,28 @@ onMounted(loadSettings)
         </NSpace>
       </NCard>
 
+      <!-- 启动 -->
+      <NCard title="启动" size="small">
+        <NSpace vertical>
+          <div class="flex items-center justify-between">
+            <span class="text-sm">{{ t("settings.launch.mode") }}</span>
+            <NRadioGroup
+              :value="launchMode"
+              size="small"
+              @update:value="handleLaunchModeChange"
+            >
+              <NRadio value="steam">{{ t("settings.launch.steam") }}</NRadio>
+              <NRadio value="direct">{{ t("settings.launch.direct") }}</NRadio>
+            </NRadioGroup>
+          </div>
+          <div class="border-t border-c-default"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-sm">{{ t("settings.launch.checkCloudSave") }}</span>
+            <NSwitch :value="launchCheckCloudSave" @update:value="handleLaunchCheckCloudSaveChange" />
+          </div>
+        </NSpace>
+      </NCard>
+
       <!-- Nexus Mods -->
       <NCard :title="t('settings.nexus.title')" size="small">
         <NSpace vertical>
@@ -251,7 +292,7 @@ onMounted(loadSettings)
             <div class="flex items-start gap-2">
               <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-theme text-white flex items-center justify-center text-[10px] font-bold">3</span>
               <span>{{ t("settings.nexus.help.step3") }} — </span>
-              <NButton text size="tiny" class="text-primary-600-theme! underline! p-0!" @click="openUrl('https://www.nexusmods.com/users/myaccount?tab=api')">打开 →</NButton>
+              <NButton text size="tiny" class="text-primary-600-theme! underline! p-0!" @click="openUrl('https://www.nexusmods.com/users/myaccount?tab=api')">{{ t("settings.nexus.help.step3Btn") }}</NButton>
             </div>
             <div class="flex items-start gap-2">
               <span class="flex-shrink-0 w-5 h-5 rounded-full bg-primary-theme text-white flex items-center justify-center text-[10px] font-bold">4</span>

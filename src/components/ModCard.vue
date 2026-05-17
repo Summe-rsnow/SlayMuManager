@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue"
+import { currentLocale } from "../i18n"
 import { useI18n } from "vue-i18n"
 import {
   NTag, NButton, NIcon, NSwitch, NPopconfirm, NPopover, NCheckbox, NSpace, NInput,
@@ -67,7 +68,7 @@ const cardStyle = computed(() => ({
           closable
           @close="() => toggleTag(mod.id, tagId)"
         >
-          {{ getTagLabel(tagId) }}
+          {{ getTagLabel(tagId, currentLocale) }}
         </NTag>
       </div>
 
@@ -102,7 +103,7 @@ const cardStyle = computed(() => ({
               :checked="getTags(mod.id).includes(t.id)"
               @update:checked="() => toggleTag(mod.id, t.id)"
             >
-              <span class="text-xs">{{ getTagLabel(t.id) }}</span>
+              <span class="text-xs">{{ getTagLabel(t.id, currentLocale) }}</span>
             </NCheckbox>
           </NSpace>
         </div>

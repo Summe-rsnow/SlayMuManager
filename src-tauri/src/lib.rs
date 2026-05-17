@@ -95,6 +95,8 @@ pub fn run() {
             app::commands::update_auto_backup_keep_count,
             app::commands::update_theme_mode,
             app::commands::update_theme_color,
+            app::commands::update_launch_mode,
+            app::commands::update_launch_check_cloud_save,
             // 5.11 日志
             app::commands::list_activity_logs,
         ])
