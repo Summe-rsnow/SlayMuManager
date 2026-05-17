@@ -483,7 +483,7 @@ async function checkForUpdate() {
               <span class="text-xs text-green-600">v{{ APP_VERSION }} · {{ t("settings.about.upToDate") }}</span>
             </div>
             <div v-else class="flex items-center gap-2">
-              <span class="text-xs text-primary-theme">{{ t("settings.about.newVersion", { ver: `v${latestVersion.value}` }) }}</span>
+              <span class="text-xs text-primary-theme">{{ t("settings.about.newVersion", { ver: `v${latestVersion}` }) }}</span>
               <NButton text size="tiny" class="text-primary-theme" @click="openUrl(updateUrl)">
                 {{ t("settings.about.open") }}
               </NButton>
