@@ -62,7 +62,7 @@ const { minimize, toggleMaximize, close } = useWindow()
                   <text x="64" y="84" font-family="system-ui,sans-serif" font-size="58" font-weight="800" fill="#fff" text-anchor="middle">S</text>
                 </svg>
                 <span class="text-sm font-semibold" :style="{ color: 'var(--color-text-primary)' }">SlayMuManager</span>
-                <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">v1.3.2</span>
+                <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">v1.3.3</span>
               </div>
               <div class="flex items-center -mr-2 h-full">
                 <NButton text class="h-full! w-11! rounded-none!" :style="{ color: 'var(--color-text-muted)' }" @click="minimize">
@@ -79,7 +79,7 @@ const { minimize, toggleMaximize, close } = useWindow()
             <div class="flex flex-1 overflow-hidden relative">
               <SideNav />
               <main
-                class="flex-1 overflow-auto p-6"
+                class="flex-1 overflow-auto px-12 py-6"
                 :style="{
                   backgroundColor: 'var(--color-main-bg)',
                 }"

@@ -145,12 +145,38 @@ fn recursive_discover_from_dir(
 
     // 1. 当前目录自身就是 Mod（直接包含 manifest）
     if has_manifest(dir) {
-        let folder_name = dir
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("unknown")
-            .to_string();
-        let manifest = find_manifest_path(dir).and_then(|p| ModManifest::from_file(&p));
+        // 深度 0（解压根目录）：找最佳 manifest，避免无关 .json 干扰
+        let (manifest_path, manifest) = if depth == 0 {
+            find_best_manifest(dir)
+        } else {
+            let p = find_manifest_path(dir);
+            let m = p.as_ref().and_then(|p| ModManifest::from_file(p));
+            (p, m)
+        };
+        let folder_name = if depth == 0 {
+            // 参考同类实现：用 manifest 文件名（去扩展名.stem）作为文件夹名
+            // 如 STS2Advisor.json → STS2Advisor，mod_manifest.json 除外
+            manifest_path
+                .as_ref()
+                .and_then(|p| p.file_stem())
+                .and_then(|s| s.to_str())
+                .filter(|s| *s != "mod_manifest")
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    source_archive.and_then(|s| {
+                        std::path::Path::new(s)
+                            .file_stem()
+                            .and_then(|n| n.to_str())
+                            .map(|n| n.to_string())
+                    })
+                })
+                .unwrap_or_else(|| "unknown".to_string())
+        } else {
+            dir.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown")
+                .to_string()
+        };
         mods.push(build_discovered_mod(
             &manifest,
             &folder_name,
@@ -258,6 +284,65 @@ fn has_manifest(dir: &Path) -> bool {
 /// 在目录中找到 manifest 文件路径（优先级对齐 ModManifest::find_in_dir）
 fn find_manifest_path(dir: &Path) -> Option<PathBuf> {
     ModManifest::find_in_dir(dir).map(|(p, _)| p)
+}
+
+/// 在目录中找最佳 manifest：按优先级探测，优先返回 is_valid() 通过的，
+/// 同时返回文件路径（用于取 stem 作为文件夹名）和解析结果。
+/// 参考同类实现逻辑。
+fn find_best_manifest(dir: &Path) -> (Option<PathBuf>, Option<ModManifest>) {
+    let folder_name = match dir.file_name().and_then(|n| n.to_str()) {
+        Some(n) => n.to_string(),
+        None => return (None, None),
+    };
+
+    // 1. <folderName>.json（StS2 标准命名约定）
+    let named = dir.join(format!("{folder_name}.json"));
+    if let Some(m) = ModManifest::from_file(&named) {
+        if m.is_valid() {
+            return (Some(named), Some(m));
+        }
+    }
+
+    // 2. mod_manifest.json
+    let alt = dir.join("mod_manifest.json");
+    if let Some(m) = ModManifest::from_file(&alt) {
+        if m.is_valid() {
+            return (Some(alt), Some(m));
+        }
+    }
+
+    // 3. manifest.json
+    let def = dir.join("manifest.json");
+    if let Some(m) = ModManifest::from_file(&def) {
+        if m.is_valid() {
+            return (Some(def), Some(m));
+        }
+    }
+
+    // 4. 任意 .json — 扫描全部，优先 is_valid，否则回退到第一个可解析的
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        let mut fb_path: Option<PathBuf> = None;
+        let mut fb_manifest: Option<ModManifest> = None;
+        for entry in entries.filter_map(|e| e.ok()) {
+            let p = entry.path();
+            if p.is_file() && p.extension().map_or(false, |e| e == "json") {
+                if let Some(m) = ModManifest::from_file(&p) {
+                    if m.is_valid() {
+                        return (Some(p), Some(m));
+                    }
+                    if fb_manifest.is_none() {
+                        fb_path = Some(p);
+                        fb_manifest = Some(m);
+                    }
+                }
+            }
+        }
+        if let (Some(fp), Some(fm)) = (fb_path, fb_manifest) {
+            return (Some(fp), Some(fm));
+        }
+    }
+
+    (None, None)
 }
 
 fn discover_from_plugins_dir(
@@ -568,9 +653,14 @@ fn find_source_mod_folder(extracted_root: &Path, folder_name: &str) -> Result<Pa
     if mods_dir.is_dir() {
         return Ok(mods_dir);
     }
-    find_dir_recursive(extracted_root, folder_name).ok_or_else(|| {
-        AppError::Other(format!("在解压内容中找不到 Mod 文件夹: {}", folder_name))
-    })
+    if let Some(found) = find_dir_recursive(extracted_root, folder_name) {
+        return Ok(found);
+    }
+    // 回退：松散文件直接位于解压根目录（如 StS2 标准 Mod ZIP）
+    if extracted_root.is_dir() {
+        return Ok(extracted_root.to_path_buf());
+    }
+    Err(AppError::Other(format!("在解压内容中找不到 Mod 文件夹: {}", folder_name)))
 }
 
 fn find_dir_recursive(root: &Path, target: &str) -> Option<PathBuf> {
