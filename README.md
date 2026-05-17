@@ -1,3 +1,7 @@
+[🇬🇧 English](./README.en.md) | [🇨🇳 中文](./README.md)
+
+---
+
 # SlayMuManager
 
 > 杀戮尖塔 2 (Slay the Spire 2) 桌面端 Mod 管理器

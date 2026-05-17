@@ -1,3 +1,7 @@
+[🇬🇧 English](./README.en.md) | [🇨🇳 中文](./README.md)
+
+---
+
 # SlayMuManager
 
 > Slay the Spire 2 Desktop Mod Manager
