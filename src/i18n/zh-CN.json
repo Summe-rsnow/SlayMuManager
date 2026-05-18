@@ -43,7 +43,7 @@
     "newPresetHint": "将创建一个空的预设并切换到该预设",
     "enableAll": "全部启用",
     "disableAll": "全部禁用",
-    "importMod": "导入 Mod",
+    "importMod": "导入模组",
     "searchPlaceholder": "搜索已安装的 Mod... 按 Enter 搜索",
     "filter": {
       "title": "筛选",
@@ -59,7 +59,7 @@
     },
     "empty": {
       "noMods": "暂无 Mod",
-      "noModsHint": "点击\"导入 Mod\"或从发现页面搜索并安装",
+      "noModsHint": "点击\"导入模组\"或从发现页面搜索并安装",
       "filterNoResults": "筛选无结果",
       "clearAllFilters": "清除所有筛选",
       "searchNoMatch": "未找到匹配「{q}」的 Mod",

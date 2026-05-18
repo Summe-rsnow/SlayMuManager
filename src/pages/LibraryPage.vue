@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n"
 import { currentLocale } from "../i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
+import { getCurrentWebview } from "@tauri-apps/api/webview"
 import {
   NSpace, NCard, NTag, NButton, NInput, NIcon,
   NCheckbox, useMessage,
@@ -13,6 +14,7 @@ import {
   AlertTriangle, Filter, X, PackageOpen, Check,
 } from "lucide-vue-next"
 import ImportDialog from "../components/ImportDialog.vue"
+import DragOverlay from "../components/DragOverlay.vue"
 import ModCard from "../components/ModCard.vue"
 import AppDialog from "../components/AppDialog.vue"
 import { useModCache } from "../composables/useModCache"
@@ -48,8 +50,12 @@ const {
 
 // --- 对话框 ---
 const showImportDialog = ref(false)
+const importInitialPaths = ref<string[]>([])
 
-function handleImport() {
+async function handleImport() {
+  const paths = await invoke<string[]>("pick_archive_files")
+  if (paths.length === 0) return
+  importInitialPaths.value = paths
   showImportDialog.value = true
 }
 
@@ -221,6 +227,34 @@ const emptyReason = computed(() => {
   return null
 })
 
+function onImportDialogClose() {
+  showImportDialog.value = false
+  importInitialPaths.value = []
+}
+
+// --- 拖拽导入（Webview 级别，覆盖整个页面）---
+let unlistenDragDrop: (() => void) | null = null
+
+function isSupportedImport(path: string): boolean {
+  const lower = path.toLowerCase()
+  if (lower.endsWith(".zip") || lower.endsWith(".7z")) return true
+  const base = path.split(/[\\/]/).pop() ?? ""
+  if (!base.includes(".")) return true
+  return false
+}
+
+async function setupDragDrop() {
+  const webview = getCurrentWebview()
+  unlistenDragDrop = await webview.onDragDropEvent((event) => {
+    if (event.payload.type !== "drop") return
+    if (showImportDialog.value) return // 对话框打开时由 DropZone 处理
+    const paths = event.payload.paths.filter(isSupportedImport)
+    if (paths.length === 0) return
+    importInitialPaths.value = paths
+    showImportDialog.value = true
+  })
+}
+
 // --- 外部 Mod 变更监听 ---
 let unlistenModsChanged: (() => void) | null = null
 
@@ -244,10 +278,12 @@ onMounted(async () => {
   unlistenModsChanged = (await listen("slaymgr:mods-changed", () => {
     if (isActive.value) fetchMods()
   }).catch(() => null)) as (() => void) | null
+  setupDragDrop()
 })
 
 onUnmounted(() => {
   unlistenModsChanged?.()
+  unlistenDragDrop?.()
 })
 
 // 侧边栏切换预设后自动刷新
@@ -505,7 +541,8 @@ watch(presetAppliedTick, () => {
     <!-- 导入对话框 -->
     <ImportDialog
       :show="showImportDialog"
-      @close="showImportDialog = false"
+      :initial-paths="importInitialPaths"
+      @close="onImportDialogClose"
       @installed="onImportDone"
     />
 
@@ -552,6 +589,9 @@ watch(presetAppliedTick, () => {
         </div>
       </NSpace>
     </AppDialog>
+
+    <!-- 拖拽导入遮罩 -->
+    <DragOverlay :accept-ext="['zip', '7z']" title="松开以导入模组" />
 
   </div>
 </template>

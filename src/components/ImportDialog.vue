@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, h } from "vue"
+import { ref, computed, watch, h } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
@@ -16,7 +16,7 @@ import type { BatchImportPreview, BatchInstallResult, ConflictResolution } from 
 
 const { t } = useI18n()
 
-const props = defineProps<{ show: boolean }>()
+const props = defineProps<{ show: boolean; initialPaths?: string[] }>()
 const emit = defineEmits<{
   (e: "close"): void
   (e: "installed"): void
@@ -60,6 +60,14 @@ const errorMods = computed(() =>
 const hasConflicts = computed(() =>
   preview.value?.discoveredMods.some((m) => m.conflicts.length > 0) ?? false,
 )
+
+// 外部传入初始路径时跳过空闲阶段，直接进入预览
+watch(() => props.show, async (val) => {
+  if (val && props.initialPaths && props.initialPaths.length > 0) {
+    importPaths.value = [...props.initialPaths]
+    await doPreview()
+  }
+})
 
 // --- 操作 ---
 

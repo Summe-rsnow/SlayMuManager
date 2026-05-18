@@ -1,19 +1,21 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue"
+import { ref, computed, onMounted, onUnmounted, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
+import { getCurrentWebview } from "@tauri-apps/api/webview"
 import {
   NCard, NButton, NTag, NIcon, NSpace, NInput,
   NPopconfirm, NCheckbox, NPopover, useMessage,
 } from "naive-ui"
 import {
-  Plus, FolderHeart, Edit3, Trash2, Play, Download, Upload, Search, Loader2,
+  Plus, FolderHeart, Edit3, Trash2, Play, Download, Search, Loader2,
 } from "lucide-vue-next"
 import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import { useSidebarActions } from "../composables/useSidebarActions"
 import { useExportState } from "../composables/useExportState"
 import EmptyState from "../components/EmptyState.vue"
+import DragOverlay from "../components/DragOverlay.vue"
 import AppDialog from "../components/AppDialog.vue"
 
 const { t } = useI18n()
@@ -266,12 +268,53 @@ async function confirmImport() {
   }
 }
 
+// --- 拖拽导入预设 ---
+let unlistenDragDrop: (() => void) | null = null
+
+async function setupDragDrop() {
+  const webview = getCurrentWebview()
+  unlistenDragDrop = await webview.onDragDropEvent((event) => {
+    if (event.payload.type !== "drop") return
+    if (showImportDialog.value) return
+    const paths = event.payload.paths
+    const presetPath = paths.find((p: string) => p.toLowerCase().endsWith(".7z"))
+    if (!presetPath) return
+    handleDropPreset(presetPath)
+  })
+}
+
+async function handleDropPreset(path: string) {
+  try {
+    bundlePath.value = path
+    loading.value = true
+    bundlePreview.value = await invoke<BundlePreview>("preview_preset_bundle", {
+      bundlePath: path,
+    })
+    // 默认冲突跳过
+    const resolutions: Record<string, ConflictResolution> = {}
+    for (const c of bundlePreview.value.conflicts) {
+      resolutions[c.modId] = "skip"
+    }
+    bundleResolutions.value = resolutions
+    showImportDialog.value = true
+  } catch (e: unknown) {
+    message.error(`${t("profiles.error.importPreviewFailed")}: ${String(e)}`)
+  } finally {
+    loading.value = false
+  }
+}
+
 onMounted(async () => {
   await loadProfiles()
   try {
     const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
     activePresetName.value = bootstrap.activeProfileName || ""
   } catch { /* ignore */ }
+  setupDragDrop()
+})
+
+onUnmounted(() => {
+  unlistenDragDrop?.()
 })
 
 // 侧边栏切换预设后自动刷新
@@ -290,7 +333,7 @@ watch(presetAppliedTick, () => {
       </div>
       <NSpace>
         <NButton secondary @click="startImport">
-          <template #icon><NIcon :size="16"><Upload /></NIcon></template>
+          <template #icon><NIcon :size="16"><Download /></NIcon></template>
           {{ t("profiles.importBundle") }}
         </NButton>
         <NButton type="primary" @click="openCreate">
@@ -546,5 +589,12 @@ watch(presetAppliedTick, () => {
         </NSpace>
       </template>
     </AppDialog>
+
+    <!-- 拖拽导入遮罩 -->
+    <DragOverlay
+      :accept-ext="['7z']"
+      title="松开以导入预设"
+      subtitle="拖放 .7z 预设整合包到此处"
+    />
   </div>
 </template>

@@ -88,6 +88,9 @@ async function checkForUpdate() {
           <NButton text size="tiny" class="text-primary-theme" @click="openUrl(updateUrl)">
             {{ t("settings.about.open") }}
           </NButton>
+          <NButton text size="tiny" class="text-primary-theme" @click="openUrl('https://pan.quark.cn/s/3bd89f2513a8')">
+            网盘下载
+          </NButton>
         </div>
       </div>
     </NSpace>
