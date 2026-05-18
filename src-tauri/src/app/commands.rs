@@ -38,6 +38,7 @@ pub struct AppBootstrap {
     pub nexus_user_name: Option<String>,
     pub proxy_url: Option<String>,
     pub auto_backup_keep_count: usize,
+    pub backup_on_path_switch: bool,
     pub theme_mode: String,
     pub theme_color: String,
     pub launch_mode: String,
@@ -97,6 +98,7 @@ pub fn get_app_bootstrap(state: State<AppState>) -> AppBootstrap {
         nexus_user_name: settings.nexus_user_name.clone(),
         proxy_url: settings.proxy_url.clone(),
         auto_backup_keep_count: settings.auto_backup_keep_count,
+        backup_on_path_switch: settings.backup_on_path_switch,
         theme_mode: settings.theme_mode.clone(),
         theme_color: settings.theme_color.clone(),
         launch_mode: settings.launch_mode.clone(),
@@ -278,7 +280,8 @@ pub fn enable_mod(mod_id: String, state: State<AppState>) -> Result<ModToggleRes
         .ok_or("游戏目录未设置")?;
 
     let sync_pairs = settings.save_sync_pairs.clone();
-    let result = mod_service::enable_mod(Path::new(game_root), &mod_id, &sync_pairs)
+    let backup_on_switch = settings.backup_on_path_switch;
+    let result = mod_service::enable_mod(Path::new(game_root), &mod_id, &sync_pairs, backup_on_switch)
         .map_err(|e| e.to_string())?;
 
     // 如果当前有激活的非内置预设，自动将 mod_id 加入其列表
@@ -322,7 +325,8 @@ pub fn disable_mod(mod_id: String, state: State<AppState>) -> Result<ModToggleRe
         .ok_or("游戏目录未设置")?;
 
     let sync_pairs = settings.save_sync_pairs.clone();
-    let result = mod_service::disable_mod(Path::new(game_root), &mod_id, &sync_pairs)
+    let backup_on_switch = settings.backup_on_path_switch;
+    let result = mod_service::disable_mod(Path::new(game_root), &mod_id, &sync_pairs, backup_on_switch)
         .map_err(|e| e.to_string())?;
 
     // 如果当前有激活的非内置预设，自动将 mod_id 从其列表移除
@@ -590,7 +594,7 @@ pub fn batch_install_mods(
     .map_err(|e| e.to_string())?;
 
     // Save Guard：从 0 个 Mod → N 个 Mod 时自动触发存档备份 + 同步
-    if enable_now && result.success_count > 0 {
+    if enable_now && result.success_count > 0 && settings.backup_on_path_switch {
         let sync_pairs = settings.save_sync_pairs.clone();
         let installed_count = mod_service::scan_enabled_mods(Path::new(game_root)).len();
         // 仅当安装前 mods/ 为空时才触发（first-time activation）
@@ -697,7 +701,7 @@ pub fn delete_profile(id: String, state: State<AppState>) -> Result<(), String> 
 
 #[tauri::command]
 pub fn apply_profile(id: String, state: State<AppState>) -> Result<ApplyProfileResult, String> {
-    let (game_root, sync_pairs) = {
+    let (game_root, sync_pairs, backup_on_switch) = {
         let settings = state.settings.read().unwrap();
         let game_root = settings
             .game_root_dir
@@ -705,10 +709,11 @@ pub fn apply_profile(id: String, state: State<AppState>) -> Result<ApplyProfileR
             .ok_or("游戏目录未设置")?
             .clone();
         let sync_pairs = settings.save_sync_pairs.clone();
-        (game_root, sync_pairs)
+        let backup_on_switch = settings.backup_on_path_switch;
+        (game_root, sync_pairs, backup_on_switch)
     };
 
-    let result = profile_service::apply_profile(&id, Path::new(&game_root), &sync_pairs)
+    let result = profile_service::apply_profile(&id, Path::new(&game_root), &sync_pairs, backup_on_switch)
         .map_err(|e| e.to_string())?;
 
     // 同步内存中的 active_profile_name，确保 get_app_bootstrap 返回最新值
@@ -787,12 +792,14 @@ pub fn confirm_import_preset_bundle(
         .ok_or("游戏目录未设置")?;
 
     let sync_pairs = settings.save_sync_pairs.clone();
+    let backup_on_switch = settings.backup_on_path_switch;
     profile_service::import_bundle(
         &bundle_path,
         Path::new(game_root),
         apply_profile,
         &resolutions,
         &sync_pairs,
+        backup_on_switch,
     )
     .map_err(|e| e.to_string())
 }
@@ -1247,6 +1254,14 @@ pub fn update_auto_backup_keep_count(count: usize, state: State<AppState>) -> Re
 }
 
 #[tauri::command]
+pub fn update_backup_on_path_switch(enabled: bool, state: State<AppState>) -> Result<(), String> {
+    let mut settings = state.settings.write().unwrap();
+    settings.backup_on_path_switch = enabled;
+    let _ = settings_repo::save_settings(&settings);
+    Ok(())
+}
+
+#[tauri::command]
 pub fn update_theme_mode(mode: String, state: State<AppState>) -> Result<(), String> {
     let mut settings = state.settings.write().unwrap();
     settings.theme_mode = mode;
@@ -1285,4 +1300,47 @@ pub fn update_launch_check_cloud_save(check: bool, state: State<AppState>) -> Re
 #[tauri::command]
 pub fn list_activity_logs(state: State<AppState>) -> Vec<ActivityLogEntry> {
     state.recent_activity.read().unwrap().clone()
+}
+
+// =========================================================================
+// 5.12 翻译
+// =========================================================================
+
+/// 通过 MyMemory API 翻译文本（走 Rust 后端避免 WebView CORS/403 问题）
+#[tauri::command]
+pub fn translate_text(text: String) -> Result<String, String> {
+    let url = reqwest::Url::parse_with_params(
+        "https://api.mymemory.translated.net/get",
+        &[("q", &text as &str), ("langpair", "en|zh-CN")],
+    )
+    .map_err(|e| format!("URL 构建失败: {}", e))?;
+
+    let resp = reqwest::blocking::get(url)
+        .map_err(|e| format!("翻译请求失败: {}", e))?;
+
+    if !resp.status().is_success() {
+        let hints = match resp.status().as_u16() {
+            403 => "免费 API 频率超限，稍后再试".to_string(),
+            429 => "请求过于频繁，请稍候".to_string(),
+            503 => "翻译服务暂时不可用".to_string(),
+            code => format!("HTTP {}", code),
+        };
+        return Err(hints);
+    }
+
+    let data: serde_json::Value = resp
+        .json()
+        .map_err(|e| format!("响应解析失败: {}", e))?;
+
+    let status = data["responseStatus"].as_i64().unwrap_or(0);
+    if status != 200 {
+        let details = data["responseDetails"].as_str().unwrap_or("");
+        return Err(format!("翻译服务返回错误: {}", details));
+    }
+
+    let translated = data["responseData"]["translatedText"]
+        .as_str()
+        .ok_or_else(|| "翻译结果为空".to_string())?;
+
+    Ok(translated.to_string())
 }

@@ -41,6 +41,8 @@ pub struct AppSettings {
     pub proxy_url: Option<String>,
     #[serde(default = "default_auto_backup_keep_count")]
     pub auto_backup_keep_count: usize,
+    #[serde(default = "default_true")]
+    pub backup_on_path_switch: bool,
     #[serde(default = "default_theme_mode")]
     pub theme_mode: String,
     #[serde(default = "default_theme_color")]
@@ -64,6 +66,7 @@ impl Default for AppSettings {
             nexus_user_name: None,
             proxy_url: None,
             auto_backup_keep_count: default_auto_backup_keep_count(),
+            backup_on_path_switch: true,
             theme_mode: default_theme_mode(),
             theme_color: default_theme_color(),
             launch_mode: default_launch_mode(),
@@ -97,6 +100,10 @@ fn default_launch_mode() -> String {
 }
 
 fn default_launch_check_cloud_save() -> bool {
+    true
+}
+
+fn default_true() -> bool {
     true
 }
 

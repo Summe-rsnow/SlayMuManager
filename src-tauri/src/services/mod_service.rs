@@ -106,8 +106,9 @@ pub fn enable_mod(
     game_root: &Path,
     mod_id: &str,
     sync_pairs: &[SaveSyncPair],
+    backup_on_switch: bool,
 ) -> Result<ModToggleResult, AppError> {
-    toggle_mod(game_root, mod_id, true, sync_pairs)
+    toggle_mod(game_root, mod_id, true, sync_pairs, backup_on_switch)
 }
 
 /// 禁用 Mod：从 mods/ 移动到 mods_disabled/
@@ -115,8 +116,9 @@ pub fn disable_mod(
     game_root: &Path,
     mod_id: &str,
     sync_pairs: &[SaveSyncPair],
+    backup_on_switch: bool,
 ) -> Result<ModToggleResult, AppError> {
-    toggle_mod(game_root, mod_id, false, sync_pairs)
+    toggle_mod(game_root, mod_id, false, sync_pairs, backup_on_switch)
 }
 
 fn toggle_mod(
@@ -124,6 +126,7 @@ fn toggle_mod(
     mod_id: &str,
     enable: bool,
     sync_pairs: &[SaveSyncPair],
+    backup_on_switch: bool,
 ) -> Result<ModToggleResult, AppError> {
     let plugins_dir = game_root.join("mods");
     let disabled_dir = game_root.join("mods_disabled");
@@ -211,7 +214,7 @@ fn toggle_mod(
         }
     };
 
-    let had_pairs = !sync_pairs.is_empty();
+    let had_pairs = !sync_pairs.is_empty() && backup_on_switch;
     let (saves_synced, backups_created) = if had_pairs && path_switched {
         match super::save_service::sync_saves(game_root, sync_pairs) {
             Ok(result) => (

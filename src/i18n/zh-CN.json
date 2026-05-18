@@ -94,7 +94,8 @@
     },
     "saveGuard": {
       "title": "存档路径变更提醒",
-      "pathSwitchWarning": "启用此 Mod 将切换存档目录（原版 → Mod 版）。游戏会使用不同的存档位置。",
+      "toModded": "启用此 Mod 将切换存档目录（原版 → Mod 版）。游戏会使用不同的存档位置。",
+      "toVanilla": "禁用后 Mod 版存档将切换回原版目录（Mod 版 → 原版）。游戏会使用不同的存档位置。",
       "syncResult": "检测到存档同步配对，已自动同步 {synced} 个存档（创建 {backups} 个备份）。",
       "gotIt": "知道了"
     },
@@ -219,7 +220,9 @@
     },
     "backup": {
       "title": "备份",
-      "autoKeepCount": "自动备份保留数量"
+      "autoKeepCount": "自动备份保留数量",
+      "onPathSwitch": "路径切换时自动备份",
+      "onPathSwitchDesc": "关闭后，切换存档目录时仍会提示，但不会自动创建备份"
     },
     "launch": {
       "mode": "启动方式",
@@ -252,6 +255,13 @@
       "gameNotFound": "未找到 Slay the Spire 2",
       "proxyUrlRequired": "请先输入代理地址"
     },
+    "discover": {
+      "title": "发现",
+      "columnCount": "模组卡片列数",
+      "prefetch": "预取相邻页",
+      "prefetchDesc": "翻页时后台缓存前后页数据，提升切换速度",
+      "translateQuotaTip": "翻译配额提示"
+    },
     "error": {
       "detectFailed": "检测失败: {e}",
       "saveFailed": "保存失败: {e}",
@@ -280,6 +290,11 @@
       "needsApiKey": "提示：需要先在设置中配置 Nexus Mods API Key",
       "startSearch": "输入关键词开始搜索，或直接搜索浏览全部 Mod"
     },
+    "translate": "翻译",
+    "showOriginal": "原文",
+    "translating": "翻译中...",
+    "translateFailed": "翻译失败",
+    "translateQuota": "翻译服务每日有限额，翻译失败时可稍后重试（可在设置关闭该提示）",
     "error": {
       "searchFailed": "搜索失败: {e}"
     }

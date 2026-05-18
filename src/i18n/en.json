@@ -94,7 +94,8 @@
     },
     "saveGuard": {
       "title": "Save Path Change Notice",
-      "pathSwitchWarning": "Enabling this mod will switch the save directory (vanilla → modded). The game will use a different save location.",
+      "toModded": "Enabling this mod will switch the save directory (vanilla → modded). The game will use a different save location.",
+      "toVanilla": "Disabling this mod will switch the save directory (modded → vanilla). The game will use a different save location.",
       "syncResult": "Save sync pairs detected, automatically synced {synced} save(s) (created {backups} backup(s)).",
       "gotIt": "Got it"
     },
@@ -219,7 +220,9 @@
     },
     "backup": {
       "title": "Backup",
-      "autoKeepCount": "Auto-backup retention count"
+      "autoKeepCount": "Auto-backup retention count",
+      "onPathSwitch": "Auto-backup on path switch",
+      "onPathSwitchDesc": "When disabled, still shows the path switch prompt but skips automatic backup creation"
     },
     "launch": {
       "mode": "Launch Mode",
@@ -252,6 +255,13 @@
       "gameNotFound": "Slay the Spire 2 not found",
       "proxyUrlRequired": "Please enter a proxy URL first"
     },
+    "discover": {
+      "title": "Discover",
+      "columnCount": "Mod Card Columns",
+      "prefetch": "Prefetch Adjacent Pages",
+      "prefetchDesc": "Cache adjacent pages in background for faster navigation",
+      "translateQuotaTip": "Translate Quota Tip"
+    },
     "error": {
       "detectFailed": "Detection failed: {e}",
       "saveFailed": "Save failed: {e}",
@@ -280,6 +290,11 @@
       "needsApiKey": "Tip: Configure your Nexus Mods API Key in Settings first",
       "startSearch": "Enter a keyword to search, or search with no keyword to browse all mods"
     },
+    "translate": "Translate",
+    "showOriginal": "Original",
+    "translating": "Translating...",
+    "translateFailed": "Translation failed",
+    "translateQuota": "Translation service has daily quota limits. Retry later if it fails. (Can be disabled in Settings)",
     "error": {
       "searchFailed": "Search failed: {e}"
     }

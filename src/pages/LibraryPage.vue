@@ -679,7 +679,7 @@ watch(presetAppliedTick, () => {
         </template>
         <NSpace v-if="saveGuardInfo" vertical :size="8">
           <p v-if="saveGuardInfo.saveGuard.pathSwitched" class="text-sm text-c-secondary">
-            {{ t("library.saveGuard.pathSwitchWarning") }}
+            {{ saveGuardInfo.saveGuard.direction === 'modded_to_vanilla' ? t("library.saveGuard.toVanilla") : t("library.saveGuard.toModded") }}
           </p>
           <p v-if="saveGuardInfo.saveGuard.hadPairs" class="text-sm text-c-secondary">
             {{ t("library.saveGuard.syncResult", { synced: saveGuardInfo.saveGuard.savesSynced, backups: saveGuardInfo.saveGuard.backupsCreated }) }}

@@ -94,12 +94,15 @@ pub fn run() {
             app::commands::update_proxy_url,
             app::commands::test_proxy,
             app::commands::update_auto_backup_keep_count,
+            app::commands::update_backup_on_path_switch,
             app::commands::update_theme_mode,
             app::commands::update_theme_color,
             app::commands::update_launch_mode,
             app::commands::update_launch_check_cloud_save,
             // 5.11 日志
             app::commands::list_activity_logs,
+            // 5.12 翻译
+            app::commands::translate_text,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

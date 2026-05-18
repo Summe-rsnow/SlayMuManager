@@ -232,6 +232,7 @@ export interface AppBootstrap {
   nexusUserName: string | null
   proxyUrl: string | null
   autoBackupKeepCount: number
+  backupOnPathSwitch: boolean
   themeMode: string
   themeColor: string
   launchMode: string

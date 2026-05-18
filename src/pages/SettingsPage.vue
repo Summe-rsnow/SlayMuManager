@@ -2,10 +2,13 @@
 import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NCard, NSpace, NInput, NButton, NSelect, NIcon, NInputNumber, NRadioGroup, NRadio, NSwitch, useMessage } from "naive-ui"
-import { FolderSearch, Key, Globe, ChevronDown } from "lucide-vue-next"
+import { NCard, NSpace, NInput, NButton, NSelect, NIcon, NInputNumber, NRadioGroup, NRadio, NSwitch, NPopover, useMessage } from "naive-ui"
+import { FolderSearch, Key, Globe, ChevronDown, HelpCircle } from "lucide-vue-next"
 import { setLocale } from "../i18n"
 import { displayMode, setDisplayMode, themeColorKey, setThemeColor, colorPalettes, type ThemeColorKey, type DisplayMode } from "../theme"
+import { discoverColumns, setDiscoverColumns } from "../composables/useDiscoverColumns"
+import { prefetchEnabled, setPrefetchEnabled } from "../composables/usePageCache"
+import { showTranslateQuotaTip, setShowTranslateQuotaTip } from "../composables/useTranslation"
 import type { AppBootstrap } from "../types"
 import { version as APP_VERSION } from "../../package.json"
 
@@ -40,6 +43,7 @@ const nexusKey = ref("")
 const proxyUrl = ref("")
 const locale = ref("zh-CN")
 const backupCount = ref(5)
+const backupOnPathSwitch = ref(true)
 const launchMode = ref("steam")
 const launchCheckCloudSave = ref(true)
 const loading = ref(false)
@@ -59,6 +63,7 @@ async function loadSettings() {
     locale.value = bootstrap.locale
     setLocale(bootstrap.locale)
     backupCount.value = bootstrap.autoBackupKeepCount
+    backupOnPathSwitch.value = bootstrap.backupOnPathSwitch
     launchMode.value = bootstrap.launchMode
     launchCheckCloudSave.value = bootstrap.launchCheckCloudSave
   } catch (e: any) {
@@ -197,6 +202,13 @@ async function updateBackupCount(val: number | null) {
   backupCount.value = val
   try {
     await invoke("update_auto_backup_keep_count", { count: val })
+  } catch {}
+}
+
+async function toggleBackupOnPathSwitch(val: boolean) {
+  backupOnPathSwitch.value = val
+  try {
+    await invoke("update_backup_on_path_switch", { enabled: val })
   } catch {}
 }
 
@@ -421,6 +433,37 @@ async function checkForUpdate() {
         </NSpace>
       </NCard>
 
+      <!-- 发现 -->
+      <NCard :title="t('settings.discover.title')" size="small">
+        <div class="flex items-center justify-between">
+          <span class="text-sm">{{ t("settings.discover.columnCount") }}</span>
+          <NRadioGroup :value="discoverColumns" size="small" @update:value="setDiscoverColumns">
+            <NRadio :value="1">1</NRadio>
+            <NRadio :value="2">2</NRadio>
+            <NRadio :value="3">3</NRadio>
+            <NRadio :value="4">4</NRadio>
+          </NRadioGroup>
+        </div>
+        <div class="border-t border-c-default my-3"></div>
+        <div class="flex items-center justify-between">
+          <NPopover trigger="hover" placement="right" :width="240">
+            <template #trigger>
+              <span class="flex items-center gap-1 cursor-help text-sm" :style="{ lineHeight: '1', color: 'var(--color-text-primary)' }">
+                <span>{{ t("settings.discover.prefetch") }}</span>
+                <NIcon :size="14" :style="{ color: 'var(--color-text-muted)' }"><HelpCircle /></NIcon>
+              </span>
+            </template>
+            <span class="text-xs">{{ t("settings.discover.prefetchDesc") }}</span>
+          </NPopover>
+          <NSwitch :value="prefetchEnabled" @update:value="setPrefetchEnabled" />
+        </div>
+        <div class="border-t border-c-default my-3"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-sm">{{ t("settings.discover.translateQuotaTip") }}</span>
+          <NSwitch :value="showTranslateQuotaTip" @update:value="setShowTranslateQuotaTip" />
+        </div>
+      </NCard>
+
       <!-- 备份 -->
       <NCard :title="t('settings.backup.title')" size="small">
         <div class="flex items-center justify-between">
@@ -433,6 +476,19 @@ async function checkForUpdate() {
             style="width: 120px"
             @update:value="updateBackupCount"
           />
+        </div>
+        <div class="border-t border-c-default my-3"></div>
+        <div class="flex items-center justify-between">
+          <NPopover trigger="hover" placement="right" :width="240">
+            <template #trigger>
+              <span class="flex items-center gap-1 cursor-help text-sm" :style="{ lineHeight: '1', color: 'var(--color-text-primary)' }">
+                <span>{{ t("settings.backup.onPathSwitch") }}</span>
+                <NIcon :size="14" :style="{ color: 'var(--color-text-muted)' }"><HelpCircle /></NIcon>
+              </span>
+            </template>
+            <span class="text-xs">{{ t("settings.backup.onPathSwitchDesc") }}</span>
+          </NPopover>
+          <NSwitch :value="backupOnPathSwitch" @update:value="toggleBackupOnPathSwitch" />
         </div>
       </NCard>
 

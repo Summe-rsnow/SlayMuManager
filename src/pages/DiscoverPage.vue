@@ -1,19 +1,43 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from "vue"
+import { ref, computed, reactive, onMounted, onUnmounted } from "vue"
 import { onBeforeRouteLeave } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
   NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, NModal, NPopover, useMessage,
 } from "naive-ui"
-import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown, List } from "lucide-vue-next"
+import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown, List, Languages } from "lucide-vue-next"
 import type { RemoteMod, RemoteModSearchResult, AppBootstrap } from "../types"
 import { useIsActive } from "../composables/useIsActive"
+import { currentLocale } from "../i18n"
+import { translateText, showTranslateQuotaTip } from "../composables/useTranslation"
+import { discoverColumns } from "../composables/useDiscoverColumns"
+import { prefetchEnabled, getPageCache, setPageCache } from "../composables/usePageCache"
 import TruncatedText from "../components/TruncatedText.vue"
 
 const { t } = useI18n()
 const message = useMessage()
 const { isActive } = useIsActive()
+
+// --- 发现页列数映射 ---
+const gridColsClass = computed(() => {
+  const map: Record<number, string> = {
+    1: "grid grid-cols-1 gap-4 mb-6 items-start",
+    2: "grid grid-cols-2 gap-4 mb-6 items-start",
+    3: "grid grid-cols-3 gap-4 mb-6 items-start",
+    4: "grid grid-cols-4 gap-4 mb-6 items-start",
+  }
+  return map[discoverColumns.value] || map[3]
+})
+const skeletonColsClass = computed(() => {
+  const map: Record<number, string> = {
+    1: "grid grid-cols-1 gap-4 items-start",
+    2: "grid grid-cols-2 gap-4 items-start",
+    3: "grid grid-cols-3 gap-4 items-start",
+    4: "grid grid-cols-4 gap-4 items-start",
+  }
+  return map[discoverColumns.value] || map[3]
+})
 
 // --- 排序选项 ---
 const sortOptions = computed(() => [
@@ -47,6 +71,32 @@ function onImgError(modId: string) {
   imageLoadFailed.value = { ...imageLoadFailed.value, [modId]: true }
 }
 
+// --- 翻译 ---
+const translatedTexts = reactive<Record<string, string>>({})
+const translatingMods = reactive<Record<string, boolean>>({})
+const showTranslation = reactive<Record<string, boolean>>({})
+
+async function handleTranslate(mod: RemoteMod) {
+  if (!mod.summary || translatingMods[mod.remoteId]) return
+  translatingMods[mod.remoteId] = true
+  try {
+    const result = await translateText(mod.summary)
+    if (result.ok) {
+      translatedTexts[mod.remoteId] = result.text
+      showTranslation[mod.remoteId] = true
+    } else {
+      console.warn("[discover] translate failed:", result.error)
+      message.warning(t("discover.translateFailed") + ": " + result.error)
+    }
+  } finally {
+    translatingMods[mod.remoteId] = false
+  }
+}
+
+function toggleTranslation(modId: string) {
+  showTranslation[modId] = !showTranslation[modId]
+}
+
 // --- 初始加载（空搜索浏览最新 Mod） ---
 onMounted(async () => {
   try {
@@ -58,18 +108,41 @@ onMounted(async () => {
 
 async function doSearch(resetPage = true) {
   if (resetPage) page.value = 1
-  loading.value = true
   searched.value = true
+  const q = query.value.trim()
+  const pg = page.value
+  const ps = pageSize.value
+  const sb = sortBy.value
+
+  // 预取缓存命中：直接展示，不显示 loading
+  if (prefetchEnabled.value) {
+    const cached = getPageCache(q, sb, pg, ps)
+    if (cached) {
+      results.value = cached.items
+      totalCount.value = cached.totalCount
+      initialLoading.value = false
+      return
+    }
+  }
+
+  loading.value = true
   try {
     const res = await invoke<RemoteModSearchResult>("search_remote_mods", {
-      query: query.value.trim(),
-      page: page.value,
-      pageSize: pageSize.value,
-      sortBy: sortBy.value,
+      query: q,
+      page: pg,
+      pageSize: ps,
+      sortBy: sb,
     })
     if (!isActive.value) return
     results.value = res.items
     totalCount.value = res.totalCount
+
+    // 写入缓存
+    if (prefetchEnabled.value) {
+      setPageCache(q, sb, pg, ps, res.items, res.totalCount)
+      // 后台预取相邻页
+      prefetchAdjacentPages(q, sb, pg, ps)
+    }
   } catch (e: any) {
     if (!isActive.value) return
     message.error(t("discover.error.searchFailed") + ": " + e)
@@ -78,6 +151,30 @@ async function doSearch(resetPage = true) {
     if (isActive.value) {
       loading.value = false
       initialLoading.value = false
+    }
+  }
+}
+
+/** 后台预取前后页数据（静默，不显示 loading） */
+async function prefetchAdjacentPages(
+  q: string, sb: string, currentPage: number, ps: number
+) {
+  const pages = [currentPage - 1, currentPage + 1]
+  for (const p of pages) {
+    if (p < 1) continue
+    if (getPageCache(q, sb, p, ps)) continue // 已有缓存
+    try {
+      const res = await invoke<RemoteModSearchResult>("search_remote_mods", {
+        query: q,
+        page: p,
+        pageSize: ps,
+        sortBy: sb,
+      })
+      if (isActive.value) {
+        setPageCache(q, sb, p, ps, res.items, res.totalCount)
+      }
+    } catch {
+      // 预取失败静默忽略
     }
   }
 }
@@ -172,7 +269,7 @@ onUnmounted(() => {
     <div class="flex-1">
 
     <!-- 初始加载骨架屏 -->
-    <div v-if="initialLoading" class="grid grid-cols-3 gap-4">
+    <div v-if="initialLoading" :class="skeletonColsClass">
       <NCard v-for="i in pageSize" :key="i" :style="{ minHeight: '150px' }">
         <div class="flex gap-4 h-full animate-pulse">
           <div class="w-28 h-28 rounded-lg flex-shrink-0" :style="{ backgroundColor: 'var(--color-bg-secondary)' }" />
@@ -196,7 +293,7 @@ onUnmounted(() => {
         <span />
       </div>
 
-      <div class="grid grid-cols-3 gap-4 mb-6">
+      <div :class="gridColsClass">
         <NCard
           v-for="mod in results"
           :key="mod.remoteId"
@@ -234,9 +331,9 @@ onUnmounted(() => {
               <NIcon :size="32" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
             </div>
 
-            <!-- 右侧：上下两行 -->
+            <!-- 右侧：标题 + 说明 + 统计 -->
             <div class="flex-1 flex flex-col min-w-0">
-              <!-- 上行：标题 + 版本号 + 跳转按钮 -->
+              <!-- 标题 + 版本号 + 跳转按钮 -->
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-2 min-w-0 flex-1">
                   <NPopover v-if="mod.name" trigger="hover" placement="top" :width="320">
@@ -255,20 +352,60 @@ onUnmounted(() => {
                 </NButton>
               </div>
 
-              <!-- 下行：说明 + 统计 -->
-              <div class="flex-1 flex flex-col justify-between min-h-0 mt-2">
+              <!-- 说明 + 翻译（内容撑开） -->
+              <div class="min-h-0 mt-2">
                 <TruncatedText :text="mod.summary" />
-                <div class="flex items-center gap-3 text-xs pt-2" :style="{ color: 'var(--color-text-muted)' }">
-                  <span>{{ mod.author ?? t("discover.unknownAuthor") }}</span>
-                  <span class="flex items-center gap-1">
-                    <NIcon :size="13"><ThumbsUp /></NIcon>
-                    {{ formatCount(mod.endorsementCount) }}
+
+                <!-- 翻译区域（仅中文用户） -->
+                <div v-if="mod.summary && currentLocale === 'zh-CN'" class="flex flex-wrap items-start gap-x-1.5 mt-1">
+                  <!-- 已翻译：切换按钮 + 译文 -->
+                  <template v-if="translatedTexts[mod.remoteId]">
+                    <button
+                      class="translate-toggle"
+                      @click="toggleTranslation(mod.remoteId)"
+                    >
+                      <NIcon :size="12"><Languages /></NIcon>
+                      {{ showTranslation[mod.remoteId] ? t("discover.showOriginal") : t("discover.translate") }}
+                    </button>
+                    <p
+                      v-if="showTranslation[mod.remoteId]"
+                      class="text-xs leading-relaxed w-full mt-0.5"
+                      :style="{ color: 'var(--color-text-secondary)' }"
+                    >
+                      {{ translatedTexts[mod.remoteId] }}
+                    </p>
+                  </template>
+                  <!-- 翻译中 -->
+                  <span v-else-if="translatingMods[mod.remoteId]" class="text-xs" :style="{ color: 'var(--color-text-muted)' }">
+                    {{ t("discover.translating") }}
                   </span>
-                  <span class="flex items-center gap-1">
-                    <NIcon :size="13"><ArrowDown /></NIcon>
-                    {{ formatCount(mod.downloadCount) }}
-                  </span>
+                  <!-- 未翻译：显示翻译按钮（带配额提示） -->
+                  <NPopover v-else trigger="hover" placement="top" :width="240" :disabled="!showTranslateQuotaTip">
+                    <template #trigger>
+                      <button
+                        class="translate-toggle"
+                        @click="handleTranslate(mod)"
+                      >
+                        <NIcon :size="12"><Languages /></NIcon>
+                        {{ t("discover.translate") }}
+                      </button>
+                    </template>
+                    <span class="text-xs">{{ t("discover.translateQuota") }}</span>
+                  </NPopover>
                 </div>
+              </div>
+
+              <!-- 统计：靠底部 -->
+              <div class="flex items-center gap-3 text-xs pt-2 mt-auto" :style="{ color: 'var(--color-text-muted)' }">
+                <span>{{ mod.author ?? t("discover.unknownAuthor") }}</span>
+                <span class="flex items-center gap-1">
+                  <NIcon :size="13"><ThumbsUp /></NIcon>
+                  {{ formatCount(mod.endorsementCount) }}
+                </span>
+                <span class="flex items-center gap-1">
+                  <NIcon :size="13"><ArrowDown /></NIcon>
+                  {{ formatCount(mod.downloadCount) }}
+                </span>
               </div>
             </div>
           </div>
@@ -355,6 +492,26 @@ onUnmounted(() => {
 <style scoped>
 .discover-card {
   --n-border-color: color-mix(in srgb, var(--color-border), var(--color-text-muted) 50%);
+}
+
+/* 翻译切换按钮 */
+.translate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  color: var(--primary-color);
+  background-color: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  transition: background-color 0.15s;
+  white-space: nowrap;
+}
+.translate-toggle:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 18%, transparent);
 }
 
 /* 分页按钮药丸形状 */

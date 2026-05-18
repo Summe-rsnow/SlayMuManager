@@ -100,6 +100,7 @@ pub fn apply_profile(
     id: &str,
     game_root: &Path,
     sync_pairs: &[crate::app::state::SaveSyncPair],
+    backup_on_switch: bool,
 ) -> Result<ApplyProfileResult, AppError> {
     let profiles = profile_repo::load_profiles();
     let profile = profiles
@@ -124,7 +125,7 @@ pub fn apply_profile(
             enabled_list.push(mod_id.clone());
         } else if disabled_ids.contains(mod_id) {
             // 需要启用
-            mod_service::enable_mod(game_root, mod_id, sync_pairs)?;
+            mod_service::enable_mod(game_root, mod_id, sync_pairs, backup_on_switch)?;
             enabled_list.push(mod_id.clone());
         } else {
             // 未安装
@@ -135,7 +136,7 @@ pub fn apply_profile(
     // 禁用不在预设中的已启用 Mod
     for mod_id in &enabled_ids {
         if !profile.mod_ids.contains(mod_id) {
-            mod_service::disable_mod(game_root, mod_id, sync_pairs)?;
+            mod_service::disable_mod(game_root, mod_id, sync_pairs, backup_on_switch)?;
             disabled_list.push(mod_id.clone());
         }
     }
@@ -342,6 +343,7 @@ pub fn import_bundle(
     should_apply: bool,
     resolutions: &[(String, String)], // (modId, "skip"|"replace")
     sync_pairs: &[crate::app::state::SaveSyncPair],
+    backup_on_switch: bool,
 ) -> Result<ApplyProfileResult, AppError> {
     // 复用 install_archive_workflow 的统一解压逻辑
     let temp_dir = crate::workflows::install_archive_workflow::extract_archive(Path::new(bundle_path))
@@ -400,7 +402,7 @@ pub fn import_bundle(
             profiles.push(new_profile.clone());
         }
         profile_repo::save_profiles(&profiles).map_err(|e| AppError::Other(e))?;
-        return apply_profile(&new_profile.id, game_root, sync_pairs);
+        return apply_profile(&new_profile.id, game_root, sync_pairs, backup_on_switch);
     }
 
     // 返回结果
