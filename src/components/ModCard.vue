@@ -18,9 +18,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  toggle: [mod: InstalledMod]
-  openFolder: [mod: InstalledMod]
-  uninstall: [mod: InstalledMod]
+  (e: "toggle", mod: InstalledMod): void
+  (e: "openFolder", mod: InstalledMod): void
+  (e: "uninstall", mod: InstalledMod): void
 }>()
 
 const { t } = useI18n()

@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
-  NCard, NButton, NTag, NIcon, NSpace, NModal, NInput,
+  NCard, NButton, NTag, NIcon, NSpace, NInput,
   NPopconfirm, NCheckbox, NPopover, useMessage,
 } from "naive-ui"
 import {
@@ -13,6 +13,8 @@ import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, Confl
 import { useIsActive } from "../composables/useIsActive"
 import { useSidebarActions } from "../composables/useSidebarActions"
 import { useExportState } from "../composables/useExportState"
+import EmptyState from "../components/EmptyState.vue"
+import AppDialog from "../components/AppDialog.vue"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -106,9 +108,9 @@ async function loadProfiles() {
     const result = await invoke<ModProfile[]>("list_profiles")
     if (!isActive.value) return
     profiles.value = result
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(`${t("profiles.error.loadFailed")}: ${e}`)
+    message.error(`${t("profiles.error.loadFailed")}: ${String(e)}`)
   }
 }
 
@@ -163,9 +165,9 @@ async function handleSave() {
     }
     showCreateDialog.value = false
     await loadProfiles()
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(`${t("profiles.error.saveFailed")}: ${e}`)
+    message.error(`${t("profiles.error.saveFailed")}: ${String(e)}`)
   } finally {
     if (isActive.value) loading.value = false
   }
@@ -176,8 +178,8 @@ async function handleDelete(profile: ModProfile) {
     await invoke("delete_profile", { id: profile.id })
     message.success(t("profiles.success.deleted", { name: profile.name }))
     await loadProfiles()
-  } catch (e: any) {
-    message.error(`${t("profiles.error.deleteFailed")}: ${e}`)
+  } catch (e: unknown) {
+    message.error(`${t("profiles.error.deleteFailed")}: ${String(e)}`)
   }
 }
 
@@ -191,9 +193,9 @@ async function handleApply(profile: ModProfile) {
     showApplyDialog.value = true
     await loadProfiles()
     presetAppliedTick.value++
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(`${t("profiles.error.applyFailed")}: ${e}`)
+    message.error(`${t("profiles.error.applyFailed")}: ${String(e)}`)
   } finally {
     if (isActive.value) loading.value = false
   }
@@ -213,8 +215,8 @@ async function handleExport(profile: ModProfile) {
       outputPath: path,
     })
     message.success(t("profiles.success.exported", { path }))
-  } catch (e: any) {
-    message.error(`${t("profiles.error.exportFailed")}: ${e}`)
+  } catch (e: unknown) {
+    message.error(`${t("profiles.error.exportFailed")}: ${String(e)}`)
   } finally {
     exportingId.value = null
   }
@@ -236,8 +238,8 @@ async function startImport() {
       bundleResolutions.value[c.modId] = "skip"
     }
     showImportDialog.value = true
-  } catch (e: any) {
-    message.error(`${t("profiles.error.importPreviewFailed")}: ${e}`)
+  } catch (e: unknown) {
+    message.error(`${t("profiles.error.importPreviewFailed")}: ${String(e)}`)
   } finally {
     loading.value = false
   }
@@ -257,8 +259,8 @@ async function confirmImport() {
     message.success(t("profiles.success.bundleImported", { n: result.enabledModIds.length }))
     activePresetName.value = result.profile.name
     await loadProfiles()
-  } catch (e: any) {
-    message.error(`${t("profiles.error.importFailed")}: ${e}`)
+  } catch (e: unknown) {
+    message.error(`${t("profiles.error.importFailed")}: ${String(e)}`)
   } finally {
     loading.value = false
   }
@@ -370,137 +372,115 @@ watch(presetAppliedTick, () => {
           </NCard>
         </div>
 
-        <NCard v-else size="small">
-          <div class="text-center py-12 text-c-muted">
-            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><FolderHeart /></NIcon>
-            <p>{{ t("profiles.empty.noProfiles") }}</p>
-            <p class="text-sm mt-1">{{ t("profiles.empty.noProfilesHint") }}</p>
-          </div>
-        </NCard>
+        <EmptyState v-else :icon="FolderHeart" :title="t('profiles.empty.noProfiles')" :description="t('profiles.empty.noProfilesHint')" bordered />
       </div>
     </Transition>
 
     <!-- 创建/编辑对话框 -->
-    <NModal
-      :show="showCreateDialog"
-      :mask-closable="false"
-      @update:show="(v: boolean) => !v && (showCreateDialog = false)"
-    >
-      <NCard style="width: 520px" :bordered="false" role="dialog">
-        <template #header>
-          <span class="text-lg font-semibold">{{ formTitle }}</span>
-        </template>
-        <NSpace vertical :size="12">
-          <div>
-            <label class="text-sm text-c-secondary mb-1 block">{{ t("profiles.form.name") }}</label>
-            <NInput v-model:value="formName" :placeholder="t('profiles.form.namePlaceholder')" />
-          </div>
-          <div>
-            <label class="text-sm text-c-secondary mb-1 block">{{ t("profiles.form.description") }}</label>
-            <NInput
-              v-model:value="formDescription"
-              type="textarea"
-              :placeholder="t('profiles.form.descriptionPlaceholder')"
-              :rows="2"
-            />
-          </div>
-          <div>
-            <label class="text-sm text-c-secondary mb-1 flex items-center gap-2">
-              {{ t("profiles.form.modList") }}
-              <NTag size="tiny" :bordered="false" :type="selectedModIds.length > 0 ? 'info' : 'default'">
-                {{ t("profiles.form.selectedCount", { n: selectedModIds.length }) }}
-              </NTag>
-            </label>
+    <AppDialog v-model:show="showCreateDialog" :title="formTitle" width="520px" :mask-closable="false">
+      <NSpace vertical :size="12">
+        <div>
+          <label class="text-sm text-c-secondary mb-1 block">{{ t("profiles.form.name") }}</label>
+          <NInput v-model:value="formName" :placeholder="t('profiles.form.namePlaceholder')" />
+        </div>
+        <div>
+          <label class="text-sm text-c-secondary mb-1 block">{{ t("profiles.form.description") }}</label>
+          <NInput
+            v-model:value="formDescription"
+            type="textarea"
+            :placeholder="t('profiles.form.descriptionPlaceholder')"
+            :rows="2"
+          />
+        </div>
+        <div>
+          <label class="text-sm text-c-secondary mb-1 flex items-center gap-2">
+            {{ t("profiles.form.modList") }}
+            <NTag size="tiny" :bordered="false" :type="selectedModIds.length > 0 ? 'info' : 'default'">
+              {{ t("profiles.form.selectedCount", { n: selectedModIds.length }) }}
+            </NTag>
+          </label>
 
-            <!-- Mod 搜索 -->
-            <NInput
-              v-model:value="modSearchQuery"
-              :placeholder="t('profiles.form.searchMods')"
-              size="small"
-              clearable
-              class="mb-2"
-            >
-              <template #prefix><NIcon :size="14"><Search /></NIcon></template>
-            </NInput>
+          <NInput
+            v-model:value="modSearchQuery"
+            :placeholder="t('profiles.form.searchMods')"
+            size="small"
+            clearable
+            class="mb-2"
+          >
+            <template #prefix><NIcon :size="14"><Search /></NIcon></template>
+          </NInput>
 
-            <!-- Mod 列表 -->
-            <div class="max-h-60 overflow-y-auto border border-c-default rounded-lg p-2 space-y-1">
-              <div v-if="loadingMods" class="text-center py-4 text-xs text-c-muted">
-                {{ t("profiles.form.loadingMods") }}
-              </div>
-              <template v-else>
-                <NCheckbox
-                  v-for="mod in filteredModsForPicker"
-                  :key="mod.id"
-                  :checked="selectedModIds.includes(mod.id)"
-                  size="small"
-                  class="w-full"
-                  @update:checked="(v: boolean) => toggleModSelection(mod.id, v)"
-                >
-                  <span class="text-xs">
-                    {{ mod.name }}
-                    <span v-if="mod.version" class="text-c-muted font-mono ml-1">{{ mod.version }}</span>
-                  </span>
-                </NCheckbox>
-                <div v-if="filteredModsForPicker.length === 0 && !loadingMods" class="text-center py-4 text-xs text-c-muted">
-                  {{ t("profiles.form.noModsMatch") }}
-                </div>
-              </template>
+          <div class="max-h-60 overflow-y-auto border border-c-default rounded-lg p-2 space-y-1">
+            <div v-if="loadingMods" class="text-center py-4 text-xs text-c-muted">
+              {{ t("profiles.form.loadingMods") }}
             </div>
-
-            <NSpace :size="4" class="mt-2">
-              <NButton size="tiny" text @click="selectAllMods">
-                {{ t("profiles.form.selectAll") }}
-              </NButton>
-              <NButton size="tiny" text @click="deselectAllMods">
-                {{ t("profiles.form.deselectAll") }}
-              </NButton>
-            </NSpace>
+            <template v-else>
+              <NCheckbox
+                v-for="mod in filteredModsForPicker"
+                :key="mod.id"
+                :checked="selectedModIds.includes(mod.id)"
+                size="small"
+                class="w-full"
+                @update:checked="(v: boolean) => toggleModSelection(mod.id, v)"
+              >
+                <span class="text-xs">
+                  {{ mod.name }}
+                  <span v-if="mod.version" class="text-c-muted font-mono ml-1">{{ mod.version }}</span>
+                </span>
+              </NCheckbox>
+              <div v-if="filteredModsForPicker.length === 0 && !loadingMods" class="text-center py-4 text-xs text-c-muted">
+                {{ t("profiles.form.noModsMatch") }}
+              </div>
+            </template>
           </div>
-        </NSpace>
-        <template #footer>
-          <NSpace justify="end">
-            <NButton @click="showCreateDialog = false">{{ t("common.cancel") }}</NButton>
-            <NButton type="primary" :loading="loading" @click="handleSave">
-              {{ editingId ? t("profiles.form.updateBtn") : t("profiles.form.createBtn") }}
+
+          <NSpace :size="4" class="mt-2">
+            <NButton size="tiny" text @click="selectAllMods">
+              {{ t("profiles.form.selectAll") }}
+            </NButton>
+            <NButton size="tiny" text @click="deselectAllMods">
+              {{ t("profiles.form.deselectAll") }}
             </NButton>
           </NSpace>
-        </template>
-      </NCard>
-    </NModal>
+        </div>
+      </NSpace>
+      <template #footer>
+        <NSpace justify="end">
+          <NButton @click="showCreateDialog = false">{{ t("common.cancel") }}</NButton>
+          <NButton type="primary" :loading="loading" @click="handleSave">
+            {{ editingId ? t("profiles.form.updateBtn") : t("profiles.form.createBtn") }}
+          </NButton>
+        </NSpace>
+      </template>
+    </AppDialog>
 
     <!-- 应用结果对话框 -->
-    <NModal
-      :show="showApplyDialog"
-      @update:show="(v: boolean) => !v && (showApplyDialog = false)"
-    >
-      <NCard v-if="applyResult" style="width: 480px" :bordered="false" role="dialog">
-        <template #header>
-          <span class="text-lg font-semibold">
-            {{ t("profiles.apply.applied", { name: applyResult.profile.name }) }}
-          </span>
-        </template>
-        <NSpace vertical :size="8">
-          <div v-if="applyResult.enabledModIds.length > 0" class="flex items-center gap-2 text-sm">
-            <NTag type="success" size="small" :bordered="false">+{{ applyResult.enabledModIds.length }}</NTag>
-            <span class="text-c-secondary">{{ t("profiles.apply.enabled") }}</span>
-          </div>
-          <div v-if="applyResult.disabledModIds.length > 0" class="flex items-center gap-2 text-sm">
-            <NTag type="default" size="small" :bordered="false">-{{ applyResult.disabledModIds.length }}</NTag>
-            <span class="text-c-secondary">{{ t("profiles.apply.disabled") }}</span>
-          </div>
-          <div v-if="applyResult.missingModIds.length > 0" class="flex items-center gap-2 text-sm">
-            <NTag type="warning" size="small" :bordered="false">!{{ applyResult.missingModIds.length }}</NTag>
-            <span class="text-c-secondary">{{ t("profiles.apply.missing") }}</span>
-          </div>
-        </NSpace>
-        <template #footer>
-          <NButton type="primary" @click="showApplyDialog = false">
-            {{ t("profiles.apply.ok") }}
-          </NButton>
-        </template>
-      </NCard>
-    </NModal>
+    <AppDialog v-if="applyResult" v-model:show="showApplyDialog" width="480px">
+      <template #header>
+        <span class="text-lg font-semibold">
+          {{ t("profiles.apply.applied", { name: applyResult.profile.name }) }}
+        </span>
+      </template>
+      <NSpace vertical :size="8">
+        <div v-if="applyResult.enabledModIds.length > 0" class="flex items-center gap-2 text-sm">
+          <NTag type="success" size="small" :bordered="false">+{{ applyResult.enabledModIds.length }}</NTag>
+          <span class="text-c-secondary">{{ t("profiles.apply.enabled") }}</span>
+        </div>
+        <div v-if="applyResult.disabledModIds.length > 0" class="flex items-center gap-2 text-sm">
+          <NTag type="default" size="small" :bordered="false">-{{ applyResult.disabledModIds.length }}</NTag>
+          <span class="text-c-secondary">{{ t("profiles.apply.disabled") }}</span>
+        </div>
+        <div v-if="applyResult.missingModIds.length > 0" class="flex items-center gap-2 text-sm">
+          <NTag type="warning" size="small" :bordered="false">!{{ applyResult.missingModIds.length }}</NTag>
+          <span class="text-c-secondary">{{ t("profiles.apply.missing") }}</span>
+        </div>
+      </NSpace>
+      <template #footer>
+        <NButton type="primary" @click="showApplyDialog = false">
+          {{ t("profiles.apply.ok") }}
+        </NButton>
+      </template>
+    </AppDialog>
 
     <!-- 分析导入文件时的加载遮罩 -->
     <div
@@ -515,64 +495,56 @@ watch(presetAppliedTick, () => {
     </div>
 
     <!-- 导入预设对话框 -->
-    <NModal
-      :show="showImportDialog"
-      :mask-closable="false"
-      @update:show="(v: boolean) => !v && (showImportDialog = false)"
-    >
-      <NCard v-if="bundlePreview" style="width: 560px" :bordered="false" role="dialog">
-        <template #header>
-          <span class="text-lg font-semibold">
-            {{ t("profiles.importDialog.title", { name: bundlePreview.manifest.profile.name }) }}
-          </span>
-        </template>
+    <AppDialog v-if="bundlePreview" v-model:show="showImportDialog" width="560px" :mask-closable="false">
+      <template #header>
+        <span class="text-lg font-semibold">
+          {{ t("profiles.importDialog.title", { name: bundlePreview.manifest.profile.name }) }}
+        </span>
+      </template>
 
-        <div class="mb-3">
-          <span class="text-sm text-c-secondary">
-            {{ t("profiles.importDialog.summary", {
-              n1: bundlePreview.manifest.mods.length,
-              n2: bundlePreview.manifest.profile.modIds.length,
-            }) }}
-          </span>
-        </div>
+      <div class="mb-3">
+        <span class="text-sm text-c-secondary">
+          {{ t("profiles.importDialog.summary", {
+            n1: bundlePreview.manifest.mods.length,
+            n2: bundlePreview.manifest.profile.modIds.length,
+          }) }}
+        </span>
+      </div>
 
-        <!-- 冲突提示 -->
+      <div
+        v-if="bundlePreview.conflicts.length > 0"
+        class="mb-3 p-3 rounded-lg bg-c-warning border border-c-warning"
+      >
+        <p class="text-sm font-medium text-c-warning mb-2">
+          {{ t("profiles.importDialog.conflictCount", { n: bundlePreview.conflicts.length }) }}
+        </p>
         <div
-          v-if="bundlePreview.conflicts.length > 0"
-          class="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200"
+          v-for="c in bundlePreview.conflicts"
+          :key="c.modId"
+          class="text-xs text-c-warning mb-1"
         >
-          <p class="text-sm font-medium text-amber-800 mb-2">
-            {{ t("profiles.importDialog.conflictCount", { n: bundlePreview.conflicts.length }) }}
-          </p>
-          <div
-            v-for="c in bundlePreview.conflicts"
-            :key="c.modId"
-            class="text-xs text-amber-700 mb-1"
-          >
-            · {{ c.name }}: {{ c.reason }}
-          </div>
-          <div class="mt-2 text-xs text-c-secondary">
-            {{ t("profiles.importDialog.conflictHint") }}
-          </div>
+          · {{ c.name }}: {{ c.reason }}
         </div>
-
-        <!-- 缺失提示 -->
-        <div
-          v-if="bundlePreview.missingIds.length > 0"
-          class="mb-3 text-xs text-c-secondary"
-        >
-          {{ t("profiles.importDialog.missingHint", { n: bundlePreview.missingIds.length }) }}
+        <div class="mt-2 text-xs text-c-secondary">
+          {{ t("profiles.importDialog.conflictHint") }}
         </div>
+      </div>
 
-        <template #footer>
-          <NSpace justify="end">
-            <NButton @click="showImportDialog = false">{{ t("common.cancel") }}</NButton>
-            <NButton type="primary" :loading="loading" @click="confirmImport">
-              {{ t("profiles.importDialog.importBtn") }}
-            </NButton>
-          </NSpace>
-        </template>
-      </NCard>
-    </NModal>
+      <div
+        v-if="bundlePreview.missingIds.length > 0"
+        class="mb-3 text-xs text-c-secondary"
+      >
+        {{ t("profiles.importDialog.missingHint", { n: bundlePreview.missingIds.length }) }}
+      </div>
+
+      <template #footer>
+        <NSpace justify="end">
+          <NButton @click="showImportDialog = false">{{ t("common.cancel") }}</NButton>
+          <NButton type="primary" :loading="loading" @click="confirmImport">
+            {{ t("profiles.importDialog.importBtn") }}
+          </NButton>
+        </NSpace>
+      </template>
+    </AppDialog>
   </div>
 </template>

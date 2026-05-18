@@ -17,3 +17,9 @@ pub enum AppError {
     #[error("{0}")]
     Other(String),
 }
+
+impl From<AppError> for String {
+    fn from(e: AppError) -> Self {
+        e.to_string()
+    }
+}

@@ -12,6 +12,19 @@ pub struct AppState {
     pub recent_activity: RwLock<Vec<ActivityLogEntry>>,
 }
 
+impl AppState {
+    /// 向活动日志追加一条记录，超过 MAX_LOG_ENTRIES 时自动裁剪旧条目
+    pub fn push_activity(&self, entry: ActivityLogEntry) {
+        const MAX_LOG_ENTRIES: usize = 500;
+        let mut log = self.recent_activity.write().unwrap();
+        if log.len() >= MAX_LOG_ENTRIES {
+            let excess = log.len() - MAX_LOG_ENTRIES + 1;
+            log.drain(0..excess);
+        }
+        log.push(entry);
+    }
+}
+
 impl Default for AppState {
     fn default() -> Self {
         Self {
@@ -24,32 +37,22 @@ impl Default for AppState {
 // --- 应用设置 ---
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)] // 缺失字段从 Default::default() 取值
 pub struct AppSettings {
     pub game_root_dir: Option<String>,
-    #[serde(default = "default_active_profile_name")]
     pub active_profile_name: String,
-    #[serde(default = "default_locale")]
     pub locale: String,
-    #[serde(default)]
     pub save_auto_sync: bool,
-    #[serde(default)]
     pub save_sync_pairs: Vec<SaveSyncPair>,
     pub nexus_api_key: Option<String>,
-    #[serde(default)]
     pub nexus_is_premium: bool,
     pub nexus_user_name: Option<String>,
     pub proxy_url: Option<String>,
-    #[serde(default = "default_auto_backup_keep_count")]
     pub auto_backup_keep_count: usize,
-    #[serde(default = "default_true")]
     pub backup_on_path_switch: bool,
-    #[serde(default = "default_theme_mode")]
     pub theme_mode: String,
-    #[serde(default = "default_theme_color")]
     pub theme_color: String,
-    #[serde(default = "default_launch_mode")]
     pub launch_mode: String,
-    #[serde(default = "default_launch_check_cloud_save")]
     pub launch_check_cloud_save: bool,
 }
 
@@ -57,54 +60,22 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             game_root_dir: None,
-            active_profile_name: default_active_profile_name(),
-            locale: default_locale(),
+            active_profile_name: "原版".to_string(),
+            locale: "zh-CN".to_string(),
             save_auto_sync: false,
             save_sync_pairs: Vec::new(),
             nexus_api_key: None,
             nexus_is_premium: false,
             nexus_user_name: None,
             proxy_url: None,
-            auto_backup_keep_count: default_auto_backup_keep_count(),
+            auto_backup_keep_count: 5,
             backup_on_path_switch: true,
-            theme_mode: default_theme_mode(),
-            theme_color: default_theme_color(),
-            launch_mode: default_launch_mode(),
-            launch_check_cloud_save: default_launch_check_cloud_save(),
+            theme_mode: "system".to_string(),
+            theme_color: "indigo".to_string(),
+            launch_mode: "steam".to_string(),
+            launch_check_cloud_save: true,
         }
     }
-}
-
-fn default_active_profile_name() -> String {
-    "原版".to_string()
-}
-
-fn default_locale() -> String {
-    "zh-CN".to_string()
-}
-
-fn default_auto_backup_keep_count() -> usize {
-    5
-}
-
-fn default_theme_mode() -> String {
-    "system".to_string()
-}
-
-fn default_theme_color() -> String {
-    "indigo".to_string()
-}
-
-fn default_launch_mode() -> String {
-    "steam".to_string()
-}
-
-fn default_launch_check_cloud_save() -> bool {
-    true
-}
-
-fn default_true() -> bool {
-    true
 }
 
 // --- 存档同步配对 ---

@@ -1,5 +1,5 @@
-import { ref } from "vue"
 import type { RemoteMod } from "../types"
+import { useStorage } from "./useStorage"
 
 const STORAGE_KEY = "discover-prefetch"
 
@@ -14,11 +14,10 @@ function makeKey(query: string, sortBy: string, page: number, pageSize: number):
 
 const cache = new Map<string, CacheEntry>()
 
-export const prefetchEnabled = ref(localStorage.getItem(STORAGE_KEY) !== "false")
+export const prefetchEnabled = useStorage(STORAGE_KEY, true)
 
 export function setPrefetchEnabled(v: boolean) {
   prefetchEnabled.value = v
-  localStorage.setItem(STORAGE_KEY, String(v))
 }
 
 export function getPageCache(

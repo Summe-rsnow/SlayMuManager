@@ -25,6 +25,6 @@ export function setupI18n() {
 export function setLocale(locale: string) {
   currentLocale.value = locale
   if (i18n) {
-    ;(i18n.global.locale as any).value = locale
+    ;(i18n.global.locale as { value: string }).value = locale
   }
 }

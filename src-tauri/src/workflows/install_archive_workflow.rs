@@ -519,10 +519,37 @@ pub fn detect_conflicts(
 }
 
 /// 便捷方法：自动扫描启用+禁用目录进行冲突检测
-pub fn detect_conflicts_full(discovered: &mut [DiscoveredMod], game_root: &Path) {
+/// 如果提供 extracted_root，额外检查文件级哈希冲突
+pub fn detect_conflicts_full(
+    discovered: &mut [DiscoveredMod],
+    game_root: &Path,
+    extracted_root: Option<&Path>,
+) {
     let enabled = mod_service::scan_enabled_mods(game_root);
     let disabled = mod_service::scan_disabled_mods(game_root);
     detect_conflicts(discovered, &enabled, &disabled);
+
+    // 文件哈希级冲突检测
+    if let Some(extracted) = extracted_root {
+        for dmod in discovered.iter_mut() {
+            if !matches!(dmod.status, DiscoveredModStatus::Ready) {
+                continue;
+            }
+            if let Ok(source_folder) = find_source_mod_folder(extracted, &dmod.folder_name) {
+                if let Ok(hashes) = mod_service::compute_mod_hashes(&source_folder) {
+                    let file_conflicts = mod_service::find_file_conflicts(&hashes);
+                    for conflict in file_conflicts {
+                        if !dmod.conflicts.contains(&conflict) {
+                            dmod.conflicts.push(conflict);
+                        }
+                    }
+                    if !dmod.conflicts.is_empty() {
+                        dmod.status = DiscoveredModStatus::Conflict;
+                    }
+                }
+            }
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -607,6 +634,15 @@ pub fn install_discovered_mods(
 
         let manifest_path = dest_path.join("manifest.json");
         let manifest = ModManifest::from_file(&manifest_path);
+        // 计算并存储文件哈希
+        let mod_id_for_hash = manifest
+            .as_ref()
+            .and_then(|m| m.id.clone())
+            .unwrap_or_else(|| dmod.mod_id.clone());
+        if let Ok(hashes) = mod_service::compute_mod_hashes(&dest_path) {
+            let _ = crate::repositories::mod_hashes_repo::set_mod_hashes(&mod_id_for_hash, hashes);
+        }
+
         let state = if enable {
             InstalledModState::Enabled
         } else {
@@ -701,7 +737,7 @@ pub fn preview_archive(
     let temp_dir = extract_archive(archive_path)?;
     let mut discovered =
         discover_mods_in_dir(&temp_dir, Some(archive_name), DiscoveredModSourceType::Archive);
-    detect_conflicts_full(&mut discovered, game_root);
+    detect_conflicts_full(&mut discovered, game_root, None);
     cleanup_extract_dir(&temp_dir);
 
     Ok(BatchImportPreview {
@@ -724,7 +760,7 @@ pub fn execute_install(
     let temp_dir = extract_archive(archive_path)?;
     let mut discovered =
         discover_mods_in_dir(&temp_dir, Some(archive_name), DiscoveredModSourceType::Archive);
-    detect_conflicts_full(&mut discovered, game_root);
+    detect_conflicts_full(&mut discovered, game_root, None);
 
     let default_resolution = if replace_existing {
         ConflictResolution::Replace
@@ -781,7 +817,7 @@ pub fn batch_preview(
                 Some(path_str),
                 DiscoveredModSourceType::Folder,
             );
-            detect_conflicts_full(&mut discovered, game_root);
+            detect_conflicts_full(&mut discovered, game_root, None);
             all_discovered.extend(discovered);
         } else if detect_archive_format(path).is_some() {
             match extract_archive(path) {
@@ -795,7 +831,7 @@ pub fn batch_preview(
                         Some(archive_name),
                         DiscoveredModSourceType::Archive,
                     );
-                    detect_conflicts_full(&mut discovered, game_root);
+                    detect_conflicts_full(&mut discovered, game_root, None);
                     all_discovered.extend(discovered);
                     cleanup_extract_dir(&temp_dir);
                 }
@@ -947,7 +983,7 @@ fn install_from_folder(
         Some(folder_name),
         DiscoveredModSourceType::Folder,
     );
-    detect_conflicts_full(&mut discovered, game_root);
+    detect_conflicts_full(&mut discovered, game_root, None);
 
     let mods = install_discovered_mods(
         folder_path,
@@ -987,7 +1023,7 @@ fn install_single_archive(
         Some(archive_name),
         DiscoveredModSourceType::Archive,
     );
-    detect_conflicts_full(&mut discovered, game_root);
+    detect_conflicts_full(&mut discovered, game_root, None);
 
     let mods = install_discovered_mods(
         &temp_dir,

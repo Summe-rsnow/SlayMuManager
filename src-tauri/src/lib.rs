@@ -15,6 +15,14 @@ use tauri::Manager;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 全局 panic hook：崩溃时打印诊断信息
+    std::panic::set_hook(Box::new(|info| {
+        eprintln!("[SlayMuManager] Panic: {info}");
+        if let Some(loc) = info.location() {
+            eprintln!("  at {}:{}:{}", loc.file(), loc.line(), loc.column());
+        }
+    }));
+
     tauri::Builder::default()
         .setup(|app| {
             let state = AppState::default();

@@ -10,13 +10,13 @@ use std::path::{Path, PathBuf};
 // 路径工具
 // ---------------------------------------------------------------------------
 
-/// 原版存档根目录 → %APPDATA%/SlayTheSpire2/steam/
+/// 原版存档根目录（跨平台）
+/// Windows: %APPDATA%/SlayTheSpire2/steam/
+/// macOS:   ~/Library/Application Support/SlayTheSpire2/steam/
+/// Linux:   ~/.local/share/SlayTheSpire2/steam/
 pub fn vanilla_saves_root() -> PathBuf {
-    let appdata = std::env::var("APPDATA").unwrap_or_else(|_| {
-        let profile = std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\Users\\Default".to_string());
-        format!("{}\\AppData\\Roaming", profile)
-    });
-    PathBuf::from(appdata)
+    dirs_next::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
         .join("SlayTheSpire2")
         .join("steam")
 }
@@ -487,10 +487,8 @@ pub fn delete_save_slot(
 // 配对同步
 // ---------------------------------------------------------------------------
 
-pub fn sync_saves(game_root: &Path, pairs: &[SaveSyncPair]) -> Result<SaveSyncResult, AppError> {
-    let mut details = Vec::new();
-
-    // 遍历所有 Steam 用户，为每个用户应用配对同步
+/// 收集存档目录下的 Steam 用户 ID，无用户时返回 ["default"]
+fn collect_steam_user_ids() -> Vec<String> {
     let vanilla_root = vanilla_saves_root();
     let user_ids: Vec<String> = if vanilla_root.exists() {
         std::fs::read_dir(&vanilla_root)
@@ -509,74 +507,75 @@ pub fn sync_saves(game_root: &Path, pairs: &[SaveSyncPair]) -> Result<SaveSyncRe
     } else {
         Vec::new()
     };
+    if user_ids.is_empty() { vec!["default".to_string()] } else { user_ids }
+}
 
-    // 如果没有找到任何用户，使用默认值
-    let user_ids = if user_ids.is_empty() {
-        vec!["default".to_string()]
-    } else {
-        user_ids
+/// 同步一对存档槽位，决定方向并执行复制。无需同步时返回 Ok(None)。
+fn sync_pair(
+    game_root: &Path,
+    steam_user_id: &str,
+    pair: &SaveSyncPair,
+) -> Result<Option<SyncDetail>, AppError> {
+    let vanilla_path = slot_path(game_root, steam_user_id, &SaveKind::Vanilla, pair.vanilla_slot);
+    let modded_path = slot_path(game_root, steam_user_id, &SaveKind::Modded, pair.modded_slot);
+
+    let v_has = vanilla_path.join("progress.save").is_file();
+    let m_has = modded_path.join("progress.save").is_file();
+    let v_time = dir_last_modified(&vanilla_path);
+    let m_time = dir_last_modified(&modded_path);
+
+    let direction = match (v_has, m_has) {
+        (true, false) => Some(SyncDirection::VanillaToModded),
+        (false, true) => Some(SyncDirection::ModdedToVanilla),
+        (true, true) => match (v_time, m_time) {
+            (Some(v), Some(m)) if v > m => Some(SyncDirection::VanillaToModded),
+            (Some(v), Some(m)) if m > v => Some(SyncDirection::ModdedToVanilla),
+            _ => None,
+        },
+        _ => None,
     };
+
+    match direction {
+        Some(SyncDirection::VanillaToModded) => {
+            if m_has {
+                let _ = create_backup_internal(
+                    game_root, steam_user_id, &SaveKind::Modded, pair.modded_slot,
+                    "同步前自动备份",
+                );
+            }
+            incremental_sync_dir(&vanilla_path, &modded_path)?;
+            Ok(Some(SyncDetail {
+                slot_index: pair.modded_slot,
+                direction: SyncDirection::VanillaToModded,
+                backup_created: m_has,
+            }))
+        }
+        Some(SyncDirection::ModdedToVanilla) => {
+            if v_has {
+                let _ = create_backup_internal(
+                    game_root, steam_user_id, &SaveKind::Vanilla, pair.vanilla_slot,
+                    "同步前自动备份",
+                );
+            }
+            incremental_sync_dir(&modded_path, &vanilla_path)?;
+            Ok(Some(SyncDetail {
+                slot_index: pair.vanilla_slot,
+                direction: SyncDirection::ModdedToVanilla,
+                backup_created: v_has,
+            }))
+        }
+        _ => Ok(None),
+    }
+}
+
+pub fn sync_saves(game_root: &Path, pairs: &[SaveSyncPair]) -> Result<SaveSyncResult, AppError> {
+    let user_ids = collect_steam_user_ids();
+    let mut details = Vec::new();
 
     for steam_user_id in &user_ids {
         for pair in pairs {
-            let vanilla_path = slot_path(game_root, steam_user_id, &SaveKind::Vanilla, pair.vanilla_slot);
-            let modded_path = slot_path(game_root, steam_user_id, &SaveKind::Modded, pair.modded_slot);
-
-            let v_has = vanilla_path.join("progress.save").is_file();
-            let m_has = modded_path.join("progress.save").is_file();
-            let v_time = dir_last_modified(&vanilla_path);
-            let m_time = dir_last_modified(&modded_path);
-
-            // 方向决策：有数据的覆盖无数据；都有数据时较新的覆盖较旧的
-            let direction = match (v_has, m_has) {
-                (true, false) => Some(SyncDirection::VanillaToModded),
-                (false, true) => Some(SyncDirection::ModdedToVanilla),
-                (true, true) => match (v_time, m_time) {
-                    (Some(v), Some(m)) if v > m => Some(SyncDirection::VanillaToModded),
-                    (Some(v), Some(m)) if m > v => Some(SyncDirection::ModdedToVanilla),
-                    _ => None, // 时间相同，不操作
-                },
-                _ => None,
-            };
-
-            match direction {
-                Some(SyncDirection::VanillaToModded) => {
-                    if m_has {
-                        let _ = create_backup_internal(
-                            game_root, steam_user_id, &SaveKind::Modded, pair.modded_slot,
-                            "同步前自动备份",
-                        );
-                        std::fs::remove_dir_all(&modded_path).map_err(AppError::Io)?;
-                    }
-                    if let Some(parent) = modded_path.parent() {
-                        std::fs::create_dir_all(parent).map_err(AppError::Io)?;
-                    }
-                    copy_dir_recursive(&vanilla_path, &modded_path)?;
-                    details.push(SyncDetail {
-                        slot_index: pair.modded_slot,
-                        direction: SyncDirection::VanillaToModded,
-                        backup_created: m_has,
-                    });
-                }
-                Some(SyncDirection::ModdedToVanilla) => {
-                    if v_has {
-                        let _ = create_backup_internal(
-                            game_root, steam_user_id, &SaveKind::Vanilla, pair.vanilla_slot,
-                            "同步前自动备份",
-                        );
-                        std::fs::remove_dir_all(&vanilla_path).map_err(AppError::Io)?;
-                    }
-                    if let Some(parent) = vanilla_path.parent() {
-                        std::fs::create_dir_all(parent).map_err(AppError::Io)?;
-                    }
-                    copy_dir_recursive(&modded_path, &vanilla_path)?;
-                    details.push(SyncDetail {
-                        slot_index: pair.vanilla_slot,
-                        direction: SyncDirection::ModdedToVanilla,
-                        backup_created: v_has,
-                    });
-                }
-                _ => {}
+            if let Ok(Some(detail)) = sync_pair(game_root, steam_user_id, pair) {
+                details.push(detail);
             }
         }
     }
@@ -609,6 +608,62 @@ fn dir_last_modified(dir: &Path) -> Option<std::time::SystemTime> {
 // ---------------------------------------------------------------------------
 // 工具
 // ---------------------------------------------------------------------------
+
+/// 增量同步目录：只复制有新/修改的文件，删除目标中多余的文件
+fn incremental_sync_dir(from: &Path, to: &Path) -> Result<(), AppError> {
+    if !from.exists() {
+        return Ok(());
+    }
+    std::fs::create_dir_all(to).map_err(AppError::Io)?;
+
+    let mut to_files: std::collections::HashMap<String, PathBuf> = std::collections::HashMap::new();
+    if to.exists() {
+        collect_files_recursive(to, to, &mut to_files);
+    }
+
+    let mut from_files: std::collections::HashMap<String, PathBuf> = std::collections::HashMap::new();
+    collect_files_recursive(from, from, &mut from_files);
+
+    for (rel_path, src_path) in &from_files {
+        let dst_path = to.join(rel_path);
+        if let Some(parent) = dst_path.parent() {
+            std::fs::create_dir_all(parent).map_err(AppError::Io)?;
+        }
+
+        let needs_copy = match to_files.get(rel_path) {
+            None => true,
+            Some(existing) => {
+                let src_mtime = std::fs::metadata(src_path).ok().and_then(|m| m.modified().ok());
+                let dst_mtime = std::fs::metadata(existing).ok().and_then(|m| m.modified().ok());
+                src_mtime != dst_mtime
+            }
+        };
+
+        if needs_copy {
+            std::fs::copy(src_path, &dst_path).map_err(AppError::Io)?;
+        }
+        to_files.remove(rel_path);
+    }
+
+    for (_, extra_path) in &to_files {
+        let _ = std::fs::remove_file(extra_path);
+    }
+
+    Ok(())
+}
+
+fn collect_files_recursive(base: &Path, dir: &Path, out: &mut std::collections::HashMap<String, PathBuf>) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_dir() {
+                collect_files_recursive(base, &path, out);
+            } else if let Ok(rel) = path.strip_prefix(base) {
+                out.insert(rel.to_string_lossy().to_string(), path);
+            }
+        }
+    }
+}
 
 pub fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), AppError> {
     if !src.exists() {

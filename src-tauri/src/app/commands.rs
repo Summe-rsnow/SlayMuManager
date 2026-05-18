@@ -13,6 +13,7 @@ use crate::repositories::settings_repo;
 use crate::services::{
     backup_service, discover_service, game_service, mod_service, profile_service, save_service,
 };
+use crate::utils::error::AppError;
 use crate::workflows::install_archive_workflow;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -219,20 +220,135 @@ pub fn open_path_in_explorer(path: String) -> Result<(), String> {
     if !p.exists() {
         return Err(format!("路径不存在: {}", path));
     }
-    std::process::Command::new("explorer")
-        .arg(p)
-        .spawn()
-        .map_err(|e| format!("打开资源管理器失败: {}", e))?;
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(p)
+            .spawn()
+            .map_err(|e| format!("打开资源管理器失败: {}", e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(p)
+            .spawn()
+            .map_err(|e| format!("打开 Finder 失败: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(p)
+            .spawn()
+            .map_err(|e| format!("打开文件管理器失败: {}", e))?;
+    }
     Ok(())
 }
 
 #[tauri::command]
 pub fn open_url_in_browser(url: String) -> Result<(), String> {
-    std::process::Command::new("cmd")
-        .args(["/C", "start", "", &url])
-        .spawn()
-        .map_err(|e| format!("打开浏览器失败: {}", e))?;
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", &url])
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败: {}", e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| format!("打开浏览器失败: {}", e))?;
+    }
     Ok(())
+}
+
+// =========================================================================
+// 辅助函数：更新激活预设的 mod 列表
+// =========================================================================
+
+/// 向激活的非内置预设添加 mod_id
+fn add_mod_to_active_profile(mod_id: &str, active_name: &str) {
+    if active_name.is_empty() {
+        return;
+    }
+    let profiles = profile_service::list_profiles();
+    if let Some(active_profile) = profiles.iter().find(|p| p.name == active_name) {
+        if !active_profile.builtin && !active_profile.mod_ids.contains(&mod_id.to_string()) {
+            let mut new_ids = active_profile.mod_ids.clone();
+            new_ids.push(mod_id.to_string());
+            let _ = profile_service::update_profile(
+                active_profile.id.clone(),
+                active_profile.name.clone(),
+                active_profile.description.clone(),
+                new_ids,
+            );
+        }
+    }
+}
+
+/// 从激活的非内置预设移除 mod_id
+fn remove_mod_from_active_profile(mod_id: &str, active_name: &str) {
+    if active_name.is_empty() {
+        return;
+    }
+    let profiles = profile_service::list_profiles();
+    if let Some(active_profile) = profiles.iter().find(|p| p.name == active_name) {
+        if !active_profile.builtin && active_profile.mod_ids.contains(&mod_id.to_string()) {
+            let new_ids: Vec<String> = active_profile
+                .mod_ids
+                .iter()
+                .filter(|id| *id != mod_id)
+                .cloned()
+                .collect();
+            let _ = profile_service::update_profile(
+                active_profile.id.clone(),
+                active_profile.name.clone(),
+                active_profile.description.clone(),
+                new_ids,
+            );
+        }
+    }
+}
+
+/// 内部辅助：提取 enable_mod / disable_mod 的公共逻辑
+fn toggle_mod_internal(
+    state: &AppState,
+    mod_id: &str,
+    toggle_fn: impl FnOnce(&Path, &str, &[SaveSyncPair], bool) -> Result<ModToggleResult, AppError>,
+    modify_profile: impl FnOnce(&str, &str),
+    action_label: &str,
+) -> Result<ModToggleResult, String> {
+    let settings = state.settings.read().unwrap();
+    let game_root = settings
+        .game_root_dir
+        .as_ref()
+        .ok_or("游戏目录未设置")?;
+    let sync_pairs = settings.save_sync_pairs.clone();
+    let backup_on_switch = settings.backup_on_path_switch;
+
+    let result = toggle_fn(Path::new(game_root), mod_id, &sync_pairs, backup_on_switch)?;
+
+    let active_name = settings.active_profile_name.clone();
+    drop(settings);
+    modify_profile(mod_id, &active_name);
+
+    state.push_activity(ActivityLogEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        category: "mod".to_string(),
+        title: format!("{action_label} Mod: {}", result.mod_item.name),
+        detail: None,
+        created_at: chrono::Utc::now().to_rfc3339(),
+    });
+
+    Ok(result)
 }
 
 // =========================================================================
@@ -273,95 +389,24 @@ pub fn list_disabled_mods(state: State<AppState>) -> Result<Vec<InstalledMod>, S
 
 #[tauri::command]
 pub fn enable_mod(mod_id: String, state: State<AppState>) -> Result<ModToggleResult, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    let sync_pairs = settings.save_sync_pairs.clone();
-    let backup_on_switch = settings.backup_on_path_switch;
-    let result = mod_service::enable_mod(Path::new(game_root), &mod_id, &sync_pairs, backup_on_switch)
-        .map_err(|e| e.to_string())?;
-
-    // 如果当前有激活的非内置预设，自动将 mod_id 加入其列表
-    let active_name = settings.active_profile_name.clone();
-    drop(settings);
-    if !active_name.is_empty() {
-        let profiles = profile_service::list_profiles();
-        if let Some(active_profile) = profiles.iter().find(|p| p.name == active_name) {
-            if !active_profile.builtin && !active_profile.mod_ids.contains(&mod_id) {
-                let mut new_ids = active_profile.mod_ids.clone();
-                new_ids.push(mod_id.clone());
-                let _ = profile_service::update_profile(
-                    active_profile.id.clone(),
-                    active_profile.name.clone(),
-                    active_profile.description.clone(),
-                    new_ids,
-                );
-            }
-        }
-    }
-
-    // 记录活动日志
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
-        id: uuid::Uuid::new_v4().to_string(),
-        category: "mod".to_string(),
-        title: format!("启用 Mod: {}", result.mod_item.name),
-        detail: None,
-        created_at: chrono::Utc::now().to_rfc3339(),
-    });
-
-    Ok(result)
+    toggle_mod_internal(
+        &state,
+        &mod_id,
+        |root, id, sync, backup| mod_service::enable_mod(root, id, sync, backup),
+        |id, name| add_mod_to_active_profile(id, name),
+        "启用",
+    )
 }
 
 #[tauri::command]
 pub fn disable_mod(mod_id: String, state: State<AppState>) -> Result<ModToggleResult, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    let sync_pairs = settings.save_sync_pairs.clone();
-    let backup_on_switch = settings.backup_on_path_switch;
-    let result = mod_service::disable_mod(Path::new(game_root), &mod_id, &sync_pairs, backup_on_switch)
-        .map_err(|e| e.to_string())?;
-
-    // 如果当前有激活的非内置预设，自动将 mod_id 从其列表移除
-    let active_name = settings.active_profile_name.clone();
-    drop(settings);
-    if !active_name.is_empty() {
-        let profiles = profile_service::list_profiles();
-        if let Some(active_profile) = profiles.iter().find(|p| p.name == active_name) {
-            if !active_profile.builtin && active_profile.mod_ids.contains(&mod_id) {
-                let new_ids: Vec<String> = active_profile
-                    .mod_ids
-                    .iter()
-                    .filter(|id| *id != &mod_id)
-                    .cloned()
-                    .collect();
-                let _ = profile_service::update_profile(
-                    active_profile.id.clone(),
-                    active_profile.name.clone(),
-                    active_profile.description.clone(),
-                    new_ids,
-                );
-            }
-        }
-    }
-
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
-        id: uuid::Uuid::new_v4().to_string(),
-        category: "mod".to_string(),
-        title: format!("禁用 Mod: {}", result.mod_item.name),
-        detail: None,
-        created_at: chrono::Utc::now().to_rfc3339(),
-    });
-
-    Ok(result)
+    toggle_mod_internal(
+        &state,
+        &mod_id,
+        |root, id, sync, backup| mod_service::disable_mod(root, id, sync, backup),
+        |id, name| remove_mod_from_active_profile(id, name),
+        "禁用",
+    )
 }
 
 #[tauri::command]
@@ -372,10 +417,11 @@ pub fn uninstall_mod(mod_id: String, state: State<AppState>) -> Result<(), Strin
         .as_ref()
         .ok_or("游戏目录未设置")?;
 
-    mod_service::uninstall_mod(Path::new(game_root), &mod_id).map_err(|e| e.to_string())?;
+    mod_service::uninstall_mod(Path::new(game_root), &mod_id)?;
+    // 清理文件哈希
+    let _ = crate::repositories::mod_hashes_repo::remove_mod_hashes(&mod_id);
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "mod".to_string(),
         title: format!("卸载 Mod: {}", mod_id),
@@ -399,12 +445,29 @@ pub fn open_mod_folder(mod_id: String, state: State<AppState>) -> Result<(), Str
 
     let mod_folder = mod_service::find_mod_folder(&plugins_dir, &mod_id)
         .or_else(|_| mod_service::find_mod_folder(&disabled_dir, &mod_id))
-        .map_err(|e| e.to_string())?;
+        ?;
 
-    std::process::Command::new("explorer")
-        .arg(&mod_folder)
-        .spawn()
-        .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&mod_folder)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&mod_folder)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&mod_folder)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
 
     Ok(())
 }
@@ -420,10 +483,27 @@ pub fn open_mods_directory(state: State<AppState>) -> Result<(), String> {
     let plugins = game_service::mods_dir(Path::new(game_root));
     std::fs::create_dir_all(&plugins).map_err(|e| format!("创建目录失败: {}", e))?;
 
-    std::process::Command::new("explorer")
-        .arg(&plugins)
-        .spawn()
-        .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&plugins)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&plugins)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&plugins)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
 
     Ok(())
 }
@@ -491,7 +571,7 @@ pub fn preview_install_archive(
         Path::new(&archive_path),
         Path::new(game_root),
     )
-    .map_err(|e| e.to_string())?;
+    ?;
 
     let _ = enable_after_install;
 
@@ -517,12 +597,11 @@ pub fn install_archive(
         enable_after_install,
         replace_existing,
     )
-    .map_err(|e| e.to_string())?;
+    ?;
 
     // 记录日志
     let names: Vec<_> = installed.iter().map(|m| m.name.as_str()).collect();
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "mod".to_string(),
         title: format!("安装 Mod: {}", names.join(", ")),
@@ -546,7 +625,7 @@ pub fn process_import_targets(
         .ok_or("游戏目录未设置")?;
 
     let preview = install_archive_workflow::batch_preview(&paths, Path::new(game_root))
-        .map_err(|e| e.to_string())?;
+        ?;
 
     let _ = enable_now;
     Ok(preview)
@@ -591,7 +670,7 @@ pub fn batch_install_mods(
         &parsed_resolutions,
         &selected_ids,
     )
-    .map_err(|e| e.to_string())?;
+    ?;
 
     // Save Guard：从 0 个 Mod → N 个 Mod 时自动触发存档备份 + 同步
     if enable_now && result.success_count > 0 && settings.backup_on_path_switch {
@@ -604,8 +683,7 @@ pub fn batch_install_mods(
     }
 
     // 记录日志
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "mod".to_string(),
         title: format!(
@@ -636,10 +714,9 @@ pub fn create_profile(
     state: State<AppState>,
 ) -> Result<ModProfile, String> {
     let profile = profile_service::create_profile(name, description, mod_ids)
-        .map_err(|e| e.to_string())?;
+        ?;
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "profile".to_string(),
         title: format!("创建预设: {}", profile.name),
@@ -659,10 +736,9 @@ pub fn update_profile(
     state: State<AppState>,
 ) -> Result<ModProfile, String> {
     let profile = profile_service::update_profile(id, name, description, mod_ids)
-        .map_err(|e| e.to_string())?;
+        ?;
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "profile".to_string(),
         title: format!("更新预设: {}", profile.name),
@@ -685,10 +761,9 @@ pub fn delete_profile(id: String, state: State<AppState>) -> Result<(), String> 
         return Err("当前激活的预设不能直接删除，请先切换到其他预设".to_string());
     }
 
-    profile_service::delete_profile(&id).map_err(|e| e.to_string())?;
+    profile_service::delete_profile(&id)?;
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "profile".to_string(),
         title: format!("删除预设: {}", id),
@@ -714,7 +789,7 @@ pub fn apply_profile(id: String, state: State<AppState>) -> Result<ApplyProfileR
     };
 
     let result = profile_service::apply_profile(&id, Path::new(&game_root), &sync_pairs, backup_on_switch)
-        .map_err(|e| e.to_string())?;
+        ?;
 
     // 同步内存中的 active_profile_name，确保 get_app_bootstrap 返回最新值
     {
@@ -722,8 +797,7 @@ pub fn apply_profile(id: String, state: State<AppState>) -> Result<ApplyProfileR
         settings.active_profile_name = result.profile.name.clone();
     }
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "profile".to_string(),
         title: format!(
@@ -874,10 +948,9 @@ pub fn transfer_save(
         .ok_or("游戏目录未设置")?;
 
     let result = save_service::transfer_save(Path::new(game_root), &source, &target)
-        .map_err(|e| e.to_string())?;
+        ?;
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "save".to_string(),
         title: format!(
@@ -948,10 +1021,9 @@ pub fn restore_save_backup(
         .ok_or("游戏目录未设置")?;
 
     save_service::restore_save_backup(Path::new(game_root), &backup_id)
-        .map_err(|e| e.to_string())?;
+        ?;
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "save".to_string(),
         title: format!("恢复存档备份: {}", backup_id),
@@ -1003,10 +1075,9 @@ pub fn restore_save_backup_to_slot(
         &kind,
         target_slot_index,
     )
-    .map_err(|e| e.to_string())?;
+    ?;
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "save".to_string(),
         title: format!(
@@ -1039,10 +1110,9 @@ pub fn delete_save_slot(
     };
 
     save_service::delete_save_slot(Path::new(game_root), &steam_user_id, &save_kind, slot_index)
-        .map_err(|e| e.to_string())?;
+        ?;
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "save".to_string(),
         title: format!("清空存档: {} {} 槽位 {}", kind, steam_user_id, slot_index),
@@ -1082,10 +1152,9 @@ pub fn sync_saves(state: State<AppState>) -> Result<SaveSyncResult, String> {
     let pairs = settings.save_sync_pairs.clone();
 
     let result = save_service::sync_saves(Path::new(game_root), &pairs)
-        .map_err(|e| e.to_string())?;
+        ?;
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "save".to_string(),
         title: format!("存档同步: {} 对已同步", result.synced_count),
@@ -1145,10 +1214,9 @@ pub fn ascend_to_cloud_full(state: State<AppState>) -> Result<(), String> {
         .game_root_dir
         .as_ref()
         .ok_or("游戏目录未设置")?;
-    backup_service::ascend_to_cloud_full(Path::new(game_root)).map_err(|e| e.to_string())?;
+    backup_service::ascend_to_cloud_full(Path::new(game_root))?;
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "cloud".to_string(),
         title: "全量上传到 Steam 云".to_string(),
@@ -1166,10 +1234,9 @@ pub fn descend_from_cloud_full(state: State<AppState>) -> Result<(), String> {
         .game_root_dir
         .as_ref()
         .ok_or("游戏目录未设置")?;
-    backup_service::descend_from_cloud_full(Path::new(game_root)).map_err(|e| e.to_string())?;
+    backup_service::descend_from_cloud_full(Path::new(game_root))?;
 
-    let mut activity = state.recent_activity.write().unwrap();
-    activity.push(ActivityLogEntry {
+    state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "cloud".to_string(),
         title: "从 Steam 云全量下载".to_string(),
@@ -1309,13 +1376,20 @@ pub fn list_activity_logs(state: State<AppState>) -> Vec<ActivityLogEntry> {
 /// 通过 MyMemory API 翻译文本（走 Rust 后端避免 WebView CORS/403 问题）
 #[tauri::command]
 pub fn translate_text(text: String) -> Result<String, String> {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| format!("HTTP 客户端构建失败: {}", e))?;
+
     let url = reqwest::Url::parse_with_params(
         "https://api.mymemory.translated.net/get",
         &[("q", &text as &str), ("langpair", "en|zh-CN")],
     )
     .map_err(|e| format!("URL 构建失败: {}", e))?;
 
-    let resp = reqwest::blocking::get(url)
+    let resp = client
+        .get(url)
+        .send()
         .map_err(|e| format!("翻译请求失败: {}", e))?;
 
     if !resp.status().is_success() {

@@ -1,19 +1,16 @@
-import { ref } from "vue"
 import { invoke } from "@tauri-apps/api/core"
 import { currentLocale } from "../i18n"
+import { useStorage } from "./useStorage"
 
 // 翻译缓存: `${targetLang}:${text}` -> translatedText
 const translationCache = new Map<string, string>()
 
 /** 翻译配额提示开关（localStorage 持久化） */
 const QUOTA_TIP_KEY = "slaymgr:translate-quota-tip"
-export const showTranslateQuotaTip = ref(
-  localStorage.getItem(QUOTA_TIP_KEY) !== "false"
-)
+export const showTranslateQuotaTip = useStorage(QUOTA_TIP_KEY, true)
 
 export function setShowTranslateQuotaTip(val: boolean) {
   showTranslateQuotaTip.value = val
-  localStorage.setItem(QUOTA_TIP_KEY, String(val))
 }
 
 /** 检测文本是否已包含 CJK 字符（中文/日文/韩文） */
@@ -46,7 +43,7 @@ export async function translateText(
     const result = await invoke<string>("translate_text", { text })
     translationCache.set(cacheKey, result)
     return { ok: true, text: result }
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("[translate] invoke failed:", e)
     return { ok: false, error: String(e) }
   }

@@ -328,3 +328,74 @@ fn collect_relative_paths_inner_depth(base: &Path, dir: &Path, out: &mut Vec<Str
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// 文件哈希（用于冲突检测）
+// ---------------------------------------------------------------------------
+
+/// 计算 Mod 文件夹下所有文件的 sha1 哈希
+pub fn compute_mod_hashes(mod_folder: &Path) -> Result<std::collections::HashMap<String, String>, AppError> {
+    let mut hashes = std::collections::HashMap::new();
+    compute_hashes_recursive(mod_folder, mod_folder, &mut hashes)?;
+    Ok(hashes)
+}
+
+fn compute_hashes_recursive(
+    base: &Path,
+    dir: &Path,
+    out: &mut std::collections::HashMap<String, String>,
+) -> Result<(), AppError> {
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_dir() {
+                compute_hashes_recursive(base, &path, out)?;
+            } else if path.is_file() {
+                if let Ok(rel) = path.strip_prefix(base) {
+                    let rel_str = rel.to_string_lossy().to_string();
+                    if !rel_str.is_empty() && !rel_str.starts_with('.') {
+                        match sha1_of_file(&path) {
+                            Ok(hash) => { out.insert(rel_str, hash); }
+                            Err(_) => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn sha1_of_file(path: &Path) -> Result<String, AppError> {
+    use sha1::{Digest, Sha1};
+    let data = std::fs::read(path)?;
+    let hash = Sha1::digest(&data);
+    Ok(hash.iter().map(|b| format!("{:02x}", b)).collect())
+}
+
+/// 比较新 mod 的文件与已安装 mod 的文件哈希
+pub fn find_file_conflicts(
+    new_hashes: &std::collections::HashMap<String, String>,
+) -> Vec<String> {
+    let store = crate::repositories::mod_hashes_repo::load_mod_hashes();
+    let mut conflicts = Vec::new();
+
+    for (existing_mod_id, existing_files) in &store.hashes {
+        for (file_path, new_hash) in new_hashes {
+            if let Some(existing_hash) = existing_files.get(file_path) {
+                if new_hash != existing_hash {
+                    conflicts.push(format!(
+                        "文件「{}」与 Mod「{}」冲突（哈希不同）",
+                        file_path, existing_mod_id
+                    ));
+                } else {
+                    conflicts.push(format!(
+                        "文件「{}」Mod「{}」也包含此文件",
+                        file_path, existing_mod_id
+                    ));
+                }
+            }
+        }
+    }
+    conflicts
+}

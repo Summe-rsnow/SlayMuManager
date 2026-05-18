@@ -18,8 +18,8 @@ const { t } = useI18n()
 
 const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{
-  close: []
-  installed: []
+  (e: "close"): void
+  (e: "installed"): void
 }>()
 
 const message = useMessage()
@@ -129,7 +129,7 @@ async function doPreview() {
     }
 
     stage.value = "ready"
-  } catch (e: any) {
+  } catch (e: unknown) {
     message.error(t("import.error.previewFailed", { e }))
     stage.value = "idle"
   } finally {
@@ -193,7 +193,7 @@ async function doInstall() {
 
     stage.value = "done"
     emit("installed")
-  } catch (e: any) {
+  } catch (e: unknown) {
     message.error(t("import.error.installFailed", { e }))
     stage.value = "ready"
   } finally {
@@ -325,10 +325,10 @@ function statusText(status: string) {
           <!-- 有冲突提示 -->
           <div
             v-if="hasConflicts"
-            class="flex items-center gap-2 px-3 py-2 bg-amber-50 border-b border-amber-100 text-sm"
+            class="flex items-center gap-2 px-3 py-2 bg-c-warning border-b border-c-warning text-sm"
           >
             <NIcon :size="14" color="#f0a020"><AlertTriangle /></NIcon>
-            <span class="text-amber-700">{{ t("import.conflict.detected") }}</span>
+            <span class="text-c-warning">{{ t("import.conflict.detected") }}</span>
           </div>
 
           <div
@@ -375,7 +375,7 @@ function statusText(status: string) {
               class="px-3 pb-3 ml-10"
             >
               <div class="text-xs text-c-secondary mb-1">{{ t("import.conflict.details") }}</div>
-              <div v-for="c in mod.conflicts" :key="c" class="text-xs text-amber-600 mb-1">
+              <div v-for="c in mod.conflicts" :key="c" class="text-xs text-c-warning mb-1">
                 · {{ c }}
               </div>
               <NRadioGroup

@@ -1,5 +1,4 @@
 import { createApp } from "vue"
-import { createPinia } from "pinia"
 import App from "./App.vue"
 import { router } from "./router"
 import { setupI18n } from "./i18n"
@@ -13,11 +12,15 @@ document.addEventListener("contextmenu", (e) => e.preventDefault())
 // 初始化主题
 initTheme()
 
+
 const app = createApp(App)
-const pinia = createPinia()
 const i18n = setupI18n()
 
-app.use(pinia)
+// 全局 Vue 错误处理
+app.config.errorHandler = (err, _instance, info) => {
+  console.error(`[Vue error] ${info}:`, err)
+}
+
 app.use(router)
 app.use(i18n)
 

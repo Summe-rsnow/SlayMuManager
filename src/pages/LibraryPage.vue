@@ -6,7 +6,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import {
   NSpace, NCard, NTag, NButton, NInput, NIcon,
-  NModal, NCheckbox, useMessage,
+  NCheckbox, useMessage,
 } from "naive-ui"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
@@ -14,14 +14,13 @@ import {
 } from "lucide-vue-next"
 import ImportDialog from "../components/ImportDialog.vue"
 import ModCard from "../components/ModCard.vue"
+import AppDialog from "../components/AppDialog.vue"
 import { useModCache } from "../composables/useModCache"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
-import type { InstalledMod, ModProfile, ModToggleResult, AppBootstrap } from "../types"
+import type { ModProfile, AppBootstrap } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import { useSidebarActions } from "../composables/useSidebarActions"
-
-/** 内置原版预设 ID（与服务端 BUILTIN_VANILLA_ID 对应） */
-const BUILTIN_VANILLA_ID = "__builtin__vanilla"
+import { useModOperations } from "../composables/useModOperations"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -41,11 +40,22 @@ const {
   presetAppliedTick,
 } = useSidebarActions()
 
+const {
+  busyId, batchBusy, showSaveGuardDialog, saveGuardInfo, isActivePresetBuiltin,
+  handleToggle, handleUninstall, handleOpenFolder, handleOpenModsDir,
+  enableAllMods, disableAllMods, dismissSaveGuard,
+} = useModOperations()
+
 // --- 对话框 ---
 const showImportDialog = ref(false)
 
-/** 当前激活预设是否为原版（内置） */
-const isActivePresetBuiltin = computed(() => activePresetId.value === BUILTIN_VANILLA_ID)
+function handleImport() {
+  showImportDialog.value = true
+}
+
+function onImportDone() {
+  fetchMods()
+}
 
 // --- 新增预设（空预设 + 切换）---
 const showNewPresetDialog = ref(false)
@@ -65,17 +75,14 @@ async function handleCreateNewPreset() {
   }
   creatingNewPreset.value = true
   try {
-    // 创建空预设
     await invoke("create_profile", {
       name,
       description: null,
       modIds: [] as string[],
     })
-    // 查询所有预设找到刚创建的
     const profiles = await invoke<ModProfile[]>("list_profiles")
     const created = profiles.find(p => p.name === name)
     if (created) {
-      // 切换到新预设
       await invoke("apply_profile", { id: created.id })
       if (!isActive.value) return
       activePresetId.value = created.id
@@ -87,57 +94,12 @@ async function handleCreateNewPreset() {
       loadQuickPresets()
     }
     showNewPresetDialog.value = false
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(`${t("profiles.error.applyFailed")}: ${e}`)
+    message.error(`${t("profiles.error.applyFailed")}: ${String(e)}`)
   } finally {
     creatingNewPreset.value = false
   }
-}
-
-// --- 全部启用 / 全部禁用 ---
-const batchBusy = ref(false)
-
-async function enableAllMods() {
-  const targets = disabledMods.value
-  if (targets.length === 0) {
-    message.info(t("library.info.allAlreadyEnabled"))
-    return
-  }
-  batchBusy.value = true
-  let success = 0
-  for (const mod of targets) {
-    try {
-      await invoke<ModToggleResult>("enable_mod", { modId: mod.id })
-      success++
-    } catch { /* skip failed */ }
-    if (!isActive.value) break
-  }
-  batchBusy.value = false
-  if (!isActive.value) return
-  message.success(t("library.success.batchEnabled", { n: success }))
-  await fetchMods()
-}
-
-async function disableAllMods() {
-  const targets = enabledMods.value
-  if (targets.length === 0) {
-    message.info(t("library.info.allAlreadyDisabled"))
-    return
-  }
-  batchBusy.value = true
-  let success = 0
-  for (const mod of targets) {
-    try {
-      await invoke<ModToggleResult>("disable_mod", { modId: mod.id })
-      success++
-    } catch { /* skip failed */ }
-    if (!isActive.value) break
-  }
-  batchBusy.value = false
-  if (!isActive.value) return
-  message.success(t("library.success.batchDisabled", { n: success }))
-  await fetchMods()
 }
 
 // --- 侧边栏筛选 ---
@@ -197,13 +159,6 @@ function clearSearch() {
   searchInput.value = ""
   searchQuery.value = ""
 }
-
-// --- 行级操作锁 ---
-const busyId = ref<string | null>(null)
-
-// --- Save Guard 弹窗 ---
-const showSaveGuardDialog = ref(false)
-const saveGuardInfo = ref<ModToggleResult | null>(null)
 
 // --- 搜索 + 筛选 ---
 const filteredEnabled = computed(() => {
@@ -266,95 +221,6 @@ const emptyReason = computed(() => {
   return null
 })
 
-// --- 操作 ---
-async function handleToggle(mod: InstalledMod) {
-  if (busyId.value) return
-  const isEnabling = mod.state === "disabled"
-  busyId.value = mod.id
-  try {
-    const result = await invoke<ModToggleResult>(
-      isEnabling ? "enable_mod" : "disable_mod",
-      { modId: mod.id },
-    )
-    // Save Guard 检查：仅路径切换时弹窗提醒
-    if (result.saveGuard.pathSwitched) {
-      saveGuardInfo.value = result
-      showSaveGuardDialog.value = true
-    } else {
-      message.success(
-        t(isEnabling ? "library.success.enabled" : "library.success.disabled", { name: mod.name })
-      )
-    }
-    await fetchMods()
-    // 自动同步激活预设的本地快照（后端已更新预设，前端同步避免脏标记）
-    if (activePresetId.value && !isActivePresetBuiltin.value) {
-      const next = new Set(presetSnapshot.value)
-      if (isEnabling) {
-        next.add(mod.id)
-      } else {
-        next.delete(mod.id)
-      }
-      presetSnapshot.value = next
-    }
-  } catch (e: any) {
-    message.error(t("library.error.operationFailed", { e }))
-  } finally {
-    busyId.value = null
-  }
-}
-
-async function handleUninstall(mod: InstalledMod) {
-  if (busyId.value) return
-  busyId.value = mod.id
-  try {
-    await invoke("uninstall_mod", { modId: mod.id })
-    message.success(t("library.success.uninstalled", { name: mod.name }))
-    await fetchMods()
-  } catch (e: any) {
-    message.error(t("library.error.uninstallFailed", { e }))
-  } finally {
-    busyId.value = null
-  }
-}
-
-async function handleOpenFolder(mod: InstalledMod) {
-  try {
-    await invoke("open_mod_folder", { modId: mod.id })
-  } catch (e: any) {
-    message.error(t("library.error.openFailed", { e }))
-  }
-}
-
-async function handleOpenModsDir() {
-  try {
-    await invoke("open_mods_directory")
-  } catch (e: any) {
-    message.error(t("library.error.openFailed", { e }))
-  }
-}
-
-function handleImport() {
-  showImportDialog.value = true
-}
-
-function onImportDone() {
-  fetchMods()
-}
-
-function dismissSaveGuard() {
-  showSaveGuardDialog.value = false
-  if (saveGuardInfo.value) {
-    message.success(
-      t("library.success.toggle", {
-        action: saveGuardInfo.value.modItem.state === "enabled"
-          ? t("common.enabled")
-          : t("common.disabled"),
-        name: saveGuardInfo.value.modItem.name,
-      })
-    )
-  }
-}
-
 // --- 外部 Mod 变更监听 ---
 let unlistenModsChanged: (() => void) | null = null
 
@@ -401,7 +267,7 @@ watch(presetAppliedTick, () => {
           {{ t("library.enabledCountLabel") }} {{ enabledMods.length }}
         </span>
         <span class="flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full inline-block" :style="{ backgroundColor: 'var(--color-text-muted)' }" />
+          <span class="w-2 h-2 rounded-full inline-block bg-c-muted" />
           {{ t("library.disabledCountLabel") }} {{ disabledMods.length }}
         </span>
         <span v-if="activePresetName" class="flex items-center gap-1 text-c-muted">
@@ -476,7 +342,7 @@ watch(presetAppliedTick, () => {
           <div class="flex flex-col gap-3">
             <!-- 显示 -->
             <div>
-              <div class="text-xs font-medium mb-1.5" :style="{ color: 'var(--color-text-secondary)' }">{{ t("library.filter.show") }}</div>
+              <div class="text-xs font-medium mb-1.5 text-c-secondary">{{ t("library.filter.show") }}</div>
               <div class="flex gap-3">
                 <NCheckbox v-model:checked="filterShowEnabled" size="small">
                   <span class="text-xs">{{ t("library.filter.enabled") }}</span>
@@ -492,7 +358,7 @@ watch(presetAppliedTick, () => {
             </NCheckbox>
             <!-- 标签 -->
             <div v-if="usedPresetTags.length > 0">
-              <div class="text-xs font-medium mb-1.5" :style="{ color: 'var(--color-text-secondary)' }">{{ t("library.filter.tags") }}</div>
+              <div class="text-xs font-medium mb-1.5 text-c-secondary">{{ t("library.filter.tags") }}</div>
               <div class="flex flex-wrap gap-x-3 gap-y-1">
                 <NCheckbox
                   v-for="tag in usedPresetTags"
@@ -505,10 +371,10 @@ watch(presetAppliedTick, () => {
                 </NCheckbox>
               </div>
             </div>
-            <span v-else class="text-xs italic" :style="{ color: 'var(--color-text-muted)' }">{{ t("library.filter.noTags") }}</span>
+            <span v-else class="text-xs italic text-c-muted">{{ t("library.filter.noTags") }}</span>
             <!-- 计数 + 清除 -->
-            <div v-if="activeFilterCount > 0" class="flex justify-between items-center pt-2 border-t" :style="{ borderColor: 'var(--color-border)' }">
-              <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("library.filter.activeFilterCount", { n: activeFilterCount }) }}</span>
+            <div v-if="activeFilterCount > 0" class="flex justify-between items-center pt-2 border-t border-c-default">
+              <span class="text-xs text-c-muted">{{ t("library.filter.activeFilterCount", { n: activeFilterCount }) }}</span>
               <NButton text size="tiny" type="warning" @click="clearFilters">
                 <template #icon><NIcon :size="12"><X /></NIcon></template>
                 {{ t("library.filter.clear") }}
@@ -644,52 +510,48 @@ watch(presetAppliedTick, () => {
     />
 
     <!-- 新增预设对话框 -->
-    <NModal :show="showNewPresetDialog" @update:show="(v: boolean) => !v && (showNewPresetDialog = false)">
-      <NCard style="width: 420px" :bordered="false" role="dialog" :title="t('library.newPreset')">
-        <NSpace vertical :size="12">
-          <div>
-            <label class="text-sm text-c-secondary mb-1 block">{{ t("library.savePreset.nameLabel") }}</label>
-            <NInput
-              v-model:value="newPresetName"
-              :placeholder="t('library.savePreset.namePlaceholder')"
-              @keyup.enter="handleCreateNewPreset"
-            />
-          </div>
-          <div class="text-xs text-c-muted">
-            {{ t("library.newPresetHint") }}
-          </div>
-          <div class="flex justify-end gap-2">
-            <NButton @click="showNewPresetDialog = false">{{ t("common.cancel") }}</NButton>
-            <NButton type="primary" :loading="creatingNewPreset" @click="handleCreateNewPreset">
-              {{ t("common.confirm") }}
-            </NButton>
-          </div>
-        </NSpace>
-      </NCard>
-    </NModal>
+    <AppDialog v-model:show="showNewPresetDialog" :title="t('library.newPreset')" width="420px">
+      <NSpace vertical :size="12">
+        <div>
+          <label class="text-sm text-c-secondary mb-1 block">{{ t("library.savePreset.nameLabel") }}</label>
+          <NInput
+            v-model:value="newPresetName"
+            :placeholder="t('library.savePreset.namePlaceholder')"
+            @keyup.enter="handleCreateNewPreset"
+          />
+        </div>
+        <div class="text-xs text-c-muted">
+          {{ t("library.newPresetHint") }}
+        </div>
+        <div class="flex justify-end gap-2">
+          <NButton @click="showNewPresetDialog = false">{{ t("common.cancel") }}</NButton>
+          <NButton type="primary" :loading="creatingNewPreset" @click="handleCreateNewPreset">
+            {{ t("common.confirm") }}
+          </NButton>
+        </div>
+      </NSpace>
+    </AppDialog>
 
     <!-- Save Guard 警告弹窗 -->
-    <NModal :show="showSaveGuardDialog" @update:show="(v: boolean) => !v && dismissSaveGuard()">
-      <NCard style="width: 440px" :bordered="false" role="dialog">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
-            <span class="font-semibold">{{ t("library.saveGuard.title") }}</span>
-          </div>
-        </template>
-        <NSpace v-if="saveGuardInfo" vertical :size="8">
-          <p v-if="saveGuardInfo.saveGuard.pathSwitched" class="text-sm text-c-secondary">
-            {{ saveGuardInfo.saveGuard.direction === 'modded_to_vanilla' ? t("library.saveGuard.toVanilla") : t("library.saveGuard.toModded") }}
-          </p>
-          <p v-if="saveGuardInfo.saveGuard.hadPairs" class="text-sm text-c-secondary">
-            {{ t("library.saveGuard.syncResult", { synced: saveGuardInfo.saveGuard.savesSynced, backups: saveGuardInfo.saveGuard.backupsCreated }) }}
-          </p>
-          <div class="flex justify-end mt-2">
-            <NButton type="primary" size="small" @click="dismissSaveGuard">{{ t("library.saveGuard.gotIt") }}</NButton>
-          </div>
-        </NSpace>
-      </NCard>
-    </NModal>
+    <AppDialog v-model:show="showSaveGuardDialog" width="440px">
+      <template #header>
+        <div class="flex items-center gap-2">
+          <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
+          <span class="font-semibold">{{ t("library.saveGuard.title") }}</span>
+        </div>
+      </template>
+      <NSpace v-if="saveGuardInfo" vertical :size="8">
+        <p v-if="saveGuardInfo.saveGuard.pathSwitched" class="text-sm text-c-secondary">
+          {{ saveGuardInfo.saveGuard.direction === 'modded_to_vanilla' ? t("library.saveGuard.toVanilla") : t("library.saveGuard.toModded") }}
+        </p>
+        <p v-if="saveGuardInfo.saveGuard.hadPairs" class="text-sm text-c-secondary">
+          {{ t("library.saveGuard.syncResult", { synced: saveGuardInfo.saveGuard.savesSynced, backups: saveGuardInfo.saveGuard.backupsCreated }) }}
+        </p>
+        <div class="flex justify-end mt-2">
+          <NButton type="primary" size="small" @click="dismissSaveGuard">{{ t("library.saveGuard.gotIt") }}</NButton>
+        </div>
+      </NSpace>
+    </AppDialog>
 
   </div>
 </template>

@@ -53,6 +53,9 @@ html, body {
   --color-titlebar-bg: #f9fafb;
   --color-titlebar-border: #e5e7eb;
   --color-main-bg: #ffffff;
+  --color-warning-bg: #fffbeb;
+  --color-warning-text: #92400e;
+  --color-warning-border: #fde68a;
 }
 
 .dark {
@@ -67,6 +70,9 @@ html, body {
   --color-titlebar-bg: #111111;
   --color-titlebar-border: #222222;
   --color-main-bg: #000000;
+  --color-warning-bg: #271000;
+  --color-warning-text: #fbbf24;
+  --color-warning-border: #78350f;
 }
 
 /* ============================================================
@@ -119,6 +125,18 @@ html, body {
 }
 .bg-c-secondary {
   background-color: var(--color-bg-secondary);
+}
+.bg-c-muted {
+  background-color: var(--color-text-muted);
+}
+.bg-c-warning {
+  background-color: var(--color-warning-bg);
+}
+.text-c-warning {
+  color: var(--color-warning-text);
+}
+.border-c-warning {
+  border-color: var(--color-warning-border);
 }
 .border-c-default {
   border-color: var(--color-border);

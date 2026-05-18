@@ -4,22 +4,20 @@ import { NTag, NButton, NIcon, NSpace, NPopconfirm } from "naive-ui"
 import { Clock, Upload, Database, Trash2, ShieldAlert } from "lucide-vue-next"
 import { currentLocale } from "../i18n"
 import type { SaveSlot } from "../types"
+import { kindLabel } from "../utils/kindLabel"
 
 const props = defineProps<{
   slot: SaveSlot
 }>()
 
 const emit = defineEmits<{
-  backup: [slot: SaveSlot]
-  migrate: [slot: SaveSlot]
-  delete: [slot: SaveSlot]
+  (e: "backup", slot: SaveSlot): void
+  (e: "migrate", slot: SaveSlot): void
+  (e: "delete", slot: SaveSlot): void
 }>()
 
 const { t } = useI18n()
 
-function kindLabel(kind: string): string {
-  return kind === "vanilla" ? t("saves.kind.vanilla") : t("saves.kind.modded")
-}
 </script>
 
 <template>
@@ -76,9 +74,9 @@ function kindLabel(kind: string): string {
             <span class="font-medium">{{ t("saves.confirmDeleteSlotTitle") }}</span>
           </div>
           <p class="text-xs text-c-secondary">
-            {{ t("saves.confirmDeleteSlotDesc", { kind: kindLabel(slot.kind), i: slot.slotIndex }) }}
+            {{ t("saves.confirmDeleteSlotDesc", { kind: kindLabel(t, slot.kind), i: slot.slotIndex }) }}
           </p>
-          <p class="text-xs text-amber-600 mt-1">
+          <p class="text-xs text-c-warning mt-1">
             {{ t("saves.confirmDeleteSlotNote") }}
           </p>
         </div>

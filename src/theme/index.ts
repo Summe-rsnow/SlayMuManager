@@ -5,6 +5,7 @@
 import { ref, watch, computed, type Ref } from "vue"
 import { darkTheme, type GlobalTheme, type GlobalThemeOverrides } from "naive-ui"
 import { colorPalettes, type ThemeColorKey } from "./colors"
+import { useStorage } from "../composables/useStorage"
 
 // 重新导出供外部使用
 export { colorPalettes } from "./colors"
@@ -17,13 +18,9 @@ const STORAGE_COLOR = "slaymgr:theme-color"
 // --- 类型 ---
 export type DisplayMode = "system" | "light" | "dark"
 
-// --- 响应式状态 ---
-export const displayMode: Ref<DisplayMode> = ref(
-  (localStorage.getItem(STORAGE_MODE) as DisplayMode) || "system",
-)
-export const themeColorKey: Ref<ThemeColorKey> = ref(
-  (localStorage.getItem(STORAGE_COLOR) as ThemeColorKey) || "indigo",
-)
+// --- 响应式状态（useStorage 自动同步 localStorage） ---
+export const displayMode = useStorage<DisplayMode>(STORAGE_MODE, "system")
+export const themeColorKey = useStorage<ThemeColorKey>(STORAGE_COLOR, "indigo")
 
 // 当前是否为暗色模式（由 displayMode + prefers-color-scheme 决定）
 const isDark = ref(false)
@@ -130,14 +127,12 @@ function applyCssVariables() {
 // --- 设置函数 ---
 export function setDisplayMode(mode: DisplayMode) {
   displayMode.value = mode
-  localStorage.setItem(STORAGE_MODE, mode)
   isDark.value = evaluateIsDark()
   applyHtmlClass(isDark.value)
 }
 
 export function setThemeColor(key: ThemeColorKey) {
   themeColorKey.value = key
-  localStorage.setItem(STORAGE_COLOR, key)
   applyCssVariables()
 }
 

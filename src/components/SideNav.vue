@@ -2,9 +2,10 @@
 import { h, computed, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
-import { NMenu, NIcon, NSelect, NButton, NModal, NCard, NSpace, type MenuOption } from "naive-ui"
+import { NMenu, NIcon, NSelect, NButton, NSpace, type MenuOption } from "naive-ui"
 import { Library, Compass, FolderHeart, Save, Settings, Play, LoaderCircle, AlertTriangle, Menu } from "lucide-vue-next"
 import { useSidebarActions } from "../composables/useSidebarActions"
+import AppDialog from "../components/AppDialog.vue"
 
 const { t } = useI18n()
 const route = useRoute()
@@ -155,41 +156,40 @@ onMounted(() => {
   </div>
 
   <!-- ============ 云存档差异确认弹窗 ============ -->
-  <NModal
+  <AppDialog
     :show="showLaunchMismatchDialog"
     @update:show="(v: boolean) => { if (!v) { showLaunchMismatchDialog = false; launchingGame = false } }"
+    width="440px"
   >
-    <NCard style="width: 440px" :bordered="false" role="dialog">
-      <template #header>
-        <div class="flex items-center gap-2">
-          <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
-          <span class="font-semibold">{{ t("library.launchMismatch.title") }}</span>
+    <template #header>
+      <div class="flex items-center gap-2">
+        <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
+        <span class="font-semibold">{{ t("library.launchMismatch.title") }}</span>
+      </div>
+    </template>
+    <NSpace v-if="launchMismatchStatus" vertical :size="8">
+      <p class="text-sm text-c-secondary">{{ t("library.launchMismatch.warning") }}</p>
+      <div class="text-xs text-c-secondary bg-c-warning rounded p-2 space-y-1">
+        <div class="flex justify-between" v-if="launchMismatchStatus.differentCount > 0">
+          <span>{{ t("saves.cloud.mismatch.different", { n: launchMismatchStatus.differentCount }) }}</span>
         </div>
-      </template>
-      <NSpace v-if="launchMismatchStatus" vertical :size="8">
-        <p class="text-sm text-c-secondary">{{ t("library.launchMismatch.warning") }}</p>
-        <div class="text-xs text-c-secondary bg-amber-50 rounded p-2 space-y-1">
-          <div class="flex justify-between" v-if="launchMismatchStatus.differentCount > 0">
-            <span>{{ t("saves.cloud.mismatch.different", { n: launchMismatchStatus.differentCount }) }}</span>
-          </div>
-          <div class="flex justify-between" v-if="launchMismatchStatus.localOnlyCount > 0">
-            <span>{{ t("saves.cloud.mismatch.localOnly", { n: launchMismatchStatus.localOnlyCount }) }}</span>
-          </div>
-          <div class="flex justify-between" v-if="launchMismatchStatus.cloudOnlyCount > 0">
-            <span>{{ t("saves.cloud.mismatch.cloudOnly", { n: launchMismatchStatus.cloudOnlyCount }) }}</span>
-          </div>
+        <div class="flex justify-between" v-if="launchMismatchStatus.localOnlyCount > 0">
+          <span>{{ t("saves.cloud.mismatch.localOnly", { n: launchMismatchStatus.localOnlyCount }) }}</span>
         </div>
-        <div class="flex justify-between mt-2 gap-2">
-          <NButton secondary size="small" @click="handleGoToSaves">
-            {{ t("library.launchMismatch.goToSaves") }}
-          </NButton>
-          <NButton type="warning" size="small" @click="handleLaunchAnyway">
-            {{ t("library.launchMismatch.forceLaunch") }}
-          </NButton>
+        <div class="flex justify-between" v-if="launchMismatchStatus.cloudOnlyCount > 0">
+          <span>{{ t("saves.cloud.mismatch.cloudOnly", { n: launchMismatchStatus.cloudOnlyCount }) }}</span>
         </div>
-      </NSpace>
-    </NCard>
-  </NModal>
+      </div>
+      <div class="flex justify-between mt-2 gap-2">
+        <NButton secondary size="small" @click="handleGoToSaves">
+          {{ t("library.launchMismatch.goToSaves") }}
+        </NButton>
+        <NButton type="warning" size="small" @click="handleLaunchAnyway">
+          {{ t("library.launchMismatch.forceLaunch") }}
+        </NButton>
+      </div>
+    </NSpace>
+  </AppDialog>
 </template>
 
 <style scoped>

@@ -1,4 +1,5 @@
-import { ref, shallowRef, computed } from "vue"
+import { computed } from "vue"
+import { useStorage } from "./useStorage"
 
 // 9 种预设标签
 export const PRESET_TAGS = [
@@ -17,32 +18,10 @@ export type PresetTagId = (typeof PRESET_TAGS)[number]["id"]
 
 const STORAGE_KEY = "slaymumanager_mod_tags"
 
-// Module-level state — singleton
-const tagMap = shallowRef<Record<string, string[]>>({})
-const loaded = ref(false)
-
-function load() {
-  if (loaded.value) return
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    tagMap.value = raw ? JSON.parse(raw) : {}
-  } catch {
-    tagMap.value = {}
-  }
-  loaded.value = true
-}
-
-function save() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tagMap.value))
-  } catch {
-    // localStorage 不可用时静默失败
-  }
-}
+// Module-level state — singleton（useStorage 自动持久化）
+const tagMap = useStorage<Record<string, string[]>>(STORAGE_KEY, {})
 
 export function useModTags() {
-  load()
-
   /** 获取某个 Mod 的标签列表 */
   function getTags(modId: string): string[] {
     return tagMap.value[modId] ?? []
@@ -51,7 +30,6 @@ export function useModTags() {
   /** 设置某个 Mod 的标签（覆盖） */
   function setTags(modId: string, tags: string[]) {
     tagMap.value = { ...tagMap.value, [modId]: [...new Set(tags)] }
-    save()
   }
 
   /** 为 Mod 添加一个标签 */
@@ -59,7 +37,6 @@ export function useModTags() {
     const current = getTags(modId)
     if (!current.includes(tag)) {
       tagMap.value = { ...tagMap.value, [modId]: [...current, tag] }
-      save()
     }
   }
 
@@ -67,7 +44,6 @@ export function useModTags() {
   function removeTag(modId: string, tag: string) {
     const current = getTags(modId)
     tagMap.value = { ...tagMap.value, [modId]: current.filter((t) => t !== tag) }
-    save()
   }
 
   /** 切换标签（有则删，无则加） */

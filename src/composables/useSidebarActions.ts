@@ -3,20 +3,20 @@ import { invoke } from "@tauri-apps/api/core"
 import { useMessage } from "naive-ui"
 import { useI18n } from "vue-i18n"
 import { useRouter } from "vue-router"
-import type { CloudSaveStatus, ModProfile, AppBootstrap } from "../types"
+import type { CloudSaveStatus, ModProfile, AppBootstrap, ApplyProfileResult } from "../types"
 
 // --- 模块级共享状态（SideNav + LibraryPage 共用同一实例）---
 const BUILTIN_VANILLA_ID = "__builtin__vanilla"
-export const launchingGame = ref(false)
-export const showLaunchMismatchDialog = ref(false)
-export const launchMismatchStatus = ref<CloudSaveStatus | null>(null)
-export const quickPresetId = ref<string | null>(null)
-export const quickPresetOptions = ref<Array<{ label: string; value: string }>>([])
-export const activePresetName = ref("")
-export const activePresetId = ref<string | null>(null)
-export const presetSnapshot = ref<Set<string>>(new Set())
-export const presetAppliedTick = ref(0)
-export const sidebarCollapsed = ref(true)
+const launchingGame = ref(false)
+const showLaunchMismatchDialog = ref(false)
+const launchMismatchStatus = ref<CloudSaveStatus | null>(null)
+const quickPresetId = ref<string | null>(null)
+const quickPresetOptions = ref<Array<{ label: string; value: string }>>([])
+const activePresetName = ref("")
+const activePresetId = ref<string | null>(null)
+const presetSnapshot = ref<Set<string>>(new Set())
+const presetAppliedTick = ref(0)
+const sidebarCollapsed = ref(true)
 
 export function useSidebarActions() {
   const { t } = useI18n()
@@ -28,7 +28,7 @@ export function useSidebarActions() {
     try {
       await invoke("launch_game")
       message.success(t("library.success.gameLaunched"))
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(t("library.error.launchFailed", { e }))
     } finally {
       launchingGame.value = false
@@ -92,20 +92,16 @@ export function useSidebarActions() {
     try {
       const label =
         quickPresetOptions.value.find((p) => p.value === presetId)?.label ?? presetId
-      await invoke("apply_profile", { id: presetId })
+      const result = await invoke<ApplyProfileResult>("apply_profile", { id: presetId })
       quickPresetId.value = presetId
       activePresetName.value = label
       activePresetId.value = presetId
-      // 快照预设声明的 mod ID（用于脏检测）
-      try {
-        const profiles = await invoke<ModProfile[]>("list_profiles")
-        const profile = profiles.find((p) => p.id === presetId)
-        if (profile) presetSnapshot.value = new Set(profile.modIds)
-      } catch { /* ignore */ }
+      // 快照预设声明的 mod ID（用于脏检测）—— 从 apply_profile 结果直接获取，避免重读 profiles.json
+      presetSnapshot.value = new Set(result.profile.modIds)
       message.success(t("library.success.presetApplied", { name: label }))
       presetAppliedTick.value++
-    } catch (e: any) {
-      message.error(`${t("profiles.error.applyFailed")}: ${e}`)
+    } catch (e: unknown) {
+      message.error(`${t("profiles.error.applyFailed")}: ${String(e)}`)
     }
   }
 

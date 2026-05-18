@@ -9,6 +9,19 @@ export default defineConfig(async () => ({
 
   clearScreen: false,
 
+  build: {
+    rollupOptions: {
+      output: {
+	        chunkSizeWarningLimit: 1024,
+        manualChunks(id: string) {
+          if (id.includes("naive-ui")) return "naive"
+          if (id.includes("lucide-vue-next")) return "icons"
+          if (id.includes("node_modules/vue/") || id.includes("vue-router") || id.includes("vue-i18n")) return "vendor"
+        },
+      },
+    },
+  },
+
   server: {
     port: 1420,
     strictPort: true,

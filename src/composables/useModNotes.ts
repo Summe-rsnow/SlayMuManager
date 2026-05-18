@@ -1,23 +1,8 @@
-import { ref, watch } from "vue"
+import { useStorage } from "./useStorage"
 
 const STORAGE_KEY = "slaymumanager_mod_notes"
 
-const noteMap = ref<Record<string, string>>(loadNotes())
-
-function loadNotes(): Record<string, string> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : {}
-  } catch {
-    return {}
-  }
-}
-
-function saveNotes() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(noteMap.value))
-}
-
-watch(noteMap, saveNotes, { deep: true })
+const noteMap = useStorage<Record<string, string>>(STORAGE_KEY, {})
 
 export function useModNotes() {
   function getNote(modId: string): string {

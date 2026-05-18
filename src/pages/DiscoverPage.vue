@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted, onUnmounted } from "vue"
+import { ref, computed, reactive, onMounted } from "vue"
 import { onBeforeRouteLeave } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
@@ -14,6 +14,7 @@ import { translateText, showTranslateQuotaTip } from "../composables/useTranslat
 import { discoverColumns } from "../composables/useDiscoverColumns"
 import { prefetchEnabled, getPageCache, setPageCache } from "../composables/usePageCache"
 import TruncatedText from "../components/TruncatedText.vue"
+import EmptyState from "../components/EmptyState.vue"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -143,9 +144,9 @@ async function doSearch(resetPage = true) {
       // 后台预取相邻页
       prefetchAdjacentPages(q, sb, pg, ps)
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("discover.error.searchFailed") + ": " + e)
+    message.error(t("discover.error.searchFailed") + ": " + String(e))
     results.value = []
   } finally {
     if (isActive.value) {
@@ -227,18 +228,13 @@ onBeforeRouteLeave(() => {
   imageLoadFailed.value = {}
 })
 
-// 组件卸载时也清理
-onUnmounted(() => {
-  results.value = []
-  imageLoadFailed.value = {}
-})
 </script>
 
 <template>
   <div class="flex flex-col h-full">
     <div class="mb-6">
-      <h1 class="text-2xl font-bold" :style="{ color: 'var(--color-text-primary)' }">{{ t("discover.title") }}</h1>
-      <p class="text-sm mt-1" :style="{ color: 'var(--color-text-secondary)' }">{{ t("discover.subtitle") }}</p>
+      <h1 class="text-2xl font-bold text-c-primary">{{ t("discover.title") }}</h1>
+      <p class="text-sm mt-1 text-c-secondary">{{ t("discover.subtitle") }}</p>
     </div>
 
     <!-- 搜索栏 + 排序 -->
@@ -272,12 +268,12 @@ onUnmounted(() => {
     <div v-if="initialLoading" :class="skeletonColsClass">
       <NCard v-for="i in pageSize" :key="i" :style="{ minHeight: '150px' }">
         <div class="flex gap-4 h-full animate-pulse">
-          <div class="w-28 h-28 rounded-lg flex-shrink-0" :style="{ backgroundColor: 'var(--color-bg-secondary)' }" />
+          <div class="w-28 h-28 rounded-lg flex-shrink-0 bg-c-secondary" />
           <div class="flex-1 flex flex-col">
-            <div class="h-5 w-2/3 rounded" :style="{ backgroundColor: 'var(--color-bg-secondary)' }" />
+            <div class="h-5 w-2/3 rounded bg-c-secondary" />
             <div class="flex-1 flex flex-col justify-end mt-2">
-              <div class="h-4 rounded w-full" :style="{ backgroundColor: 'var(--color-bg-secondary)' }" />
-              <div class="h-4 rounded w-3/4 mt-1" :style="{ backgroundColor: 'var(--color-bg-secondary)' }" />
+              <div class="h-4 rounded w-full bg-c-secondary" />
+              <div class="h-4 rounded w-3/4 mt-1 bg-c-secondary" />
             </div>
           </div>
         </div>
@@ -287,7 +283,7 @@ onUnmounted(() => {
     <!-- 结果列表 -->
     <div v-else-if="results.length > 0">
       <div class="flex items-center justify-between mb-3">
-        <span class="text-sm" :style="{ color: 'var(--color-text-muted)' }">
+        <span class="text-sm text-c-muted">
           {{ t("discover.resultCount", { total: totalCount }) }}
         </span>
         <span />
@@ -304,7 +300,7 @@ onUnmounted(() => {
             <!-- 左侧：缩略图 -->
             <div
               v-if="mod.pictureUrl"
-              class="w-28 h-28 rounded-lg flex-shrink-0 overflow-hidden" :style="{ backgroundColor: 'var(--color-bg-secondary)' }"
+              class="w-28 h-28 rounded-lg flex-shrink-0 overflow-hidden bg-c-secondary"
             >
               <img
                 v-show="!imageLoadFailed[mod.remoteId]"
@@ -325,8 +321,7 @@ onUnmounted(() => {
             </div>
             <div
               v-else
-              class="w-28 h-28 rounded-lg flex-shrink-0 flex items-center justify-center"
-              :style="{ backgroundColor: 'var(--color-bg-secondary)' }"
+              class="w-28 h-28 rounded-lg flex-shrink-0 flex items-center justify-center bg-c-secondary"
             >
               <NIcon :size="32" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
             </div>
@@ -338,11 +333,11 @@ onUnmounted(() => {
                 <div class="flex items-center gap-2 min-w-0 flex-1">
                   <NPopover v-if="mod.name" trigger="hover" placement="top" :width="320">
                     <template #trigger>
-                      <span class="font-semibold text-base truncate cursor-help" :style="{ color: 'var(--color-text-primary)' }">{{ mod.name }}</span>
+                      <span class="font-semibold text-base truncate cursor-help text-c-primary">{{ mod.name }}</span>
                     </template>
                     <div class="text-xs leading-relaxed break-words max-w-xs">{{ mod.name }}</div>
                   </NPopover>
-                  <span v-if="mod.latestVersion" class="text-xs font-mono flex-shrink-0" :style="{ color: 'var(--color-text-muted)' }">
+                  <span v-if="mod.latestVersion" class="text-xs font-mono flex-shrink-0 text-c-muted">
                     v{{ mod.latestVersion }}
                   </span>
                 </div>
@@ -369,14 +364,13 @@ onUnmounted(() => {
                     </button>
                     <p
                       v-if="showTranslation[mod.remoteId]"
-                      class="text-xs leading-relaxed w-full mt-0.5"
-                      :style="{ color: 'var(--color-text-secondary)' }"
+                      class="text-xs leading-relaxed w-full mt-0.5 text-c-secondary"
                     >
                       {{ translatedTexts[mod.remoteId] }}
                     </p>
                   </template>
                   <!-- 翻译中 -->
-                  <span v-else-if="translatingMods[mod.remoteId]" class="text-xs" :style="{ color: 'var(--color-text-muted)' }">
+                  <span v-else-if="translatingMods[mod.remoteId]" class="text-xs text-c-muted">
                     {{ t("discover.translating") }}
                   </span>
                   <!-- 未翻译：显示翻译按钮（带配额提示） -->
@@ -396,7 +390,7 @@ onUnmounted(() => {
               </div>
 
               <!-- 统计：靠底部 -->
-              <div class="flex items-center gap-3 text-xs pt-2 mt-auto" :style="{ color: 'var(--color-text-muted)' }">
+              <div class="flex items-center gap-3 text-xs pt-2 mt-auto text-c-muted">
                 <span>{{ mod.author ?? t("discover.unknownAuthor") }}</span>
                 <span class="flex items-center gap-1">
                   <NIcon :size="13"><ThumbsUp /></NIcon>
@@ -413,21 +407,9 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <NCard v-else-if="searched && !loading" size="small">
-      <div class="text-center py-12" :style="{ color: 'var(--color-text-muted)' }">
-        <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Search /></NIcon>
-        <p>{{ t("discover.empty.notFound") }}</p>
-        <p v-if="!hasApiKey" class="text-sm mt-2">{{ t("discover.empty.needsApiKey") }}</p>
-      </div>
-    </NCard>
+    <EmptyState v-else-if="searched && !loading" :icon="Search" :title="t('discover.empty.notFound')" :description="hasApiKey ? undefined : t('discover.empty.needsApiKey')" bordered />
 
-    <NCard v-else size="small">
-      <div class="text-center py-12" :style="{ color: 'var(--color-text-muted)' }">
-        <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
-        <p>{{ t("discover.empty.startSearch") }}</p>
-        <p v-if="!hasApiKey" class="text-sm mt-1">{{ t("discover.empty.needsApiKey") }}</p>
-      </div>
-    </NCard>
+    <EmptyState v-else :icon="PackageOpen" :title="t('discover.empty.startSearch')" :description="hasApiKey ? undefined : t('discover.empty.needsApiKey')" bordered />
     </div>
 
     <!-- 分页 + 每页条数（浮动药丸） -->
@@ -439,7 +421,7 @@ onUnmounted(() => {
         }"
       >
         <div class="flex items-center gap-1.5">
-          <NIcon :size="14" :style="{ color: 'var(--color-text-muted)' }"><List /></NIcon>
+          <NIcon :size="14" class="text-c-muted"><List /></NIcon>
           <NSelect
             :value="pageSize"
             :options="pageSizeOptions"
@@ -457,7 +439,7 @@ onUnmounted(() => {
           size="small"
         />
         </div>
-        <span class="text-xs" :style="{ color: 'var(--color-text-muted)' }">{{ t("discover.jumpTo") }}</span>
+        <span class="text-xs text-c-muted">{{ t("discover.jumpTo") }}</span>
         <NInputNumber
           v-model:value="jumpPage"
           size="tiny"

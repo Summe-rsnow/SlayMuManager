@@ -12,7 +12,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  filesDropped: [paths: string[]]
+  (e: "filesDropped", paths: string[]): void
 }>()
 
 // --- Tauri 原生拖放（获取真实文件系统路径）---
