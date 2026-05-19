@@ -214,6 +214,17 @@ export interface ModToggleResult {
   saveGuard: SaveGuardInfo
 }
 
+// --- 更新检测 ---
+
+export interface ModUpdateInfo {
+  modId: string
+  name: string
+  localVersion: string | null
+  remoteVersion: string | null
+  hasUpdate: boolean
+  remoteMod: RemoteMod | null
+}
+
 // --- 通用 ---
 
 export interface AppBootstrap {

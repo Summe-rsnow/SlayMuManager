@@ -14,7 +14,8 @@ use crate::services::{
     backup_service, discover_service, game_service, mod_service, profile_service, save_service,
 };
 use crate::utils::error::AppError;
-use crate::workflows::install_archive_workflow;
+use crate::workflows::{install_archive_workflow, update_check};
+use crate::workflows::update_check::ModUpdateInfo;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::State;
@@ -1285,6 +1286,16 @@ pub fn search_remote_mods(
         &sort_by.unwrap_or_else(|| "latest_added".to_string()),
     )
     .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn check_mod_updates(state: State<AppState>) -> Result<Vec<ModUpdateInfo>, String> {
+    let settings = state.settings.read().unwrap();
+    let game_root = settings
+        .game_root_dir
+        .as_ref()
+        .ok_or("游戏目录未设置")?;
+    update_check::check_mod_updates(std::path::Path::new(game_root)).map_err(|e| e.to_string())
 }
 
 // =========================================================================

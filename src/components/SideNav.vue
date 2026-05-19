@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, computed, onMounted } from "vue"
+import { h, computed, ref, onMounted } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { NMenu, NIcon, NSelect, NButton, NSpace, type MenuOption } from "naive-ui"
@@ -24,6 +24,33 @@ const {
   handleQuickPreset,
   sidebarCollapsed,
 } = useSidebarActions()
+
+const showPresetPanel = ref(false)
+const presetMenuOpen = ref(false)
+let presetPanelTimer: ReturnType<typeof setTimeout> | null = null
+const PRESET_HOVER_DELAY = 300 // ms
+
+function onPresetEnter() {
+  if (presetPanelTimer) {
+    clearTimeout(presetPanelTimer)
+    presetPanelTimer = null
+  }
+  showPresetPanel.value = true
+}
+
+function onPresetLeave() {
+  if (presetMenuOpen.value) return // 下拉菜单打开时不移除面板
+  presetPanelTimer = setTimeout(() => {
+    showPresetPanel.value = false
+    presetPanelTimer = null
+  }, PRESET_HOVER_DELAY)
+}
+
+function onPresetSelect(val: string) {
+  handleQuickPreset(val)
+  presetMenuOpen.value = false
+  showPresetPanel.value = false
+}
 
 const menuOptions = computed<MenuOption[]>(() => [
   {
@@ -94,16 +121,6 @@ onMounted(() => {
             @update:value="handleUpdateValue"
           />
         </div>
-        <div class="flex-shrink-0 px-3 pb-3">
-          <NSelect
-            v-model:value="quickPresetId"
-            :options="quickPresetOptions"
-            :placeholder="t('library.quickPresetPlaceholder')"
-            size="small"
-            :disabled="quickPresetOptions.length === 0"
-            @update:value="handleQuickPreset"
-          />
-        </div>
       </div>
     </Transition>
 
@@ -127,32 +144,63 @@ onMounted(() => {
       </div>
     </button>
 
-    <!-- 「启动游戏」按钮（高斯模糊玻璃药丸） -->
-    <button
-      class="group relative w-12 hover:w-42 h-12 rounded-xl shadow-lg backdrop-blur-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out hover:shadow-xl active:scale-95"
-      :style="{
-        backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 65%, transparent)',
-        color: 'var(--color-text-primary)',
-      }"
-      :disabled="launchingGame"
-      @click="handleLaunchGame"
+    <!-- 「启动游戏」按钮 + 预设选择悬停面板 -->
+    <div
+      class="relative"
+      @mouseenter="onPresetEnter"
+      @mouseleave="onPresetLeave"
     >
-      <!-- 闭合态 -->
-      <div class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75">
-        <NIcon :size="24" :color="'var(--primary-color)'">
-          <Play v-if="!launchingGame" />
-          <LoaderCircle v-else class="animate-spin" />
-        </NIcon>
-      </div>
-      <!-- 展开态 -->
-      <div class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100">
-        <NIcon :size="24" :color="'var(--primary-color)'" class="flex-shrink-0">
-          <Play v-if="!launchingGame" />
-          <LoaderCircle v-else class="animate-spin" />
-        </NIcon>
-        <span class="text-[17px] font-medium whitespace-nowrap">{{ t("library.launchGame") }}</span>
-      </div>
-    </button>
+      <!-- 预设选择面板（悬停时在按钮上方展开） -->
+      <Transition name="preset">
+        <div
+          v-if="showPresetPanel"
+          class="absolute left-0 z-20 w-52 rounded-2xl border shadow-lg backdrop-blur-xl overflow-hidden"
+          :style="{
+            backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 60%, transparent)',
+            borderColor: 'var(--color-border)',
+            bottom: 'calc(100% + 8px)',
+          }"
+        >
+          <div class="p-3">
+            <NSelect
+              v-model:value="quickPresetId"
+              :options="quickPresetOptions"
+              size="small"
+              :disabled="quickPresetOptions.length === 0"
+              placement="top"
+              @update:value="onPresetSelect"
+              @update:show="(show: boolean) => { presetMenuOpen = show }"
+            />
+          </div>
+        </div>
+      </Transition>
+
+      <button
+        class="group relative w-12 hover:w-42 h-12 rounded-xl shadow-lg backdrop-blur-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out hover:shadow-xl active:scale-95"
+        :style="{
+          backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 65%, transparent)',
+          color: 'var(--color-text-primary)',
+        }"
+        :disabled="launchingGame"
+        @click="handleLaunchGame"
+      >
+        <!-- 闭合态 -->
+        <div class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75">
+          <NIcon :size="24" :color="'var(--primary-color)'">
+            <Play v-if="!launchingGame" />
+            <LoaderCircle v-else class="animate-spin" />
+          </NIcon>
+        </div>
+        <!-- 展开态 -->
+        <div class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100">
+          <NIcon :size="24" :color="'var(--primary-color)'" class="flex-shrink-0">
+            <Play v-if="!launchingGame" />
+            <LoaderCircle v-else class="animate-spin" />
+          </NIcon>
+          <span class="text-[17px] font-medium whitespace-nowrap">{{ t("library.launchGame") }}</span>
+        </div>
+      </button>
+    </div>
   </div>
 
   <!-- ============ 云存档差异确认弹窗 ============ -->
@@ -232,5 +280,21 @@ onMounted(() => {
 .menu-leave-to {
   opacity: 0;
   transform: translateY(16px);
+}
+
+/* 预设面板展开/收起过渡动画 */
+.preset-enter-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.preset-leave-active {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.preset-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.preset-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
 </style>

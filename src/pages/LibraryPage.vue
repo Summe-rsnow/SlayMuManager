@@ -11,7 +11,7 @@ import {
 } from "naive-ui"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
-  AlertTriangle, Filter, X, PackageOpen, Check,
+  AlertTriangle, Filter, X, PackageOpen, Check, ArrowUp,
 } from "lucide-vue-next"
 import ImportDialog from "../components/ImportDialog.vue"
 import DragOverlay from "../components/DragOverlay.vue"
@@ -19,7 +19,7 @@ import ModCard from "../components/ModCard.vue"
 import AppDialog from "../components/AppDialog.vue"
 import { useModCache } from "../composables/useModCache"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
-import type { ModProfile, AppBootstrap } from "../types"
+import type { ModProfile, AppBootstrap, ModUpdateInfo } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import { useSidebarActions } from "../composables/useSidebarActions"
 import { useModOperations } from "../composables/useModOperations"
@@ -80,6 +80,47 @@ async function handleImport() {
 
 function onImportDone() {
   fetchMods()
+}
+
+// --- 更新检测 ---
+const checkingUpdates = ref(false)
+const updateModsMap = ref<Map<string, ModUpdateInfo>>(new Map())
+
+async function handleCheckUpdates() {
+  checkingUpdates.value = true
+  try {
+    const results = await invoke<ModUpdateInfo[]>("check_mod_updates")
+    const map = new Map<string, ModUpdateInfo>()
+    for (const info of results) {
+      map.set(info.modId, info)
+    }
+    updateModsMap.value = map
+    const updates = results.filter(r => r.hasUpdate)
+    if (updates.length === 0) {
+      message.success(t("library.updateCheck.allUpToDate"))
+    } else {
+      message.success(t("library.updateCheck.foundUpdates", { n: updates.length }))
+    }
+  } catch (e: unknown) {
+    const err = String(e)
+    if (err.includes("API Key")) {
+      message.warning(t("library.updateCheck.noApiKey"))
+    } else if (err.includes("游戏目录")) {
+      message.warning(t("library.updateCheck.noGamePath"))
+    } else {
+      message.error(t("library.updateCheck.error", { e: err }))
+    }
+  } finally {
+    checkingUpdates.value = false
+  }
+}
+
+function hasUpdate(modId: string): boolean {
+  return updateModsMap.value.get(modId)?.hasUpdate ?? false
+}
+
+function getUpdateInfo(modId: string): ModUpdateInfo | undefined {
+  return updateModsMap.value.get(modId)
 }
 
 // --- 新增预设（空预设 + 切换）---
@@ -341,6 +382,10 @@ watch(presetAppliedTick, () => {
             <template #icon><NIcon :size="14"><Bookmark /></NIcon></template>
             {{ t("library.newPreset") }}
           </NButton>
+          <NButton size="small" secondary :loading="checkingUpdates" @click="handleCheckUpdates">
+            <template #icon><NIcon :size="14"><ArrowUp /></NIcon></template>
+            {{ t("library.updateCheck.check") }}
+          </NButton>
           <NButton size="small" secondary :loading="loading" @click="fetchMods">
             <template #icon><NIcon :size="14"><RefreshCw /></NIcon></template>
             {{ t("common.refresh") }}
@@ -505,6 +550,8 @@ watch(presetAppliedTick, () => {
                 :enabled="true"
                 :busy="busyId === mod.id"
                 :toggle-disabled="isActivePresetBuiltin"
+                :has-update="hasUpdate(mod.id)"
+                :update-info="getUpdateInfo(mod.id) ?? null"
                 @toggle="handleToggle"
                 @open-folder="handleOpenFolder"
                 @uninstall="handleUninstall"
@@ -549,6 +596,8 @@ watch(presetAppliedTick, () => {
                 :enabled="false"
                 :busy="busyId === mod.id"
                 :toggle-disabled="isActivePresetBuiltin"
+                :has-update="hasUpdate(mod.id)"
+                :update-info="getUpdateInfo(mod.id) ?? null"
                 @toggle="handleToggle"
                 @open-folder="handleOpenFolder"
                 @uninstall="handleUninstall"

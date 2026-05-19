@@ -38,6 +38,7 @@
     "refreshing": "刷新中...",
     "launchGame": "启动游戏",
     "quickPresetPlaceholder": "快速预设...",
+    "preset": "预设切换",
     "openModsDir": "模组目录",
     "newPreset": "新增预设",
     "newPresetHint": "将创建一个空的预设并切换到该预设",
@@ -131,6 +132,16 @@
       "openFailed": "打开失败: {e}",
       "saveFailed": "保存失败: {e}",
       "launchFailed": "启动游戏失败: {e}"
+    },
+    "updateCheck": {
+      "check": "检查更新",
+      "checking": "检查中...",
+      "allUpToDate": "所有模组已是最新版本",
+      "foundUpdates": "发现 {n} 个模组有更新",
+      "error": "检查更新失败: {e}",
+      "noApiKey": "请先在设置中配置 Nexus API Key",
+      "noGamePath": "请先设置游戏路径",
+      "openNexus": "前往 Nexus"
     },
     "vanillaConflict": {
       "title": "模组状态不一致",
@@ -231,6 +242,7 @@
       "onPathSwitchDesc": "关闭后，切换存档目录时仍会提示，但不会自动创建备份"
     },
     "launch": {
+      "title": "启动",
       "mode": "启动方式",
       "steam": "Steam 协议",
       "direct": "直接启动 exe",

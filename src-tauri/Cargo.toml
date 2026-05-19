@@ -1,6 +1,6 @@
 [package]
 name = "slaymumanager"
-version = "1.5.3"
+version = "1.5.4"
 description = "Slay the Spire 2 Mod Manager"
 authors = []
 edition = "2021"
@@ -30,4 +30,4 @@ winreg = "0.56.0"
 sha1 = "0.11.0"
 filetime = "0.2.29"
 notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
-lru = "0.14"
+lru = "0.18.0"

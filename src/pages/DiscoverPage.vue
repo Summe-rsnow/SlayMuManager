@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from "vue"
+import { ref, computed, reactive, watch, onMounted } from "vue"
 import { onBeforeRouteLeave } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
@@ -48,14 +48,6 @@ const sortOptions = computed(() => [
   { label: t("discover.sort.downloads"), value: "downloads" },
 ])
 
-// --- 每页条数选项 ---
-const pageSizeOptions = [
-  { label: "12", value: 12 },
-  { label: "18", value: 18 },
-  { label: "30", value: 30 },
-  { label: "60", value: 60 },
-]
-
 // --- 状态 ---
 const query = ref("")
 const sortBy = ref("latest_added")
@@ -63,6 +55,20 @@ const results = ref<RemoteMod[]>([])
 const totalCount = ref(0)
 const page = ref(1)
 const pageSize = ref(12)
+
+// --- 每页条数选项（基于列数 n: 4n, 6n, 10n, 20n）---
+const PAGE_SIZE_MULTIPLIERS = [4, 6, 10, 20] as const
+const pageSizeOptions = computed(() => {
+  const n = discoverColumns.value
+  return PAGE_SIZE_MULTIPLIERS.map(s => ({ label: `${s * n}`, value: s * n }))
+})
+// 列数变化时复位 pageSize 到第一个合法值（immediate 确保跨页面切换后也生效）
+watch(discoverColumns, (n) => {
+  const valid = PAGE_SIZE_MULTIPLIERS.map(s => s * n)
+  if (!valid.includes(pageSize.value)) {
+    pageSize.value = valid[0]
+  }
+}, { immediate: true })
 const loading = ref(false)
 const initialLoading = ref(true)
 const searched = ref(false)
@@ -102,8 +108,10 @@ function toggleTranslation(modId: string) {
 onMounted(async () => {
   try {
     const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+    if (!isActive.value) return
     hasApiKey.value = !!bootstrap.nexusApiKey
   } catch { /* ignore */ }
+  if (!isActive.value) return
   doSearch()
 })
 

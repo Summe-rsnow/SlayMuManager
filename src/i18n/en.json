@@ -38,6 +38,7 @@
     "refreshing": "Refreshing...",
     "launchGame": "Launch Game",
     "quickPresetPlaceholder": "Quick Preset...",
+    "preset": "Preset",
     "openModsDir": "Mods Folder",
     "newPreset": "New Preset",
     "newPresetHint": "Create an empty preset and switch to it",
@@ -131,6 +132,16 @@
       "openFailed": "Open failed: {e}",
       "saveFailed": "Save failed: {e}",
       "launchFailed": "Failed to launch game: {e}"
+    },
+    "updateCheck": {
+      "check": "Check Updates",
+      "checking": "Checking...",
+      "allUpToDate": "All mods are up to date",
+      "foundUpdates": "Found {n} mod(s) with updates",
+      "error": "Update check failed: {e}",
+      "noApiKey": "Please configure Nexus API Key in Settings first",
+      "noGamePath": "Please set the game path first",
+      "openNexus": "Open on Nexus"
     },
     "vanillaConflict": {
       "title": "Mod State Conflict",
@@ -231,6 +242,7 @@
       "onPathSwitchDesc": "When disabled, still shows the path switch prompt but skips automatic backup creation"
     },
     "launch": {
+      "title": "Launch",
       "mode": "Launch Mode",
       "steam": "Steam Protocol",
       "direct": "Direct EXE",

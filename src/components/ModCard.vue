@@ -10,11 +10,15 @@ import { useModTags, PRESET_TAGS } from "../composables/useModTags"
 import { useModNotes } from "../composables/useModNotes"
 import type { InstalledMod } from "../types"
 
+import type { ModUpdateInfo } from "../types"
+
 const props = defineProps<{
   mod: InstalledMod
   enabled: boolean
   busy: boolean
   toggleDisabled: boolean
+  hasUpdate?: boolean
+  updateInfo?: ModUpdateInfo | null
 }>()
 
 const emit = defineEmits<{
@@ -56,6 +60,9 @@ const cardStyle = computed(() => ({
           {{ mod.name }}
         </span>
         <span class="text-xs text-c-muted font-mono truncate">{{ mod.version ?? "—" }}</span>
+        <NTag v-if="hasUpdate && updateInfo?.remoteVersion" type="warning" size="tiny" :bordered="false" :title="'v' + updateInfo!.remoteVersion + ' 可用'">
+          ↑ {{ updateInfo!.remoteVersion }}
+        </NTag>
         <NTag v-if="mod.affectsGameplay" type="warning" size="tiny" :bordered="false">
           {{ t("library.mod.affectsGameplay") }}
         </NTag>

@@ -1,7 +1,7 @@
 {
   "name": "slaymumanager",
   "private": true,
-  "version": "1.5.3",
+  "version": "1.5.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,7 +15,7 @@
     "lucide-vue-next": "^1.0.0",
     "naive-ui": "^2.44.1",
     "vue": "^3.5.34",
-    "vue-i18n": "^11.4.2",
+    "vue-i18n": "^11.4.4",
     "vue-router": "^5.0.7"
   },
   "devDependencies": {
@@ -27,6 +27,6 @@
     "typescript": "~6.0.3",
     "unocss": "^66.6.8",
     "vite": "^8.0.13",
-    "vue-tsc": "^3.2.9"
+    "vue-tsc": "^3.3.0"
   }
 }
