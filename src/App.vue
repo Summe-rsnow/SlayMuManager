@@ -42,7 +42,7 @@ const { minimize, toggleMaximize, close } = useWindow()
             }"
           >
             <!-- 内容层（全高，标题栏叠加在上方） -->
-            <div class="flex h-full pt-12">
+            <div class="flex h-full pt-12 box-border">
               <SideNav />
               <main
                 class="flex-1 overflow-auto px-12 pt-0 pb-6"
@@ -81,13 +81,13 @@ const { minimize, toggleMaximize, close } = useWindow()
               </div>
               <div class="flex items-center -mr-2 h-full">
                 <NButton text class="titlebar-btn h-full! w-11! rounded-none! text-c-muted" @click="minimize">
-                  <template #icon><NIcon :size="13"><Minus /></NIcon></template>
+                  <template #icon><NIcon :size="15"><Minus /></NIcon></template>
                 </NButton>
                 <NButton text class="titlebar-btn h-full! w-11! rounded-none! text-c-muted" @click="toggleMaximize">
                   <template #icon><NIcon :size="13"><Square /></NIcon></template>
                 </NButton>
                 <NButton text class="titlebar-btn h-full! w-11! rounded-none! text-c-muted" @click="close">
-                  <template #icon><NIcon :size="13"><X /></NIcon></template>
+                  <template #icon><NIcon :size="17"><X /></NIcon></template>
                 </NButton>
               </div>
             </div>
