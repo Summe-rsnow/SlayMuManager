@@ -242,6 +242,12 @@ pub fn search_mods(
     Ok(result)
 }
 
+/// 清空搜索缓存（重新检测时调用，保证拿到最新数据）
+pub fn clear_search_cache() {
+    let mut cache = SEARCH_CACHE.lock().unwrap();
+    cache.clear();
+}
+
 /// 测试代理连通性
 pub fn test_proxy(proxy_url: &str) -> Result<bool, AppError> {
     let client = reqwest::blocking::Client::builder()

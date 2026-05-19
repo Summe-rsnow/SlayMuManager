@@ -167,8 +167,7 @@
       "detected": "检测到冲突，请为每个冲突 Mod 选择处理策略",
       "details": "冲突详情：",
       "skip": "跳过",
-      "replace": "覆盖",
-      "rename": "重命名"
+      "replace": "覆盖"
     },
     "enableAfterInstall": "安装后启用",
     "installWithCount": "安装 ({count})",

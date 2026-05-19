@@ -167,8 +167,7 @@
       "detected": "Conflicts detected — choose a strategy for each conflicting mod",
       "details": "Conflict details:",
       "skip": "Skip",
-      "replace": "Replace",
-      "rename": "Rename"
+      "replace": "Replace"
     },
     "enableAfterInstall": "Enable after install",
     "installWithCount": "Install ({count})",

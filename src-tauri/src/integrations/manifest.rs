@@ -94,26 +94,4 @@ impl ModManifest {
         None
     }
 
-    /// 重写 manifest 中的 id 字段（用于冲突解决的 rename 策略）
-    pub fn rewrite_manifest_id(mod_dir: &Path, new_id: &str) -> std::io::Result<()> {
-        let (manifest_path, mut manifest): (PathBuf, ModManifest) = Self::find_in_dir(mod_dir)
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "manifest 文件不存在"))?;
-
-        let old_id = manifest.id.clone().unwrap_or_default();
-        manifest.id = Some(new_id.to_string());
-
-        let json = serde_json::to_string_pretty(&manifest)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-        std::fs::write(&manifest_path, json)?;
-
-        // 如果 manifest 文件名是 <旧id>.json，重命名为 <新id>.json
-        if let Some(name) = manifest_path.file_name().and_then(|n| n.to_str()) {
-            if name == format!("{}.json", old_id) {
-                let new_path = mod_dir.join(format!("{}.json", new_id));
-                std::fs::rename(&manifest_path, &new_path)?;
-            }
-        }
-
-        Ok(())
-    }
 }

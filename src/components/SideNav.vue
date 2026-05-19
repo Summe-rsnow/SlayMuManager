@@ -282,19 +282,21 @@ onMounted(() => {
   transform: translateY(16px);
 }
 
-/* 预设面板展开/收起过渡动画 */
+/* 预设面板展开/收起过渡动画（从按钮向上弹出效果） */
 .preset-enter-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom center;
 }
 .preset-leave-active {
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: bottom center;
 }
 .preset-enter-from {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(12px) scaleY(0.92);
 }
 .preset-leave-to {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(8px) scaleY(0.95);
 }
 </style>

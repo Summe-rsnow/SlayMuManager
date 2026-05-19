@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue"
+import { ref } from "vue"
 import { useI18n } from "vue-i18n"
-import { getCurrentWebview } from "@tauri-apps/api/webview"
 import { NIcon } from "naive-ui"
 import { Upload } from "lucide-vue-next"
 
@@ -14,60 +13,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "filesDropped", paths: string[]): void
 }>()
-
-// --- Tauri 原生拖放（获取真实文件系统路径）---
-let tauriUnlisten: (() => void) | null = null
-
-// 防抖：400ms 内连续拖放合并为一次导入（对齐 SlaySP2Manager）
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
-const accumulatedPaths: string[] = []
-const DROP_DEBOUNCE_MS = 400
-
-/// 过滤支持的导入格式：.zip / .7z / 文件夹（无扩展名）
-function isSupportedImport(path: string): boolean {
-  const lower = path.toLowerCase()
-  // 文件：仅接受 .zip / .7z
-  if (lower.endsWith(".zip") || lower.endsWith(".7z")) return true
-  // 文件夹：无扩展名视为目录
-  const base = path.split(/[\\/]/).pop() ?? ""
-  if (!base.includes(".")) return true
-  return false
-}
-
-async function setupTauriDragDrop() {
-  const webview = getCurrentWebview()
-  tauriUnlisten = await webview.onDragDropEvent((event) => {
-    if (event.payload.type === "drop") {
-      // isBusy 防护
-      if (props.busy) return
-
-      const paths = event.payload.paths
-      if (paths.length === 0) return
-
-      // 过滤支持格式
-      const importable = paths.filter(isSupportedImport)
-      if (importable.length === 0) return
-
-      // 防抖合并
-      accumulatedPaths.push(...importable)
-      if (debounceTimer) clearTimeout(debounceTimer)
-      debounceTimer = setTimeout(() => {
-        const unique = [...new Set(accumulatedPaths)]
-        accumulatedPaths.length = 0
-        emit("filesDropped", unique)
-      }, DROP_DEBOUNCE_MS)
-    }
-  })
-}
-
-onMounted(() => {
-  setupTauriDragDrop()
-})
-
-onUnmounted(() => {
-  tauriUnlisten?.()
-  if (debounceTimer) clearTimeout(debounceTimer)
-})
 
 // --- HTML5 事件（仅用于 DropZone 区域的视觉反馈）---
 const isDragging = ref(false)

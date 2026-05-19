@@ -62,10 +62,14 @@ const hasConflicts = computed(() =>
 )
 
 // 外部传入初始路径时跳过空闲阶段，直接进入预览
-watch(() => props.show, async (val) => {
-  if (val && props.initialPaths && props.initialPaths.length > 0) {
-    importPaths.value = [...props.initialPaths]
-    await doPreview()
+watch(() => props.show, (val) => {
+  if (val) {
+    // 每次打开时重置状态
+    reset()
+    if (props.initialPaths && props.initialPaths.length > 0) {
+      importPaths.value = [...props.initialPaths]
+      doPreview()
+    }
   }
 })
 
@@ -220,7 +224,7 @@ function reset() {
 }
 
 function handleClose() {
-  reset()
+  // 不移除 stage——让模态框以当前内容完整播放关闭动画，避免闪变
   emit("close")
 }
 
@@ -394,7 +398,6 @@ function statusText(status: string) {
                 <NSpace :size="16">
                   <NRadio value="skip">{{ t("import.conflict.skip") }}</NRadio>
                   <NRadio value="replace">{{ t("import.conflict.replace") }}</NRadio>
-                  <NRadio value="rename">{{ t("import.conflict.rename") }}</NRadio>
                 </NSpace>
               </NRadioGroup>
             </div>

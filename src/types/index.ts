@@ -162,7 +162,7 @@ export interface BatchInstallResult {
   }>
 }
 
-export type ConflictResolution = "skip" | "replace" | "rename"
+export type ConflictResolution = "skip" | "replace"
 
 // --- 整合包 ---
 

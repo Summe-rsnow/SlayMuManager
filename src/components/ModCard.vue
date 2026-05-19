@@ -25,6 +25,7 @@ const emit = defineEmits<{
   (e: "toggle", mod: InstalledMod): void
   (e: "openFolder", mod: InstalledMod): void
   (e: "uninstall", mod: InstalledMod): void
+  (e: "openUpdateUrl", mod: InstalledMod): void
 }>()
 
 const { t } = useI18n()
@@ -60,9 +61,19 @@ const cardStyle = computed(() => ({
           {{ mod.name }}
         </span>
         <span class="text-xs text-c-muted font-mono truncate">{{ mod.version ?? "—" }}</span>
-        <NTag v-if="hasUpdate && updateInfo?.remoteVersion" type="warning" size="tiny" :bordered="false" :title="'v' + updateInfo!.remoteVersion + ' 可用'">
+        <span
+          v-if="hasUpdate && updateInfo?.remoteVersion"
+          class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold leading-none cursor-pointer transition-transform hover:scale-105 active:scale-95"
+          :style="{
+            backgroundColor: 'color-mix(in srgb, var(--primary-color) 18%, transparent)',
+            color: 'var(--primary-color)',
+            border: '1px solid color-mix(in srgb, var(--primary-color) 35%, transparent)',
+          }"
+          :title="'v' + updateInfo!.remoteVersion + ' 可用'"
+          @click="emit('openUpdateUrl', mod)"
+        >
           ↑ {{ updateInfo!.remoteVersion }}
-        </NTag>
+        </span>
         <NTag v-if="mod.affectsGameplay" type="warning" size="tiny" :bordered="false">
           {{ t("library.mod.affectsGameplay") }}
         </NTag>

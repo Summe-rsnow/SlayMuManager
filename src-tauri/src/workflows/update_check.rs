@@ -33,6 +33,9 @@ pub struct ModUpdateInfo {
 /// 3. 比较版本号，返回更新信息
 /// 4. 最多 3 个并发 HTTP 请求
 pub fn check_mod_updates(game_root: &Path) -> Result<Vec<ModUpdateInfo>, AppError> {
+    // 清除上次的搜索缓存，确保拿到最新结果
+    nexus_client::clear_search_cache();
+
     let settings = crate::repositories::settings_repo::load_settings().unwrap_or_default();
     let api_key = match &settings.nexus_api_key {
         Some(k) => k.clone(),

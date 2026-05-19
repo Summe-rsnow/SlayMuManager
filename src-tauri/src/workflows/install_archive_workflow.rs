@@ -10,7 +10,6 @@ use serde::Serialize;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use tauri::Emitter;
-use uuid::Uuid;
 
 // ---------------------------------------------------------------------------
 // 常量
@@ -602,33 +601,13 @@ pub fn install_discovered_mods(
         }
 
         let source_folder = find_source_mod_folder(extracted_root, &dmod.folder_name)?;
-        let mut dest_folder_name = dmod.folder_name.clone();
+        let dest_folder_name = dmod.folder_name.clone();
 
-        // Rename 策略：先复制到临时位置，重写 manifest id，再移动到目标
-        if matches!(resolution, ConflictResolution::Rename) && !dmod.conflicts.is_empty() {
-            let suffix = format!("_{}", Uuid::new_v4().to_string().split('-').next().unwrap_or("0"));
-            let new_id = format!("{}{}", dmod.mod_id, suffix);
-            // 使用临时目录存放重命名后的 Mod
-            let temp_rename = extracted_root.join(format!("_rename_{}", &new_id));
-            save_service::copy_dir_recursive(&source_folder, &temp_rename)?;
-            if let Err(e) = ModManifest::rewrite_manifest_id(&temp_rename, &new_id) {
-                let _ = std::fs::remove_dir_all(&temp_rename);
-                return Err(AppError::Other(format!("重命名失败: {}", e)));
-            }
-            dest_folder_name = format!("{}{}", dmod.folder_name, suffix);
-            let dest_path = target_dir.join(&dest_folder_name);
-            if dest_path.exists() {
-                std::fs::remove_dir_all(&dest_path).map_err(AppError::Io)?;
-            }
-            save_service::copy_dir_recursive(&temp_rename, &dest_path)?;
-            let _ = std::fs::remove_dir_all(&temp_rename);
-        } else {
-            let dest_path = target_dir.join(&dest_folder_name);
-            if dest_path.exists() {
-                std::fs::remove_dir_all(&dest_path).map_err(AppError::Io)?;
-            }
-            save_service::copy_dir_recursive(&source_folder, &dest_path)?;
+        let dest_path = target_dir.join(&dest_folder_name);
+        if dest_path.exists() {
+            std::fs::remove_dir_all(&dest_path).map_err(AppError::Io)?;
         }
+        save_service::copy_dir_recursive(&source_folder, &dest_path)?;
 
         let dest_path = target_dir.join(&dest_folder_name);
 

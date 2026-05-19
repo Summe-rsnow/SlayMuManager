@@ -19,7 +19,7 @@ import ModCard from "../components/ModCard.vue"
 import AppDialog from "../components/AppDialog.vue"
 import { useModCache } from "../composables/useModCache"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
-import type { ModProfile, AppBootstrap, ModUpdateInfo } from "../types"
+import type { InstalledMod, ModProfile, AppBootstrap, ModUpdateInfo } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import { useSidebarActions } from "../composables/useSidebarActions"
 import { useModOperations } from "../composables/useModOperations"
@@ -121,6 +121,14 @@ function hasUpdate(modId: string): boolean {
 
 function getUpdateInfo(modId: string): ModUpdateInfo | undefined {
   return updateModsMap.value.get(modId)
+}
+
+function handleOpenUpdateUrl(mod: InstalledMod) {
+  const info = updateModsMap.value.get(mod.id)
+  const url = info?.remoteMod?.detailUrl
+  if (url) {
+    invoke("open_url_in_browser", { url }).catch(() => {})
+  }
 }
 
 // --- 新增预设（空预设 + 切换）---
@@ -555,6 +563,7 @@ watch(presetAppliedTick, () => {
                 @toggle="handleToggle"
                 @open-folder="handleOpenFolder"
                 @uninstall="handleUninstall"
+                @open-update-url="handleOpenUpdateUrl"
               />
             </NSpace>
           </NCard>
@@ -601,6 +610,7 @@ watch(presetAppliedTick, () => {
                 @toggle="handleToggle"
                 @open-folder="handleOpenFolder"
                 @uninstall="handleUninstall"
+                @open-update-url="handleOpenUpdateUrl"
               />
             </NSpace>
           </NCard>

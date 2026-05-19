@@ -108,5 +108,4 @@ pub struct BatchInstallItem {
 pub enum ConflictResolution {
     Skip,
     Replace,
-    Rename,
 }
