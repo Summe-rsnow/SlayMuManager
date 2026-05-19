@@ -131,6 +131,12 @@
       "openFailed": "Open failed: {e}",
       "saveFailed": "Save failed: {e}",
       "launchFailed": "Failed to launch game: {e}"
+    },
+    "vanillaConflict": {
+      "title": "Mod State Conflict",
+      "content": "The vanilla preset is active, but {n} mod(s) are enabled. Disable all mods to restore vanilla state?",
+      "disableAll": "Disable All Mods",
+      "later": "Not Now"
     }
   },
 

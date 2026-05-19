@@ -7,7 +7,7 @@ import { listen } from "@tauri-apps/api/event"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
 import {
   NSpace, NCard, NTag, NButton, NInput, NIcon,
-  NCheckbox, useMessage,
+  NCheckbox, useMessage, useDialog,
 } from "naive-ui"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
@@ -26,6 +26,7 @@ import { useModOperations } from "../composables/useModOperations"
 
 const { t } = useI18n()
 const message = useMessage()
+const dialog = useDialog()
 const { enabledMods, disabledMods, loading, fetchMods } = useModCache()
 const { getTags, usedTags, getTagLabel } = useModTags()
 
@@ -47,6 +48,24 @@ const {
   handleToggle, handleUninstall, handleOpenFolder, handleOpenModsDir,
   enableAllMods, disableAllMods, dismissSaveGuard,
 } = useModOperations()
+
+// --- 原版预设冲突检测（重置后才重新弹）---
+let shownVanillaConflict = false
+async function checkVanillaConflict() {
+  if (shownVanillaConflict || !isActivePresetBuiltin.value) return
+  const enabled = enabledMods.value
+  if (enabled.length === 0) return
+  shownVanillaConflict = true
+  dialog.warning({
+    title: t("library.vanillaConflict.title"),
+    content: t("library.vanillaConflict.content", { n: enabled.length }),
+    positiveText: t("library.vanillaConflict.disableAll"),
+    negativeText: t("library.vanillaConflict.later"),
+    onPositiveClick: () => disableAllMods(),
+    onNegativeClick: () => { /* 用户选择以后再说 */ },
+    maskClosable: true,
+  })
+}
 
 // --- 对话框 ---
 const showImportDialog = ref(false)
@@ -275,6 +294,8 @@ onMounted(async () => {
       }
     }
   } catch { /* ignore */ }
+  // 原版预设下检测到已启用模组时提示用户
+  checkVanillaConflict()
   unlistenModsChanged = (await listen("slaymgr:mods-changed", () => {
     if (isActive.value) fetchMods()
   }).catch(() => null)) as (() => void) | null

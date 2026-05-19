@@ -131,6 +131,12 @@
       "openFailed": "打开失败: {e}",
       "saveFailed": "保存失败: {e}",
       "launchFailed": "启动游戏失败: {e}"
+    },
+    "vanillaConflict": {
+      "title": "模组状态不一致",
+      "content": "当前为原版预设，但检测到 {n} 个已启用的模组。是否禁用所有模组恢复原版预设？",
+      "disableAll": "禁用所有模组",
+      "later": "以后再说"
     }
   },
 
