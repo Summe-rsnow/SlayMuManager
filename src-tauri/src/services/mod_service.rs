@@ -282,8 +282,18 @@ pub fn find_mod_folder(base_dir: &Path, mod_id: &str) -> Result<PathBuf, AppErro
         }
 
         // 回退：按文件夹名匹配
-        if path.file_name().and_then(|n| n.to_str()) == Some(mod_id) {
+        let folder_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if folder_name == mod_id {
             return Ok(path);
+        }
+
+        // 兼容 unknown: 前缀：扫描时对无 manifest id 的 Mod 会生成 "unknown:文件夹名" 的合成 ID，
+        // 但当通过 find_mod_folder 反向查找时，文件夹名不包含 "unknown:" 前缀，导致匹配失败。
+        // 因此如果 mod_id 以 "unknown:" 开头，去掉前缀后再与文件夹名比较。
+        if let Some(stripped) = mod_id.strip_prefix("unknown:") {
+            if folder_name == stripped {
+                return Ok(path);
+            }
         }
     }
 

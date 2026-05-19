@@ -62,7 +62,7 @@ const { minimize, toggleMaximize, close } = useWindow()
                   <text x="64" y="84" font-family="system-ui,sans-serif" font-size="58" font-weight="800" fill="#fff" text-anchor="middle">S</text>
                 </svg>
                 <span class="text-sm font-semibold text-c-primary">SlayMuManager</span>
-                <span class="text-xs text-c-muted">v1.5.2</span>
+                <span class="text-xs text-c-muted">v1.5.3</span>
               </div>
               <div class="flex items-center -mr-2 h-full">
                 <NButton text class="h-full! w-11! rounded-none! text-c-muted" @click="minimize">
