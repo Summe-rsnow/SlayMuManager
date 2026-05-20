@@ -17,8 +17,9 @@ import DragOverlay from "../components/DragOverlay.vue"
 import ModCard from "../components/ModCard.vue"
 import AppDialog from "../components/AppDialog.vue"
 import { useModCache } from "../composables/useModCache"
+import { useModUpdates } from "../composables/useModUpdates"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
-import type { InstalledMod, ModProfile, AppBootstrap, ModUpdateInfo, BatchImportPreview, BatchInstallResult } from "../types"
+import type { InstalledMod, ModProfile, AppBootstrap, BatchImportPreview, BatchInstallResult } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import { useSidebarActions } from "../composables/useSidebarActions"
 import { useModOperations } from "../composables/useModOperations"
@@ -154,54 +155,15 @@ function dedupe(arr: string[]): string[] {
   return [...new Set(arr)]
 }
 
-// --- 更新检测 ---
-const checkingUpdates = ref(false)
-const updateModsMap = ref<Map<string, ModUpdateInfo>>(new Map())
-
-async function handleCheckUpdates() {
-  checkingUpdates.value = true
-  try {
-    const results = await invoke<ModUpdateInfo[]>("check_mod_updates")
-    const map = new Map<string, ModUpdateInfo>()
-    for (const info of results) {
-      map.set(info.modId, info)
-    }
-    updateModsMap.value = map
-    const updates = results.filter(r => r.hasUpdate)
-    if (updates.length === 0) {
-      message.success(t("library.updateCheck.allUpToDate"))
-    } else {
-      message.success(t("library.updateCheck.foundUpdates", { n: updates.length }))
-    }
-  } catch (e: unknown) {
-    const err = String(e)
-    if (err.includes("API Key")) {
-      message.warning(t("library.updateCheck.noApiKey"))
-    } else if (err.includes("游戏目录")) {
-      message.warning(t("library.updateCheck.noGamePath"))
-    } else {
-      message.error(t("library.updateCheck.error", { e: err }))
-    }
-  } finally {
-    checkingUpdates.value = false
-  }
-}
-
-function hasUpdate(modId: string): boolean {
-  return updateModsMap.value.get(modId)?.hasUpdate ?? false
-}
-
-function getUpdateInfo(modId: string): ModUpdateInfo | undefined {
-  return updateModsMap.value.get(modId)
-}
-
-function handleOpenUpdateUrl(mod: InstalledMod) {
-  const info = updateModsMap.value.get(mod.id)
-  const url = info?.remoteMod?.detailUrl
-  if (url) {
-    invoke("open_url_in_browser", { url }).catch(() => {})
-  }
-}
+// --- 更新检测（托管于 useModUpdates composable）---
+const {
+  checkingUpdates,
+  loadCachedUpdates,
+  checkUpdates,
+  hasUpdate,
+  getUpdateInfo,
+  openUpdateUrl,
+} = useModUpdates()
 
 // --- 新增预设（空预设 + 切换）---
 const showNewPresetDialog = ref(false)
@@ -409,6 +371,8 @@ onMounted(async () => {
       }
     }
   } catch { /* ignore */ }
+  // 加载更新检查缓存（无网络请求）
+  await loadCachedUpdates()
   // 原版预设下检测到已启用模组时提示用户
   checkVanillaConflict()
   unlistenModsChanged = (await listen("slaymgr:mods-changed", () => {
@@ -456,7 +420,7 @@ watch(presetAppliedTick, () => {
             <template #icon><NIcon :size="14"><Bookmark /></NIcon></template>
             {{ t("library.newPreset") }}
           </NButton>
-          <NButton size="small" secondary :loading="checkingUpdates" @click="handleCheckUpdates">
+          <NButton size="small" secondary :loading="checkingUpdates" @click="checkUpdates">
             <template #icon><NIcon :size="14"><ArrowUp /></NIcon></template>
             {{ t("library.updateCheck.check") }}
           </NButton>
@@ -629,7 +593,7 @@ watch(presetAppliedTick, () => {
                 @toggle="handleToggle"
                 @open-folder="handleOpenFolder"
                 @uninstall="handleUninstall"
-                @open-update-url="handleOpenUpdateUrl"
+                @open-update-url="openUpdateUrl"
               />
             </NSpace>
           </NCard>
@@ -676,7 +640,7 @@ watch(presetAppliedTick, () => {
                 @toggle="handleToggle"
                 @open-folder="handleOpenFolder"
                 @uninstall="handleUninstall"
-                @open-update-url="handleOpenUpdateUrl"
+                @open-update-url="openUpdateUrl"
               />
             </NSpace>
           </NCard>

@@ -15,9 +15,14 @@ const {
   launchingGame,
   showLaunchMismatchDialog,
   launchMismatchStatus,
+  showVanillaLaunchDialog,
+  vanillaLaunchEnabledCount,
   handleLaunchGame,
   handleGoToSaves,
   handleLaunchAnyway,
+  handleVanillaLaunchDisable,
+  handleVanillaLaunchAnyway,
+  handleVanillaLaunchCancel,
   quickPresetId,
   quickPresetOptions,
   loadQuickPresets,
@@ -235,6 +240,30 @@ onMounted(() => {
         <NButton type="warning" size="small" @click="handleLaunchAnyway">
           {{ t("library.launchMismatch.forceLaunch") }}
         </NButton>
+      </div>
+    </NSpace>
+  </AppDialog>
+
+  <!-- ============ 原版预设启动冲突弹窗 ============ -->
+  <AppDialog
+    :show="showVanillaLaunchDialog"
+    @update:show="(v: boolean) => { if (!v) { showVanillaLaunchDialog = false; launchingGame = false } }"
+    width="440px"
+  >
+    <template #header>
+      <div class="flex items-center gap-2">
+        <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
+        <span class="font-semibold">{{ t("library.vanillaConflict.title") }}</span>
+      </div>
+    </template>
+    <NSpace vertical :size="12">
+      <p class="text-sm text-c-secondary">
+        {{ t("library.vanillaConflict.content", { n: vanillaLaunchEnabledCount }) }}
+      </p>
+      <div class="flex justify-end gap-2">
+        <NButton size="small" @click="handleVanillaLaunchCancel">{{ t("common.cancel") }}</NButton>
+        <NButton size="small" secondary @click="handleVanillaLaunchAnyway">{{ t("library.launchMismatch.forceLaunch") }}</NButton>
+        <NButton size="small" type="warning" @click="handleVanillaLaunchDisable">{{ t("library.vanillaConflict.disableAll") }}</NButton>
       </div>
     </NSpace>
   </AppDialog>

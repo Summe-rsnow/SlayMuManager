@@ -10,12 +10,14 @@ use crate::domain::save::{
 use crate::domain::remote_mod::RemoteModSearchResult;
 use crate::domain::task::ActivityLogEntry;
 use crate::repositories::settings_repo;
+use crate::repositories::updates_cache_repo;
 use crate::services::{
     backup_service, discover_service, game_service, mod_service, profile_service, save_service,
 };
 use crate::utils::error::AppError;
 use crate::workflows::{install_archive_workflow, update_check};
 use crate::workflows::update_check::ModUpdateInfo;
+use crate::workflows::update_check::ModUpdateCheckCache;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::State;
@@ -1295,7 +1297,31 @@ pub fn check_mod_updates(state: State<AppState>) -> Result<Vec<ModUpdateInfo>, S
         .game_root_dir
         .as_ref()
         .ok_or("游戏目录未设置")?;
-    update_check::check_mod_updates(std::path::Path::new(game_root)).map_err(|e| e.to_string())
+    let results = update_check::check_mod_updates(std::path::Path::new(game_root))
+        .map_err(|e| e.to_string())?;
+    // 写入磁盘缓存
+    let cache = ModUpdateCheckCache {
+        results: results.clone(),
+        checked_at: chrono::Local::now().to_rfc3339(),
+        total_mods: results.len(),
+        updated_mods: results.iter().filter(|r| r.has_update).count(),
+    };
+    let _ = updates_cache_repo::save_updates_cache(&cache);
+    // 更新内存缓存
+    if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
+        *cache_lock = Some(cache);
+    }
+    Ok(results)
+}
+
+#[tauri::command]
+pub fn get_cached_mod_updates(state: State<AppState>) -> Vec<ModUpdateInfo> {
+    if let Ok(cache) = state.mod_updates_cache.read() {
+        if let Some(ref c) = *cache {
+            return c.results.clone();
+        }
+    }
+    Vec::new()
 }
 
 // =========================================================================

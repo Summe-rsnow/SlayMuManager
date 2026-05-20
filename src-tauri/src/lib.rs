@@ -98,6 +98,7 @@ pub fn run() {
             // 5.9 Nexus Mods 集成
             app::commands::search_remote_mods,
             app::commands::check_mod_updates,
+            app::commands::get_cached_mod_updates,
             // 5.10 设置
             app::commands::update_nexus_api_key,
             app::commands::update_proxy_url,

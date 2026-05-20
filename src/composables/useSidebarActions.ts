@@ -3,13 +3,15 @@ import { invoke } from "@tauri-apps/api/core"
 import { useMessage } from "naive-ui"
 import { useI18n } from "vue-i18n"
 import { useRouter } from "vue-router"
-import type { CloudSaveStatus, ModProfile, AppBootstrap, ApplyProfileResult } from "../types"
+import type { CloudSaveStatus, ModProfile, AppBootstrap, ApplyProfileResult, InstalledMod } from "../types"
 
 // --- 模块级共享状态（SideNav + LibraryPage 共用同一实例）---
 const BUILTIN_VANILLA_ID = "__builtin__vanilla"
 const launchingGame = ref(false)
 const showLaunchMismatchDialog = ref(false)
 const launchMismatchStatus = ref<CloudSaveStatus | null>(null)
+const showVanillaLaunchDialog = ref(false)
+const vanillaLaunchEnabledCount = ref(0)
 const quickPresetId = ref<string | null>(null)
 const quickPresetOptions = ref<Array<{ label: string; value: string }>>([])
 const activePresetName = ref("")
@@ -52,11 +54,22 @@ export function useSidebarActions() {
           // 云存档检查失败，继续启动
         }
       }
+      // 2. 原版预设下已启用模组提示
+      const enabledCount = bootstrap.installedCount - bootstrap.disabledCount
+      if (enabledCount > 0) {
+        const profiles = await invoke<ModProfile[]>("list_profiles")
+        const activeProfile = profiles.find(p => p.name === bootstrap.activeProfileName)
+        if (activeProfile?.id === BUILTIN_VANILLA_ID) {
+          vanillaLaunchEnabledCount.value = enabledCount
+          showVanillaLaunchDialog.value = true
+          return
+        }
+      }
       await doLaunchGame()
     } catch {
       await doLaunchGame()
     } finally {
-      if (!showLaunchMismatchDialog.value) {
+      if (!showLaunchMismatchDialog.value && !showVanillaLaunchDialog.value) {
         launchingGame.value = false
       }
     }
@@ -71,6 +84,31 @@ export function useSidebarActions() {
   async function handleLaunchAnyway() {
     showLaunchMismatchDialog.value = false
     await doLaunchGame()
+  }
+
+  /** 原版预设启动冲突：禁用所有模组并启动 */
+  async function handleVanillaLaunchDisable() {
+    showVanillaLaunchDialog.value = false
+    try {
+      const allMods = await invoke<InstalledMod[]>("list_installed_mods")
+      const enabled = allMods.filter(m => m.state === "enabled")
+      for (const mod of enabled) {
+        await invoke("disable_mod", { modId: mod.id })
+      }
+    } catch { /* best effort */ }
+    await doLaunchGame()
+  }
+
+  /** 原版预设启动冲突：直接启动 */
+  function handleVanillaLaunchAnyway() {
+    showVanillaLaunchDialog.value = false
+    doLaunchGame()
+  }
+
+  /** 原版预设启动冲突：取消 */
+  function handleVanillaLaunchCancel() {
+    showVanillaLaunchDialog.value = false
+    launchingGame.value = false
   }
 
   async function loadQuickPresets() {
@@ -109,9 +147,14 @@ export function useSidebarActions() {
     launchingGame,
     showLaunchMismatchDialog,
     launchMismatchStatus,
+    showVanillaLaunchDialog,
+    vanillaLaunchEnabledCount,
     handleLaunchGame,
     handleGoToSaves,
     handleLaunchAnyway,
+    handleVanillaLaunchDisable,
+    handleVanillaLaunchAnyway,
+    handleVanillaLaunchCancel,
     quickPresetId,
     quickPresetOptions,
     loadQuickPresets,
