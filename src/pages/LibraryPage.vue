@@ -13,13 +13,12 @@ import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
   AlertTriangle, Filter, X, PackageOpen, Check, ArrowUp,
 } from "lucide-vue-next"
-import ImportDialog from "../components/ImportDialog.vue"
 import DragOverlay from "../components/DragOverlay.vue"
 import ModCard from "../components/ModCard.vue"
 import AppDialog from "../components/AppDialog.vue"
 import { useModCache } from "../composables/useModCache"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
-import type { InstalledMod, ModProfile, AppBootstrap, ModUpdateInfo } from "../types"
+import type { InstalledMod, ModProfile, AppBootstrap, ModUpdateInfo, BatchImportPreview, BatchInstallResult } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import { useSidebarActions } from "../composables/useSidebarActions"
 import { useModOperations } from "../composables/useModOperations"
@@ -67,19 +66,92 @@ async function checkVanillaConflict() {
   })
 }
 
-// --- 对话框 ---
-const showImportDialog = ref(false)
-const importInitialPaths = ref<string[]>([])
+// --- 导入（直通流程：选文件 → 检测冲突 → 安装）---
+const importPaths = ref<string[]>([])
+const showImportConflictDialog = ref(false)
+const importPreviewData = ref<BatchImportPreview | null>(null)
+const importResolutions = ref<Record<string, "skip" | "replace">>({})
+const importBusy = ref(false)
 
 async function handleImport() {
   const paths = await invoke<string[]>("pick_archive_files")
   if (paths.length === 0) return
-  importInitialPaths.value = paths
-  showImportDialog.value = true
+  await doImportFlow(paths)
 }
 
-function onImportDone() {
-  fetchMods()
+async function doImportFlow(paths: string[]) {
+  importBusy.value = true
+  try {
+    const preview = await invoke<BatchImportPreview>("process_import_targets", {
+      paths,
+      enableNow: false,
+    })
+    const conflicts = preview.discoveredMods.filter(m => m.status === "conflict")
+    if (conflicts.length > 0) {
+      importPaths.value = paths
+      importPreviewData.value = preview
+      importResolutions.value = Object.fromEntries(
+        conflicts.map(m => [m.modId, "skip"] as const),
+      )
+      showImportConflictDialog.value = true
+    } else {
+      const allIds = preview.discoveredMods
+        .filter(m => m.status !== "error" && m.status !== "unsupported_format")
+        .map(m => m.modId)
+      if (allIds.length === 0) {
+        message.warning(t("common.noData"))
+        return
+      }
+      await invoke<BatchInstallResult>("batch_install_mods", {
+        paths,
+        enableNow: false,
+        hasConflicts: false,
+        selectedIds: allIds,
+        resolutions: [] as Array<[string, string]>,
+      })
+      fetchMods()
+      message.success(t("import.success.installedCount", { count: allIds.length }))
+    }
+  } catch (e: unknown) {
+    message.error(t("import.error.installFailed", { e: String(e) }))
+  } finally {
+    importBusy.value = false
+  }
+}
+
+async function confirmImportWithConflicts() {
+  if (!importPreviewData.value) return
+  importBusy.value = true
+  try {
+    const preview = importPreviewData.value
+    const allIds = preview.discoveredMods
+      .filter(m => m.status !== "error" && m.status !== "unsupported_format")
+      .map(m => m.modId)
+    const resolutions = Object.entries(importResolutions.value)
+      .filter(([_, v]) => v === "replace") as Array<[string, string]>
+    await invoke<BatchInstallResult>("batch_install_mods", {
+      paths: importPaths.value,
+      enableNow: false,
+      hasConflicts: true,
+      selectedIds: allIds,
+      resolutions,
+    })
+    showImportConflictDialog.value = false
+    fetchMods()
+    message.success(t("import.success.installedCount", { count: allIds.length }))
+  } catch (e: unknown) {
+    message.error(t("import.error.installFailed", { e: String(e) }))
+  } finally {
+    importBusy.value = false
+  }
+}
+
+function setConflictResolution(modId: string, resolution: "skip" | "replace") {
+  importResolutions.value = { ...importResolutions.value, [modId]: resolution }
+}
+
+function dedupe(arr: string[]): string[] {
+  return [...new Set(arr)]
 }
 
 // --- 更新检测 ---
@@ -295,11 +367,6 @@ const emptyReason = computed(() => {
   return null
 })
 
-function onImportDialogClose() {
-  showImportDialog.value = false
-  importInitialPaths.value = []
-}
-
 // --- 拖拽导入（Webview 级别，覆盖整个页面）---
 let unlistenDragDrop: (() => void) | null = null
 
@@ -315,11 +382,10 @@ async function setupDragDrop() {
   const webview = getCurrentWebview()
   unlistenDragDrop = await webview.onDragDropEvent((event) => {
     if (event.payload.type !== "drop") return
-    if (showImportDialog.value) return // 对话框打开时由 DropZone 处理
+    if (importBusy.value) return
     const paths = event.payload.paths.filter(isSupportedImport)
     if (paths.length === 0) return
-    importInitialPaths.value = paths
-    showImportDialog.value = true
+    doImportFlow(paths)
   })
 }
 
@@ -618,13 +684,61 @@ watch(presetAppliedTick, () => {
       </div>
     </Transition>
 
-    <!-- 导入对话框 -->
-    <ImportDialog
-      :show="showImportDialog"
-      :initial-paths="importInitialPaths"
-      @close="onImportDialogClose"
-      @installed="onImportDone"
-    />
+    <!-- 导入冲突处理弹窗 -->
+    <AppDialog v-model:show="showImportConflictDialog" :title="t('import.title')" width="520px">
+      <NSpace vertical :size="12">
+        <p class="text-sm text-c-secondary">{{ t("import.conflict.detected") }}</p>
+        <div
+          v-for="mod in (importPreviewData?.discoveredMods.filter(m => m.status === 'conflict') ?? [])"
+          :key="mod.modId"
+          class="flex p-2.5 rounded-xl gap-3"
+          :style="{ backgroundColor: 'color-mix(in srgb, var(--color-bg-card) 50%, transparent)', border: '1px solid var(--color-border)' }"
+        >
+          <div class="min-w-0 flex-1">
+            <div class="text-sm font-medium truncate">{{ mod.name }}</div>
+            <div class="text-xs text-c-muted mt-1 space-y-0.5">
+              <div v-for="reason in dedupe(mod.conflicts)" :key="reason">
+                • {{ reason }}
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-1.5 shrink-0 items-center">
+            <NButton
+              size="tiny"
+              :type="importResolutions[mod.modId] === 'skip' ? 'primary' : 'default'"
+              :quaternary="importResolutions[mod.modId] !== 'skip'"
+              @click="setConflictResolution(mod.modId, 'skip')"
+            >
+              <template #icon>
+                <NIcon :size="12" :class="importResolutions[mod.modId] === 'skip' ? '' : 'invisible'"><Check /></NIcon>
+              </template>
+              {{ t("import.conflict.skip") }}
+            </NButton>
+            <NButton
+              size="tiny"
+              :type="importResolutions[mod.modId] === 'replace' ? 'warning' : 'default'"
+              :quaternary="importResolutions[mod.modId] !== 'replace'"
+              @click="setConflictResolution(mod.modId, 'replace')"
+            >
+              <template #icon>
+                <NIcon :size="12" :class="importResolutions[mod.modId] === 'replace' ? '' : 'invisible'"><Check /></NIcon>
+              </template>
+              {{ t("import.conflict.replace") }}
+            </NButton>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <NButton @click="showImportConflictDialog = false">{{ t("common.cancel") }}</NButton>
+          <NButton
+            type="primary"
+            :loading="importBusy"
+            @click="confirmImportWithConflicts"
+          >
+            {{ t("import.installWithCount", { count: importPreviewData?.discoveredMods.filter(m => m.status !== 'error' && m.status !== 'unsupported_format').length ?? 0 }) }}
+          </NButton>
+        </div>
+      </NSpace>
+    </AppDialog>
 
     <!-- 新增预设对话框 -->
     <AppDialog v-model:show="showNewPresetDialog" :title="t('library.newPreset')" width="420px">

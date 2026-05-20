@@ -28,7 +28,7 @@ const {
 const showPresetPanel = ref(false)
 const presetMenuOpen = ref(false)
 let presetPanelTimer: ReturnType<typeof setTimeout> | null = null
-const PRESET_HOVER_DELAY = 300 // ms
+const PRESET_HOVER_DELAY = 100 // ms
 
 function onPresetEnter() {
   if (presetPanelTimer) {

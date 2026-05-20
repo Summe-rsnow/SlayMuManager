@@ -66,23 +66,23 @@ onUnmounted(() => {
         v-if="showOverlay"
         class="fixed inset-0 z-[9999] flex items-center justify-center select-none"
         :style="{
-          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 88%, transparent)',
-          backdropFilter: 'blur(6px)',
+          background: 'radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 70%)',
+          backdropFilter: 'blur(12px) saturate(1.3)',
         }"
       >
-        <div class="flex flex-col items-center gap-5">
+        <div class="flex flex-col items-center gap-8">
           <div
-            class="w-22 h-22 rounded-full flex items-center justify-center"
+            class="w-36 h-36 rounded-full flex items-center justify-center"
             :style="{ backgroundColor: 'color-mix(in srgb, var(--primary-color) 15%, transparent)' }"
           >
-            <NIcon :size="44" :color="'var(--primary-color)'">
+            <NIcon :size="60" :color="'var(--primary-color)'">
               <Upload />
             </NIcon>
           </div>
-          <p class="text-xl font-semibold text-c-primary">
+          <p class="text-3xl font-semibold text-c-primary">
             {{ title ?? t("import.dropZoneDropHint") }}
           </p>
-          <p class="text-sm text-c-secondary">
+          <p class="text-lg text-c-secondary">
             {{ subtitle ?? t("import.dropZoneHint") }}
           </p>
         </div>

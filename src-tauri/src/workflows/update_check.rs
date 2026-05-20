@@ -21,6 +21,16 @@ pub struct ModUpdateInfo {
     pub remote_mod: Option<RemoteMod>,
 }
 
+/// 更新检查的完整缓存结果（含时间戳和统计）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModUpdateCheckCache {
+    pub results: Vec<ModUpdateInfo>,
+    pub checked_at: String,
+    pub total_mods: usize,
+    pub updated_mods: usize,
+}
+
 // ---------------------------------------------------------------------------
 // 公开 API
 // ---------------------------------------------------------------------------

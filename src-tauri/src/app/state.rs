@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
-use std::sync::RwLock;
-
 use crate::domain::task::ActivityLogEntry;
 use crate::repositories::settings_repo;
+use crate::workflows::update_check::ModUpdateCheckCache;
+use serde::{Deserialize, Serialize};
+use std::sync::RwLock;
 
 // --- 全局状态 ---
 
@@ -10,6 +10,7 @@ use crate::repositories::settings_repo;
 pub struct AppState {
     pub settings: RwLock<AppSettings>,
     pub recent_activity: RwLock<Vec<ActivityLogEntry>>,
+    pub mod_updates_cache: RwLock<Option<ModUpdateCheckCache>>,
 }
 
 impl AppState {
@@ -30,6 +31,9 @@ impl Default for AppState {
         Self {
             settings: RwLock::new(settings_repo::load_settings().unwrap_or_default()),
             recent_activity: RwLock::new(Vec::new()),
+            mod_updates_cache: RwLock::new(
+                crate::repositories::updates_cache_repo::load_updates_cache(),
+            ),
         }
     }
 }
