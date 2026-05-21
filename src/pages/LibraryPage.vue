@@ -111,6 +111,7 @@ async function doImportFlow(paths: string[]) {
         resolutions: [] as Array<[string, string]>,
       })
       fetchMods()
+      loadCachedUpdates()
       message.success(t("import.success.installedCount", { count: allIds.length }))
     }
   } catch (e: unknown) {
@@ -139,6 +140,7 @@ async function confirmImportWithConflicts() {
     })
     showImportConflictDialog.value = false
     fetchMods()
+    loadCachedUpdates()
     message.success(t("import.success.installedCount", { count: allIds.length }))
   } catch (e: unknown) {
     message.error(t("import.error.installFailed", { e: String(e) }))
