@@ -171,8 +171,8 @@ fn check_single_mod(
 /// - 按 `.` `-` `+` 分段
 /// - 每段优先数值比较，回退到字符串比较
 fn compare_versions(local: &str, remote: &str) -> bool {
-    let local = local.strip_prefix('v').unwrap_or(local);
-    let remote = remote.strip_prefix('v').unwrap_or(remote);
+    let local = local.strip_prefix('v').or_else(|| local.strip_prefix('V')).unwrap_or(local);
+    let remote = remote.strip_prefix('v').or_else(|| remote.strip_prefix('V')).unwrap_or(remote);
 
     let local_parts: Vec<&str> = local
         .split(|c| c == '.' || c == '-' || c == '+')

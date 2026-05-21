@@ -423,6 +423,11 @@ pub fn uninstall_mod(mod_id: String, state: State<AppState>) -> Result<(), Strin
     mod_service::uninstall_mod(Path::new(game_root), &mod_id)?;
     // 清理文件哈希
     let _ = crate::repositories::mod_hashes_repo::remove_mod_hashes(&mod_id);
+    // 清除更新缓存
+    updates_cache_repo::clear_updates_cache();
+    if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
+        *cache_lock = None;
+    }
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -602,6 +607,12 @@ pub fn install_archive(
     )
     ?;
 
+    // 清除更新缓存
+    updates_cache_repo::clear_updates_cache();
+    if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
+        *cache_lock = None;
+    }
+
     // 记录日志
     let names: Vec<_> = installed.iter().map(|m| m.name.as_str()).collect();
     state.push_activity(ActivityLogEntry {
@@ -683,6 +694,12 @@ pub fn batch_install_mods(
         if installed_count == result.success_count as usize {
             let _ = save_service::sync_saves(Path::new(game_root), &sync_pairs);
         }
+    }
+
+    // 清除更新缓存
+    updates_cache_repo::clear_updates_cache();
+    if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
+        *cache_lock = None;
     }
 
     // 记录日志

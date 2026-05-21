@@ -604,15 +604,32 @@ pub fn install_discovered_mods(
         let dest_folder_name = dmod.folder_name.clone();
 
         let dest_path = target_dir.join(&dest_folder_name);
+
+        // ① 按文件夹名删除旧目录（新旧同名时直接覆盖）
         if dest_path.exists() {
             std::fs::remove_dir_all(&dest_path).map_err(AppError::Io)?;
         }
+
+        // ② 按 mod_id 查找并删除旧 Mod 文件夹（新旧不同名时生效）
+        if matches!(resolution, ConflictResolution::Replace) && !dmod.conflicts.is_empty() {
+            for base in [game_root.join("mods"), game_root.join("mods_disabled")] {
+                if let Ok(old_path) = mod_service::find_mod_folder(&base, &dmod.mod_id) {
+                    if old_path != dest_path {
+                        let _ = std::fs::remove_dir_all(&old_path);
+                    }
+                }
+            }
+        }
+
         save_service::copy_dir_recursive(&source_folder, &dest_path)?;
 
         let dest_path = target_dir.join(&dest_folder_name);
 
-        let manifest_path = dest_path.join("manifest.json");
-        let manifest = ModManifest::from_file(&manifest_path);
+        // 使用 ModManifest::find_in_dir 兼容多种 manifest 文件名
+        let (manifest_path, manifest): (Option<PathBuf>, Option<ModManifest>) =
+            ModManifest::find_in_dir(&dest_path)
+                .map(|(p, m)| (Some(p), Some(m)))
+                .unwrap_or((None, None));
         // 计算并存储文件哈希
         let mod_id_for_hash = manifest
             .as_ref()
@@ -641,11 +658,7 @@ pub fn install_discovered_mods(
             author: manifest.as_ref().and_then(|m| m.author.clone()),
             folder_name: dmod.folder_name.clone(),
             install_dir: dest_path.to_string_lossy().to_string(),
-            manifest_path: if manifest_path.exists() {
-                Some(manifest_path.to_string_lossy().to_string())
-            } else {
-                None
-            },
+            manifest_path: manifest_path.map(|p| p.to_string_lossy().to_string()),
             affects_gameplay: manifest
                 .as_ref()
                 .map(|m| m.affects_gameplay)
