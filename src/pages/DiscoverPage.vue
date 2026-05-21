@@ -462,7 +462,15 @@ onBeforeRouteLeave(() => {
     </div>
 
     <!-- 图片放大预览 -->
-    <NModal :show="showImagePreview" @update:show="(v: boolean) => !v && (showImagePreview = false)">
+    <NModal
+      :show="showImagePreview"
+      :overlay-style="{
+        backdropFilter: 'blur(var(--blur-backdrop)) saturate(1.3)',
+        WebkitBackdropFilter: 'blur(var(--blur-backdrop)) saturate(1.3)',
+        background: 'var(--blur-backdrop-bg)',
+      }"
+      @update:show="(v: boolean) => !v && (showImagePreview = false)"
+    >
       <div
         class="flex items-center justify-center"
         style="max-width: 90vw; max-height: 90vh;"

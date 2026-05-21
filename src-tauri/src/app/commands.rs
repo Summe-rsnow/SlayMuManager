@@ -1297,6 +1297,11 @@ pub fn check_mod_updates(state: State<AppState>) -> Result<Vec<ModUpdateInfo>, S
         .game_root_dir
         .as_ref()
         .ok_or("游戏目录未设置")?;
+    // 清理旧缓存，确保全新数据
+    updates_cache_repo::clear_updates_cache();
+    if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
+        *cache_lock = None;
+    }
     let results = update_check::check_mod_updates(std::path::Path::new(game_root))
         .map_err(|e| e.to_string())?;
     // 写入磁盘缓存

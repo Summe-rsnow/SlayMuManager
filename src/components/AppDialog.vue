@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { NCard, NModal } from "naive-ui"
 
-defineProps<{
+const props = withDefaults(defineProps<{
   show: boolean
   /** 标题（提供 header slot 时忽略） */
   title?: string
@@ -9,7 +9,9 @@ defineProps<{
   width?: string | number
   /** 是否允许点击遮罩关闭, 默认 true */
   maskClosable?: boolean
-}>()
+}>(), {
+  maskClosable: true,
+})
 
 const emit = defineEmits<{
   (e: "update:show", v: boolean): void
@@ -23,7 +25,7 @@ function onUpdateShow(v: boolean) {
 <template>
   <NModal
     :show="show"
-    :mask-closable="maskClosable ?? true"
+    :mask-closable="maskClosable"
     @update:show="onUpdateShow"
   >
     <NCard
@@ -46,3 +48,15 @@ function onUpdateShow(v: boolean) {
     </NCard>
   </NModal>
 </template>
+
+<style>
+.n-modal-mask {
+  backdrop-filter: blur(var(--blur-backdrop)) saturate(var(--blur-saturate));
+  background: transparent;
+  transition: backdrop-filter 0.25s ease;
+}
+
+.n-modal-mask.fade-in-transition-leave-active {
+  backdrop-filter: blur(0px) saturate(var(--blur-saturate));
+}
+</style>

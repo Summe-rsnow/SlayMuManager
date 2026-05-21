@@ -56,6 +56,13 @@ html, body {
   --color-warning-bg: #fffbeb;
   --color-warning-text: #92400e;
   --color-warning-border: #fde68a;
+
+  /* 弹窗背景毛玻璃 */
+  --blur-backdrop: 10px;
+  --blur-saturate: 1.3;
+
+  /* 弹窗遮罩的点发光（径向渐变 = 主题色中心发光，不加暗色基底） */
+  --blur-backdrop-bg: radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 70%);
 }
 
 .dark {
@@ -73,6 +80,12 @@ html, body {
   --color-warning-bg: #271000;
   --color-warning-text: #fbbf24;
   --color-warning-border: #78350f;
+
+  --blur-backdrop: 10px;
+  --blur-saturate: 1.3;
+
+  /* 弹窗遮罩的点发光 */
+  --blur-backdrop-bg: radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 70%);
 }
 
 /* ============================================================

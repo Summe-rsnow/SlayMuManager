@@ -67,7 +67,7 @@ onUnmounted(() => {
         class="fixed inset-0 z-[9999] flex items-center justify-center select-none"
         :style="{
           background: 'radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 70%)',
-          backdropFilter: 'blur(12px) saturate(1.3)',
+          backdropFilter: 'blur(var(--blur-backdrop)) saturate(var(--blur-saturate))',
         }"
       >
         <div class="flex flex-col items-center gap-8">

@@ -420,7 +420,7 @@ watch(presetAppliedTick, () => {
     </Transition>
 
     <!-- 创建/编辑对话框 -->
-    <AppDialog v-model:show="showCreateDialog" :title="formTitle" width="520px" :mask-closable="false">
+    <AppDialog v-model:show="showCreateDialog" :title="formTitle" width="520px">
       <NSpace vertical :size="12">
         <div>
           <label class="text-sm text-c-secondary mb-1 block">{{ t("profiles.form.name") }}</label>
@@ -538,7 +538,7 @@ watch(presetAppliedTick, () => {
     </div>
 
     <!-- 导入预设对话框 -->
-    <AppDialog v-if="bundlePreview" v-model:show="showImportDialog" width="560px" :mask-closable="false">
+    <AppDialog v-if="bundlePreview" v-model:show="showImportDialog" width="560px">
       <template #header>
         <span class="text-lg font-semibold">
           {{ t("profiles.importDialog.title", { name: bundlePreview.manifest.profile.name }) }}

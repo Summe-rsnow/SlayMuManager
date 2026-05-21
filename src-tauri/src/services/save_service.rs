@@ -3,6 +3,7 @@ use crate::domain::save::{
     SaveBackupEntry, SaveKind, SaveSlot, SaveSlotRef, SaveSyncResult, SaveTransferPreview,
     SyncDetail, SyncDirection,
 };
+use crate::repositories::settings_repo;
 use crate::utils::error::AppError;
 use std::path::{Path, PathBuf};
 
@@ -319,8 +320,11 @@ fn create_backup_internal(
     // 追加备份元数据
     append_backup_meta(game_root, &entry)?;
 
-    // 清理旧备份（保留最近 N 份）
-    trim_old_backups(game_root, steam_user_id, kind, slot_index, 5)?;
+    // 清理旧备份（从设置读取保留份数）
+    let keep_count = settings_repo::load_settings()
+        .map(|s| s.auto_backup_keep_count)
+        .unwrap_or(5);
+    trim_old_backups(game_root, steam_user_id, kind, slot_index, keep_count)?;
 
     Ok(entry)
 }
