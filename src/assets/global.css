@@ -1,7 +1,7 @@
 /* OPPO Sans 字体 */
 @font-face {
   font-family: "OPPO Sans";
-  src: url("./fonts/OPPOSans.ttf") format("truetype");
+  src: url("./fonts/OPPOSans.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;

@@ -1,5 +1,6 @@
 import { ref } from "vue"
 import { invoke } from "@tauri-apps/api/core"
+import { listen } from "@tauri-apps/api/event"
 import { useMessage } from "naive-ui"
 import { useI18n } from "vue-i18n"
 import type { ModUpdateInfo, InstalledMod } from "../types"
@@ -8,9 +9,58 @@ import type { ModUpdateInfo, InstalledMod } from "../types"
 const updateModsMap = ref<Map<string, ModUpdateInfo>>(new Map())
 const checkingUpdates = ref(false)
 
+// 请求计数器（模块级，匹配事件 reqId，忽略过期响应）
+let searchReqId = 0
+let listenerReady = false
+
+interface ModUpdateCheckEvent {
+  reqId: number
+  success: boolean
+  error: string | null
+  results: ModUpdateInfo[]
+  summary: {
+    totalMods: number
+    updatedMods: number
+  }
+}
+
 export function useModUpdates() {
   const message = useMessage()
   const { t } = useI18n()
+
+  // 设置事件监听（模块级单例，仅首次调用时注册）
+  if (!listenerReady) {
+    listenerReady = true
+    listen<ModUpdateCheckEvent>("slaymgr:update-check-result", (event) => {
+      const payload = event.payload
+      if (payload.reqId !== searchReqId) return
+
+      checkingUpdates.value = false
+
+      if (payload.success) {
+        const map = new Map<string, ModUpdateInfo>()
+        for (const info of payload.results) {
+          map.set(info.modId, info)
+        }
+        updateModsMap.value = map
+
+        if (payload.summary.updatedMods === 0) {
+          message.success(t("library.updateCheck.allUpToDate"))
+        } else {
+          message.success(t("library.updateCheck.foundUpdates", { n: payload.summary.updatedMods }))
+        }
+      } else {
+        const err = payload.error ?? ""
+        if (err.includes("API Key")) {
+          message.warning(t("library.updateCheck.noApiKey"))
+        } else if (err.includes("游戏目录")) {
+          message.warning(t("library.updateCheck.noGamePath"))
+        } else {
+          message.error(t("library.updateCheck.error", { e: err }))
+        }
+      }
+    }).catch(() => { /* listen 失败静默 */ })
+  }
 
   /** 从后端读取缓存，不发起网络请求 */
   async function loadCachedUpdates() {
@@ -24,34 +74,17 @@ export function useModUpdates() {
     } catch { /* ignore */ }
   }
 
-  /** 联网检查更新，结果自动写入后端缓存 */
-  async function checkUpdates() {
+  /** 联网检查更新（不阻塞，结果由事件驱动） */
+  function checkUpdates() {
     checkingUpdates.value = true
-    try {
-      const results = await invoke<ModUpdateInfo[]>("check_mod_updates")
-      const map = new Map<string, ModUpdateInfo>()
-      for (const info of results) {
-        map.set(info.modId, info)
-      }
-      updateModsMap.value = map
-      const updates = results.filter(r => r.hasUpdate)
-      if (updates.length === 0) {
-        message.success(t("library.updateCheck.allUpToDate"))
-      } else {
-        message.success(t("library.updateCheck.foundUpdates", { n: updates.length }))
-      }
-    } catch (e: unknown) {
-      const err = String(e)
-      if (err.includes("API Key")) {
-        message.warning(t("library.updateCheck.noApiKey"))
-      } else if (err.includes("游戏目录")) {
-        message.warning(t("library.updateCheck.noGamePath"))
-      } else {
-        message.error(t("library.updateCheck.error", { e: err }))
-      }
-    } finally {
-      checkingUpdates.value = false
-    }
+    searchReqId++
+    const currentReqId = searchReqId
+
+    invoke("start_mod_update_check", { reqId: currentReqId })
+      .catch((e: unknown) => {
+        checkingUpdates.value = false
+        message.error(t("library.updateCheck.error", { e: String(e) }))
+      })
   }
 
   function hasUpdate(modId: string): boolean {

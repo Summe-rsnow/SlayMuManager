@@ -16,6 +16,7 @@ import type {
   SaveSlot, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
   CloudSaveStatus, CloudSaveDiffEntry, AppBootstrap,
 } from "../types"
+import { useStorage } from "../composables/useStorage"
 import { kindLabel } from "../utils/kindLabel"
 import EmptyState from "../components/EmptyState.vue"
 import AppDialog from "../components/AppDialog.vue"
@@ -30,7 +31,7 @@ const backups = ref<SaveBackupEntry[]>([])
 const autoSync = ref(false)
 const syncPairs = ref<SaveSyncPair[]>([])
 const loading = ref(false)
-const activeUserId = ref("")
+const activeUserId = useStorage<string>("slaymgr:active-steam-user", "")
 
 // 备份恢复到指定槽位
 const showRestoreToSlotDialog = ref(false)

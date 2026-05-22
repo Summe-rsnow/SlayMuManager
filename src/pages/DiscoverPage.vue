@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, reactive, watch, onMounted } from "vue"
+import { ref, computed, reactive, watch, onMounted, onBeforeUnmount } from "vue"
 import { onBeforeRouteLeave } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
+import { listen, type UnlistenFn } from "@tauri-apps/api/event"
 import {
   NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, NModal, NPopover, useMessage,
 } from "naive-ui"
-import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown, List, Languages } from "lucide-vue-next"
+import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown, List, Languages, RefreshCw } from "lucide-vue-next"
 import type { RemoteMod, RemoteModSearchResult, AppBootstrap } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import { currentLocale } from "../i18n"
@@ -56,6 +57,9 @@ const totalCount = ref(0)
 const page = ref(1)
 const pageSize = ref(12)
 
+// 请求计数器：递增 ID 匹配事件，忽略过期响应
+const searchReqId = ref(0)
+
 // --- 每页条数选项（基于列数 n: 4n, 6n, 10n, 20n）---
 const PAGE_SIZE_MULTIPLIERS = [4, 6, 10, 20] as const
 const pageSizeOptions = computed(() => {
@@ -104,16 +108,76 @@ function toggleTranslation(modId: string) {
   showTranslation[modId] = !showTranslation[modId]
 }
 
-// --- 初始加载（空搜索浏览最新 Mod） ---
-onMounted(async () => {
-  try {
-    const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+// --- 后台搜索事件 ---
+
+interface DiscoverSearchEvent {
+  reqId: number
+  success: boolean
+  error: string | null
+  query: string
+  page: number
+  pageSize: number
+  sortBy: string
+  result: RemoteModSearchResult | null
+}
+
+let unlistenSearch: UnlistenFn | null = null
+
+// 启动后台搜索（不 await，结果由事件驱动）
+function startSearch() {
+  const q = query.value.trim()
+  const pg = page.value
+  const ps = pageSize.value
+  const sb = sortBy.value
+
+  // 递增 reqId，前一次请求的响应会被忽略
+  searchReqId.value++
+  const currentReqId = searchReqId.value
+
+  loading.value = true
+
+  invoke("start_remote_search", {
+    query: q,
+    page: pg,
+    pageSize: ps,
+    sortBy: sb,
+    reqId: currentReqId,
+  }).catch((e: unknown) => {
     if (!isActive.value) return
-    hasApiKey.value = !!bootstrap.nexusApiKey
-  } catch { /* ignore */ }
+    loading.value = false
+    initialLoading.value = false
+    message.error(t("discover.error.searchFailed") + ": " + String(e))
+  })
+
+  // 后台预取相邻页（使用非匹配 reqId，事件只缓存不更新 UI）
+  if (prefetchEnabled.value) {
+    prefetchAdjacentPages(q, sb, pg, ps, currentReqId)
+  }
+}
+
+// 处理搜索结果事件
+function handleSearchEvent(event: DiscoverSearchEvent) {
   if (!isActive.value) return
-  doSearch()
-})
+
+  // 无论是否匹配 reqId，都写入缓存（这样预取页也能被缓存）
+  if (event.result) {
+    setPageCache(event.query, event.sortBy, event.page, event.pageSize, event.result.items, event.result.totalCount)
+  }
+
+  // 仅匹配当前请求 ID 才更新 UI
+  if (event.reqId !== searchReqId.value) return
+
+  loading.value = false
+  initialLoading.value = false
+
+  if (event.success && event.result) {
+    results.value = event.result.items
+    totalCount.value = event.result.totalCount
+  } else {
+    message.error(t("discover.error.searchFailed") + ": " + (event.error ?? "unknown"))
+    results.value = []
+  }
+}
 
 async function doSearch(resetPage = true) {
   if (resetPage) page.value = 1
@@ -123,68 +187,38 @@ async function doSearch(resetPage = true) {
   const ps = pageSize.value
   const sb = sortBy.value
 
-  // 预取缓存命中：直接展示，不显示 loading
+  // 缓存命中：直接展示
   if (prefetchEnabled.value) {
     const cached = getPageCache(q, sb, pg, ps)
     if (cached) {
       results.value = cached.items
       totalCount.value = cached.totalCount
       initialLoading.value = false
+      // 即使有缓存，也启动后台刷新（带上当前 reqId，后续事件会更新 UI）
+      startSearch()
       return
     }
   }
 
-  loading.value = true
-  try {
-    const res = await invoke<RemoteModSearchResult>("search_remote_mods", {
-      query: q,
-      page: pg,
-      pageSize: ps,
-      sortBy: sb,
-    })
-    if (!isActive.value) return
-    results.value = res.items
-    totalCount.value = res.totalCount
-
-    // 写入缓存
-    if (prefetchEnabled.value) {
-      setPageCache(q, sb, pg, ps, res.items, res.totalCount)
-      // 后台预取相邻页
-      prefetchAdjacentPages(q, sb, pg, ps)
-    }
-  } catch (e: unknown) {
-    if (!isActive.value) return
-    message.error(t("discover.error.searchFailed") + ": " + String(e))
-    results.value = []
-  } finally {
-    if (isActive.value) {
-      loading.value = false
-      initialLoading.value = false
-    }
-  }
+  // 缓存未命中：启动后台搜索
+  startSearch()
 }
 
-/** 后台预取前后页数据（静默，不显示 loading） */
-async function prefetchAdjacentPages(
-  q: string, sb: string, currentPage: number, ps: number
+/** 后台预取前后页数据（使用 reqId=0 避免 UI 更新） */
+function prefetchAdjacentPages(
+  q: string, sb: string, currentPage: number, ps: number, _mainReqId: number
 ) {
   const pages = [currentPage - 1, currentPage + 1]
   for (const p of pages) {
     if (p < 1) continue
     if (getPageCache(q, sb, p, ps)) continue // 已有缓存
-    try {
-      const res = await invoke<RemoteModSearchResult>("search_remote_mods", {
-        query: q,
-        page: p,
-        pageSize: ps,
-        sortBy: sb,
-      })
-      if (isActive.value) {
-        setPageCache(q, sb, p, ps, res.items, res.totalCount)
-      }
-    } catch {
-      // 预取失败静默忽略
-    }
+    invoke("start_remote_search", {
+      query: q,
+      page: p,
+      pageSize: ps,
+      sortBy: sb,
+      reqId: 0, // 0 永不匹配 searchReqId，仅缓存不更新 UI
+    }).catch(() => {})
   }
 }
 
@@ -200,7 +234,7 @@ function onPageChange(p: number) {
 
 function onPageSizeChange(val: number) {
   pageSize.value = val
-  doSearch(true) // resetPage = true
+  doSearch(true)
 }
 
 const jumpPage = ref<number | null>(null)
@@ -230,11 +264,42 @@ function formatCount(n: number): string {
   return n.toString()
 }
 
+// --- 生命周期 ---
+
+onMounted(() => {
+  // 设置后台搜索事件监听
+  listen<DiscoverSearchEvent>("slaymgr:discover-search-result", (event) => {
+    handleSearchEvent(event.payload)
+  }).then((fn) => {
+    unlistenSearch = fn
+  })
+
+  // 获取 bootstrap（API key 信息，不阻塞搜索）
+  invoke<AppBootstrap>("get_app_bootstrap").then((bootstrap) => {
+    if (isActive.value) {
+      hasApiKey.value = !!bootstrap.nexusApiKey
+    }
+  }).catch(() => {})
+
+  // 立即触发搜索
+  doSearch()
+})
+
+// 组件销毁前取消事件监听
+onBeforeUnmount(() => {
+  unlistenSearch?.()
+})
+
 // 离开发现页时提前清空结果，避免大量图片拖慢页面切换
 onBeforeRouteLeave(() => {
   results.value = []
   imageLoadFailed.value = {}
 })
+
+// 刷新按钮
+function handleRefresh() {
+  doSearch(true)
+}
 
 </script>
 
@@ -245,7 +310,7 @@ onBeforeRouteLeave(() => {
       <p class="text-sm mt-1 text-c-secondary">{{ t("discover.subtitle") }}</p>
     </div>
 
-    <!-- 搜索栏 + 排序 -->
+    <!-- 搜索栏 + 排序 + 刷新 -->
     <div class="flex gap-2 mb-4">
       <NInput
         v-model:value="query"
@@ -267,6 +332,10 @@ onBeforeRouteLeave(() => {
       />
       <NButton size="large" type="primary" :loading="loading" @click="doSearch()">
         {{ t("common.search") }}
+      </NButton>
+      <NButton size="large" secondary :loading="loading" @click="handleRefresh">
+        <template #icon><NIcon :size="18"><RefreshCw /></NIcon></template>
+        {{ t("common.refresh") }}
       </NButton>
     </div>
 

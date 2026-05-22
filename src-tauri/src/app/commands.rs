@@ -20,6 +20,8 @@ use crate::workflows::update_check::ModUpdateInfo;
 use crate::workflows::update_check::ModUpdateCheckCache;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use tauri::Emitter;
+use tauri::Manager;
 use tauri::State;
 
 // --- DTOs ---
@@ -1307,6 +1309,70 @@ pub fn search_remote_mods(
     .map_err(|e| e.to_string())
 }
 
+// =========================================================================
+// 5.13 后端搜索（事件驱动，不阻塞前端）
+// =========================================================================
+
+/// 后台搜索结果事件载荷
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscoverSearchEvent {
+    pub req_id: u64,
+    pub success: bool,
+    pub error: Option<String>,
+    pub query: String,
+    pub page: u32,
+    pub page_size: u32,
+    pub sort_by: String,
+    pub result: Option<RemoteModSearchResult>,
+}
+
+/// 启动后台搜索（立即返回，结果通过 `slaymgr:discover-search-result` 事件推送）
+#[tauri::command]
+pub fn start_remote_search(
+    app_handle: tauri::AppHandle,
+    query: String,
+    page: Option<u32>,
+    page_size: Option<u32>,
+    sort_by: Option<String>,
+    req_id: u64,
+) -> Result<(), String> {
+    let page = page.unwrap_or(1);
+    let page_size = page_size.unwrap_or(18);
+    let sort_by = sort_by.unwrap_or_else(|| "latest_added".to_string());
+
+    std::thread::spawn(move || {
+        let result = discover_service::search_remote_mods(&query, page, page_size, &sort_by);
+
+        let event = match result {
+            Ok(res) => DiscoverSearchEvent {
+                req_id,
+                success: true,
+                error: None,
+                query,
+                page,
+                page_size,
+                sort_by,
+                result: Some(res),
+            },
+            Err(e) => DiscoverSearchEvent {
+                req_id,
+                success: false,
+                error: Some(e.to_string()),
+                query,
+                page,
+                page_size,
+                sort_by,
+                result: None,
+            },
+        };
+
+        let _ = app_handle.emit("slaymgr:discover-search-result", &event);
+    });
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn check_mod_updates(state: State<AppState>) -> Result<Vec<ModUpdateInfo>, String> {
     let settings = state.settings.read().unwrap();
@@ -1344,6 +1410,93 @@ pub fn get_cached_mod_updates(state: State<AppState>) -> Vec<ModUpdateInfo> {
         }
     }
     Vec::new()
+}
+
+// =========================================================================
+// 5.14 后台更新检查（事件驱动）
+// =========================================================================
+
+/// 更新检查结果事件载荷
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModUpdateCheckEvent {
+    pub req_id: u64,
+    pub success: bool,
+    pub error: Option<String>,
+    pub results: Vec<ModUpdateInfo>,
+    pub summary: ModUpdateSummary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModUpdateSummary {
+    pub total_mods: usize,
+    pub updated_mods: usize,
+}
+
+/// 后台更新检查（立即返回，结果通过 `slaymgr:update-check-result` 事件推送）
+#[tauri::command]
+pub fn start_mod_update_check(
+    app_handle: tauri::AppHandle,
+    state: State<AppState>,
+    req_id: u64,
+) -> Result<(), String> {
+    let game_root = {
+        let settings = state.settings.read().unwrap();
+        settings.game_root_dir.clone().ok_or("游戏目录未设置")?
+    };
+
+    // 清理内存缓存
+    if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
+        *cache_lock = None;
+    }
+
+    std::thread::spawn(move || {
+        // 清理磁盘缓存，确保全新数据
+        updates_cache_repo::clear_updates_cache();
+
+        let result = update_check::check_mod_updates(std::path::Path::new(&game_root));
+
+        let event = match result {
+            Ok(results) => {
+                let updated = results.iter().filter(|r| r.has_update).count();
+                let total = results.len();
+
+                // 写入磁盘缓存
+                let cache = ModUpdateCheckCache {
+                    results: results.clone(),
+                    checked_at: chrono::Local::now().to_rfc3339(),
+                    total_mods: total,
+                    updated_mods: updated,
+                };
+                let _ = updates_cache_repo::save_updates_cache(&cache);
+
+                // 更新内存缓存
+                if let Ok(mut cache_lock) = app_handle.state::<AppState>().mod_updates_cache.write() {
+                    *cache_lock = Some(cache);
+                }
+
+                ModUpdateCheckEvent {
+                    req_id,
+                    success: true,
+                    error: None,
+                    results,
+                    summary: ModUpdateSummary { total_mods: total, updated_mods: updated },
+                }
+            }
+            Err(e) => ModUpdateCheckEvent {
+                req_id,
+                success: false,
+                error: Some(e.to_string()),
+                results: Vec::new(),
+                summary: ModUpdateSummary { total_mods: 0, updated_mods: 0 },
+            },
+        };
+
+        let _ = app_handle.emit("slaymgr:update-check-result", &event);
+    });
+
+    Ok(())
 }
 
 // =========================================================================

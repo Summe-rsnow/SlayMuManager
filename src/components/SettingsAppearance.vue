@@ -26,15 +26,17 @@ const displayModeOptions = computed<{ label: string; value: DisplayMode }[]>(() 
   { label: t("settings.appearance.displayModeDark"), value: "dark" },
 ])
 
-const themeColorOptions: { label: string; value: ThemeColorKey }[] = [
-  { label: "靛蓝", value: "indigo" },
-  { label: "蓝色", value: "blue" },
-  { label: "绿色", value: "green" },
-  { label: "紫色", value: "purple" },
-  { label: "玫红", value: "rose" },
-  { label: "橙色", value: "orange" },
-  { label: "青色", value: "cyan" },
-]
+const themeColorOptions = computed<{ label: string; value: ThemeColorKey }[]>(() => [
+  { label: t("settings.appearance.themeColors.indigo"), value: "indigo" },
+  { label: t("settings.appearance.themeColors.blue"), value: "blue" },
+  { label: t("settings.appearance.themeColors.green"), value: "green" },
+  { label: t("settings.appearance.themeColors.purple"), value: "purple" },
+  { label: t("settings.appearance.themeColors.rose"), value: "rose" },
+  { label: t("settings.appearance.themeColors.orange"), value: "orange" },
+  { label: t("settings.appearance.themeColors.cyan"), value: "cyan" },
+  { label: t("settings.appearance.themeColors.pink"), value: "pink" },
+  { label: t("settings.appearance.themeColors.yellow"), value: "yellow" },
+])
 
 async function updateLocale(val: string) {
   locale.value = val

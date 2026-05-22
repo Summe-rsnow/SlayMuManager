@@ -232,7 +232,18 @@
       "displayModeSystem": "System",
       "displayModeLight": "Light",
       "displayModeDark": "Dark",
-      "themeColor": "Theme Color"
+      "themeColor": "Theme Color",
+      "themeColors": {
+        "indigo": "Indigo",
+        "blue": "Blue",
+        "green": "Green",
+        "purple": "Purple",
+        "rose": "Rose",
+        "orange": "Orange",
+        "cyan": "Cyan",
+        "pink": "Pink",
+        "yellow": "Yellow"
+      }
     },
     "backup": {
       "title": "Backup",

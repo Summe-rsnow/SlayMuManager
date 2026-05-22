@@ -232,7 +232,18 @@
       "displayModeSystem": "跟随系统",
       "displayModeLight": "浅色模式",
       "displayModeDark": "深色模式",
-      "themeColor": "主题色"
+      "themeColor": "主题色",
+      "themeColors": {
+        "indigo": "靛蓝",
+        "blue": "蓝色",
+        "green": "绿色",
+        "purple": "紫色",
+        "rose": "玫红",
+        "orange": "橙色",
+        "cyan": "青色",
+        "pink": "粉色",
+        "yellow": "黄色"
+      }
     },
     "backup": {
       "title": "备份",
