@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue"
+import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { currentLocale } from "../i18n"
 import { invoke } from "@tauri-apps/api/core"
@@ -9,9 +10,10 @@ import {
   NSpace, NCard, NTag, NButton, NInput, NIcon,
   NCheckbox, useMessage, useDialog,
 } from "naive-ui"
+import { useSettingsHighlight } from "../composables/useSettingsHighlight"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
-  AlertTriangle, Filter, X, PackageOpen, Check, ArrowUp,
+  AlertTriangle, Filter, X, PackageOpen, Check, ArrowUp, HardDrive,
 } from "lucide-vue-next"
 import DragOverlay from "../components/DragOverlay.vue"
 import ModCard from "../components/ModCard.vue"
@@ -27,6 +29,8 @@ import { useModOperations } from "../composables/useModOperations"
 const { t } = useI18n()
 const message = useMessage()
 const dialog = useDialog()
+const router = useRouter()
+const { highlight } = useSettingsHighlight()
 const { enabledMods, disabledMods, loading, fetchMods } = useModCache()
 const { getTags, usedTags, getTagLabel } = useModTags()
 
@@ -49,24 +53,6 @@ const {
   enableAllMods, disableAllMods, dismissSaveGuard,
 } = useModOperations()
 
-// --- 原版预设冲突检测（重置后才重新弹）---
-let shownVanillaConflict = false
-async function checkVanillaConflict() {
-  if (shownVanillaConflict || !isActivePresetBuiltin.value) return
-  const enabled = enabledMods.value
-  if (enabled.length === 0) return
-  shownVanillaConflict = true
-  dialog.warning({
-    title: t("library.vanillaConflict.title"),
-    content: t("library.vanillaConflict.content", { n: enabled.length }),
-    positiveText: t("library.vanillaConflict.disableAll"),
-    negativeText: t("library.vanillaConflict.later"),
-    onPositiveClick: () => disableAllMods(),
-    onNegativeClick: () => { /* 用户选择以后再说 */ },
-    maskClosable: true,
-  })
-}
-
 // --- 导入（直通流程：选文件 → 检测冲突 → 安装）---
 const importPaths = ref<string[]>([])
 const showImportConflictDialog = ref(false)
@@ -74,7 +60,31 @@ const importPreviewData = ref<BatchImportPreview | null>(null)
 const importResolutions = ref<Record<string, "skip" | "replace">>({})
 const importBusy = ref(false)
 
+/** 弹窗引导前往设置 */
+function showSettingsPrompt(type: "game-path" | "nexus") {
+  const isGamePath = type === "game-path"
+  dialog.warning({
+    title: t(isGamePath ? "settings.prompt.gamePathRequired" : "settings.prompt.apiKeyRequired"),
+    content: t(isGamePath ? "settings.prompt.gamePathRequiredDesc" : "settings.prompt.apiKeyRequiredDesc"),
+    positiveText: t("settings.prompt.goToSettings"),
+    negativeText: t("common.cancel"),
+    onPositiveClick: () => {
+      highlight(type)
+      router.push("/settings")
+    },
+    maskClosable: true,
+  })
+}
+
+/** 带游戏路径守卫的导入 */
 async function handleImport() {
+  try {
+    const b = await invoke<AppBootstrap>("get_app_bootstrap")
+    if (!b.gameDirectory) {
+      showSettingsPrompt("game-path")
+      return
+    }
+  } catch { /* ignore */ }
   const paths = await invoke<string[]>("pick_archive_files")
   if (paths.length === 0) return
   await doImportFlow(paths)
@@ -161,18 +171,38 @@ function dedupe(arr: string[]): string[] {
 const {
   checkingUpdates,
   loadCachedUpdates,
-  checkUpdates,
+  checkUpdates: unsafeCheckUpdates,
   hasUpdate,
   getUpdateInfo,
   openUpdateUrl,
 } = useModUpdates()
 
-// --- 新增预设（空预设 + 切换）---
+/** 带游戏路径 + API Key 守卫的更新检查 */
+async function checkUpdates() {
+  try {
+    const b = await invoke<AppBootstrap>("get_app_bootstrap")
+    if (!b.gameDirectory) { showSettingsPrompt("game-path"); return }
+    if (!b.nexusApiKey) { showSettingsPrompt("nexus"); return }
+  } catch { /* ignore */ }
+  unsafeCheckUpdates()
+}
+
+// --- 新增/保存预设 ---
 const showNewPresetDialog = ref(false)
 const newPresetName = ref("")
 const creatingNewPreset = ref(false)
+/** 非空时表示"保存当前配置为新预设"，存的是要写入预设的 modId 列表 */
+const saveAsPresetModIds = ref<string[] | null>(null)
 
 function openNewPreset() {
+  saveAsPresetModIds.value = null
+  newPresetName.value = ""
+  showNewPresetDialog.value = true
+}
+
+/** 原版预设警告条：将当前已启用 Mod 保存为新预设 */
+function openSaveAsPreset() {
+  saveAsPresetModIds.value = enabledMods.value.map((m: InstalledMod) => m.id)
   newPresetName.value = ""
   showNewPresetDialog.value = true
 }
@@ -185,10 +215,11 @@ async function handleCreateNewPreset() {
   }
   creatingNewPreset.value = true
   try {
+    const modIds = saveAsPresetModIds.value ?? []
     await invoke("create_profile", {
       name,
       description: null,
-      modIds: [] as string[],
+      modIds,
     })
     const profiles = await invoke<ModProfile[]>("list_profiles")
     const created = profiles.find(p => p.name === name)
@@ -198,8 +229,14 @@ async function handleCreateNewPreset() {
       activePresetId.value = created.id
       activePresetName.value = created.name
       quickPresetId.value = created.id
-      presetSnapshot.value = new Set()
-      message.success(t("library.success.presetApplied", { name }))
+      presetSnapshot.value = new Set(modIds)
+      let msg = t("library.success.presetApplied", { name })
+      if (saveAsPresetModIds.value) {
+        // 保存当前配置后禁用原版预设的 mod
+        await disableAllMods()
+        msg = t("profiles.success.created")
+      }
+      message.success(msg)
       await fetchMods()
       loadQuickPresets()
     }
@@ -323,8 +360,13 @@ const anyFilterActive = computed(() =>
   !filterShowEnabled.value || !filterShowDisabled.value ||
   filterAffectsGameplay.value || filterTagIds.value.size > 0
 )
+const hasGamePath = ref<boolean | null>(null)
 const emptyReason = computed(() => {
-  if (!hasMods.value) return "noMods"
+  if (hasGamePath.value === false && !hasMods.value) return "noGamePath"
+  if (!hasMods.value) {
+    if (isActivePresetBuiltin) return "vanillaNoMods"
+    return "noMods"
+  }
   if (anyFilterActive.value &&
       filteredEnabled.value.length + filteredDisabled.value.length === 0) return "filtered"
   if (hasSearch.value && filteredEnabled.value.length + filteredDisabled.value.length === 0) return "search"
@@ -362,9 +404,10 @@ onMounted(async () => {
   // 恢复上次激活的预设状态
   try {
     const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
-    if (bootstrap.activeProfileName) {
+    hasGamePath.value = !!bootstrap.gameDirectory
+    if (bootstrap.activeProfileId) {
       const profiles = await invoke<ModProfile[]>("list_profiles")
-      const active = profiles.find(p => p.name === bootstrap.activeProfileName)
+      const active = profiles.find(p => p.id === bootstrap.activeProfileId)
       if (active) {
         activePresetId.value = active.id
         activePresetName.value = active.id === "__builtin__vanilla" ? t("profiles.builtinVanilla") : active.name
@@ -375,8 +418,6 @@ onMounted(async () => {
   } catch { /* ignore */ }
   // 加载更新检查缓存（无网络请求）
   await loadCachedUpdates()
-  // 原版预设下检测到已启用模组时提示用户
-  checkVanillaConflict()
   unlistenModsChanged = (await listen("slaymgr:mods-changed", () => {
     if (isActive.value) fetchMods()
   }).catch(() => null)) as (() => void) | null
@@ -531,10 +572,20 @@ watch(presetAppliedTick, () => {
       <div :key="presetAppliedTick">
         <!-- 三层空状态 -->
         <div v-if="emptyReason" class="text-center py-16 text-c-muted">
-          <template v-if="emptyReason === 'noMods'">
+          <template v-if="emptyReason === 'noGamePath'">
+            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><HardDrive /></NIcon>
+            <p class="text-lg">{{ t("library.empty.noGamePath") }}</p>
+            <p class="text-sm mt-1">{{ t("library.empty.noGamePathHint") }}</p>
+          </template>
+          <template v-else-if="emptyReason === 'noMods'">
             <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
             <p class="text-lg">{{ t("library.empty.noMods") }}</p>
             <p class="text-sm mt-1">{{ t("library.empty.noModsHint") }}</p>
+          </template>
+          <template v-else-if="emptyReason === 'vanillaNoMods'">
+            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Bookmark /></NIcon>
+            <p class="text-lg">{{ t("library.empty.vanillaNoMods") }}</p>
+            <p class="text-sm mt-1">{{ t("library.empty.vanillaNoModsHint") }}</p>
           </template>
           <template v-else-if="emptyReason === 'filtered'">
             <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Filter /></NIcon>
@@ -579,10 +630,34 @@ watch(presetAppliedTick, () => {
 
             <div v-if="filteredEnabled.length === 0" class="text-center py-8 text-c-muted">
               <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
+              <p v-else-if="isActivePresetBuiltin">{{ t("library.empty.vanillaNoEnabled") }}</p>
               <p v-else>{{ t("library.empty.noEnabledMods") }}</p>
             </div>
 
-            <NSpace v-else vertical :size="8">
+            <!-- 原版预设下已启用 Mod 提示条 -->
+            <div
+              v-if="filteredEnabled.length > 0 && isActivePresetBuiltin"
+              class="mx-3 mt-3 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm"
+              :style="{
+                backgroundColor: 'color-mix(in srgb, var(--color-warning) 12%, transparent)',
+                color: 'var(--color-text-primary)',
+              }"
+            >
+              <div class="flex items-center gap-2">
+                <NIcon :size="16" color="#f0a020"><AlertTriangle /></NIcon>
+                <span>{{ t("library.vanillaConflict.content", { n: filteredEnabled.length }) }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <NButton size="tiny" secondary @click="openSaveAsPreset">
+                  {{ t("library.vanillaConflict.saveAsPreset") }}
+                </NButton>
+                <NButton size="tiny" secondary :loading="batchBusy" @click="disableAllMods">
+                  {{ t("library.vanillaConflict.disableAll") }}
+                </NButton>
+              </div>
+            </div>
+
+            <NSpace v-if="filteredEnabled.length > 0" vertical :size="8">
               <ModCard
                 v-for="mod in filteredEnabled"
                 :key="mod.id"
@@ -707,7 +782,7 @@ watch(presetAppliedTick, () => {
     </AppDialog>
 
     <!-- 新增预设对话框 -->
-    <AppDialog v-model:show="showNewPresetDialog" :title="t('library.newPreset')" width="420px">
+    <AppDialog v-model:show="showNewPresetDialog" :title="saveAsPresetModIds ? t('library.saveAsPreset') : t('library.newPreset')" width="420px">
       <NSpace vertical :size="12">
         <div>
           <label class="text-sm text-c-secondary mb-1 block">{{ t("library.savePreset.nameLabel") }}</label>
@@ -718,12 +793,12 @@ watch(presetAppliedTick, () => {
           />
         </div>
         <div class="text-xs text-c-muted">
-          {{ t("library.newPresetHint") }}
+          {{ saveAsPresetModIds ? t("library.saveAsPresetHint", { n: saveAsPresetModIds.length }) : t("library.newPresetHint") }}
         </div>
         <div class="flex justify-end gap-2">
           <NButton @click="showNewPresetDialog = false">{{ t("common.cancel") }}</NButton>
           <NButton type="primary" :loading="creatingNewPreset" @click="handleCreateNewPreset">
-            {{ t("common.confirm") }}
+            {{ saveAsPresetModIds ? t("common.save") : t("common.confirm") }}
           </NButton>
         </div>
       </NSpace>

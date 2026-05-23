@@ -16,7 +16,24 @@ import { Minus, Square, X } from "lucide-vue-next"
 import { currentLocale } from "./i18n"
 import { naiveTheme, naiveThemeOverrides } from "./theme"
 import { useWindow } from "./composables/useWindow"
+import { useStorage } from "./composables/useStorage"
 import SideNav from "./components/SideNav.vue"
+import { useRoute, useRouter } from "vue-router"
+
+const route = useRoute()
+const router = useRouter()
+const defaultPage = useStorage<string>("slaymgr:default-page", "")
+
+// 启动时重定向到默认页面
+router.isReady().then(() => {
+  const saved = defaultPage.value
+  if (saved) {
+    const validPaths = router.getRoutes().map((r) => r.path)
+    if (validPaths.includes(saved) && saved !== route.path) {
+      router.replace(saved)
+    }
+  }
+})
 
 const naiveLocale = computed(() => (currentLocale.value === "zh-CN" ? zhCN : enUS))
 const naiveDateLocale = computed(() => (currentLocale.value === "zh-CN" ? dateZhCN : dateEnUS))
@@ -76,7 +93,7 @@ const { minimize, toggleMaximize, close } = useWindow()
                 </svg>
                 <div class="flex items-baseline gap-1.5">
                   <span class="text-base font-semibold text-c-primary">SlayMuManager</span>
-                  <span class="text-xs text-c-muted">v1.5.10</span>
+                  <span class="text-xs text-c-muted">v1.5.11</span>
                 </div>
               </div>
               <div class="flex items-center -mr-2 h-full">

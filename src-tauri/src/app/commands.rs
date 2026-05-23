@@ -36,6 +36,7 @@ pub struct AppBootstrap {
     pub installed_count: usize,
     pub disabled_count: usize,
     pub active_profile_name: String,
+    pub active_profile_id: Option<String>,
     pub locale: String,
     pub save_auto_sync: bool,
     pub save_sync_pairs: Vec<SaveSyncPair>,
@@ -96,6 +97,10 @@ pub fn get_app_bootstrap(state: State<AppState>) -> AppBootstrap {
         installed_count,
         disabled_count,
         active_profile_name: settings.active_profile_name.clone(),
+        active_profile_id: {
+            let profiles = crate::repositories::profile_repo::load_profiles();
+            profiles.iter().find(|p| p.name == settings.active_profile_name).map(|p| p.id.clone())
+        },
         locale: settings.locale.clone(),
         save_auto_sync: settings.save_auto_sync,
         save_sync_pairs: settings.save_sync_pairs.clone(),
@@ -154,7 +159,7 @@ pub fn detect_game_install(state: State<AppState>) -> Option<GameInstall> {
 pub fn update_game_root_dir(root_dir: String, state: State<AppState>) -> AppBootstrap {
     {
         let mut settings = state.settings.write().unwrap();
-        settings.game_root_dir = Some(root_dir);
+        settings.game_root_dir = if root_dir.is_empty() { None } else { Some(root_dir) };
         // 持久化
         let _ = settings_repo::save_settings(&settings);
     }
@@ -171,6 +176,40 @@ pub fn update_app_locale(locale: String, state: State<AppState>) {
 // =========================================================================
 // 5.2 游戏操作
 // =========================================================================
+
+/// 检查游戏进程是否正在运行
+#[tauri::command]
+pub fn is_game_running() -> bool {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("tasklist")
+            .args(["/FI", "IMAGENAME eq SlayTheSpire2.exe", "/NH"])
+            .output()
+            .ok()
+            .map_or(false, |o| {
+                let out = String::from_utf8_lossy(&o.stdout);
+                out.contains("SlayTheSpire2.exe")
+            })
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("pgrep")
+            .arg("-x")
+            .arg("SlayTheSpire2")
+            .output()
+            .ok()
+            .map_or(false, |o| o.status.success())
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("pgrep")
+            .arg("-x")
+            .arg("SlayTheSpire2")
+            .output()
+            .ok()
+            .map_or(false, |o| o.status.success())
+    }
+}
 
 #[tauri::command]
 pub fn launch_game(state: State<AppState>) -> Result<(), String> {

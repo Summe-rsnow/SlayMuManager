@@ -5,8 +5,10 @@ import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSpace, NInput, NButton, NIcon } from "naive-ui"
 import { Key, ChevronDown } from "lucide-vue-next"
 import type { AppBootstrap } from "../types"
+import { useSettingsHighlight } from "../composables/useSettingsHighlight"
 
 const { t } = useI18n()
+const { highlightedSetting } = useSettingsHighlight()
 
 const nexusKey = ref("")
 const showNexusHelp = ref(false)
@@ -30,7 +32,7 @@ async function saveNexusKey() {
 </script>
 
 <template>
-  <NCard :title="t('settings.nexus.title')" size="small">
+  <NCard id="setting-nexus" :title="t('settings.nexus.title')" size="small" :class="{ 'setting-highlight': highlightedSetting === 'nexus' }">
     <NSpace vertical>
       <div class="flex gap-2">
         <NInput v-model:value="nexusKey" :placeholder="t('settings.nexus.apiKeyPlaceholder')" type="password" show-password-on="click">

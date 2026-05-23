@@ -42,6 +42,8 @@
     "openModsDir": "Mods Folder",
     "newPreset": "New Preset",
     "newPresetHint": "Create an empty preset and switch to it",
+    "saveAsPreset": "Save as New Preset",
+    "saveAsPresetHint": "Save {n} enabled mod(s) to a new preset, then auto-disable vanilla",
     "enableAll": "Enable All",
     "disableAll": "Disable All",
     "importMod": "Import Mod",
@@ -61,6 +63,11 @@
     "empty": {
       "noMods": "No mods",
       "noModsHint": "Click \"Import Mod\" or search and install from the Discover page",
+      "noGamePath": "Game Path Not Set",
+      "noGamePathHint": "Please configure the game directory in Settings first",
+      "vanillaNoMods": "Vanilla Preset Has No Mods",
+      "vanillaNoModsHint": "Create a new preset or switch to another preset to manage mods",
+      "vanillaNoEnabled": "Mods cannot be enabled on the vanilla preset. Switch or create a preset",
       "filterNoResults": "No results for current filters",
       "clearAllFilters": "Clear all filters",
       "searchNoMatch": "No mods matching \"{q}\"",
@@ -118,7 +125,8 @@
     },
     "info": {
       "allAlreadyEnabled": "All mods are already enabled",
-      "allAlreadyDisabled": "All mods are already disabled"
+      "allAlreadyDisabled": "All mods are already disabled",
+      "gameAlreadyRunning": "Game is already running"
     },
     "launchMismatch": {
       "title": "Cloud Save Mismatch",
@@ -147,7 +155,8 @@
       "title": "Mod State Conflict",
       "content": "The vanilla preset is active, but {n} mod(s) are enabled. Disable all mods to restore vanilla state?",
       "disableAll": "Disable All Mods",
-      "later": "Not Now"
+      "later": "Not Now",
+      "saveAsPreset": "Save as New Preset"
     }
   },
 
@@ -289,6 +298,17 @@
       "prefetch": "Prefetch Adjacent Pages",
       "prefetchDesc": "Cache adjacent pages in background for faster navigation",
       "translateQuotaTip": "Translate Quota Tip"
+    },
+    "defaultPage": {
+      "title": "Default Page",
+      "description": "Auto-navigate on startup"
+    },
+    "prompt": {
+      "apiKeyRequired": "Nexus API Key Required",
+      "apiKeyRequiredDesc": "Searching and updating mods requires a Nexus Mods API Key. Go to Settings to configure it?",
+      "gamePathRequired": "Game Path Required",
+      "gamePathRequiredDesc": "This action requires a configured game directory. Go to Settings to set it?",
+      "goToSettings": "Go to Settings"
     },
     "error": {
       "detectFailed": "Detection failed: {e}",

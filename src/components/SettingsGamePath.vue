@@ -5,8 +5,10 @@ import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSpace, NInput, NButton, NIcon } from "naive-ui"
 import { FolderSearch } from "lucide-vue-next"
 import type { AppBootstrap } from "../types"
+import { useSettingsHighlight } from "../composables/useSettingsHighlight"
 
 const { t } = useI18n()
+const { highlightedSetting } = useSettingsHighlight()
 
 const gamePath = ref("")
 const gameValid = ref(false)
@@ -49,7 +51,6 @@ async function detectGame() {
 }
 
 async function saveGamePath() {
-  if (!gamePath.value.trim()) return
   saving.value = true
   try {
     const b = await invoke<AppBootstrap>("update_game_root_dir", { rootDir: gamePath.value.trim() })
@@ -63,7 +64,7 @@ async function saveGamePath() {
 </script>
 
 <template>
-  <NCard :title="t('settings.gamePath.title')" size="small">
+  <NCard id="setting-game-path" :title="t('settings.gamePath.title')" size="small" :class="{ 'setting-highlight': highlightedSetting === 'game-path' }">
     <NSpace vertical>
       <div class="flex gap-2">
         <NInput v-model:value="gamePath" :placeholder="t('settings.gamePath.placeholder')" clearable>

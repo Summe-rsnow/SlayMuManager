@@ -1,9 +1,10 @@
 import { ref } from "vue"
 import { invoke } from "@tauri-apps/api/core"
-import { useMessage } from "naive-ui"
+import { useMessage, useDialog } from "naive-ui"
 import { useI18n } from "vue-i18n"
 import { useRouter } from "vue-router"
 import type { CloudSaveStatus, ModProfile, AppBootstrap, ApplyProfileResult, InstalledMod } from "../types"
+import { useSettingsHighlight } from "./useSettingsHighlight"
 
 // --- 模块级共享状态（SideNav + LibraryPage 共用同一实例）---
 const BUILTIN_VANILLA_ID = "__builtin__vanilla"
@@ -23,7 +24,25 @@ const sidebarCollapsed = ref(true)
 export function useSidebarActions() {
   const { t } = useI18n()
   const message = useMessage()
+  const dialog = useDialog()
   const router = useRouter()
+  const { highlight } = useSettingsHighlight()
+
+  /** 弹窗引导前往设置游戏路径 */
+  function showGamePathPrompt() {
+    launchingGame.value = false
+    dialog.warning({
+      title: t("settings.prompt.gamePathRequired"),
+      content: t("settings.prompt.gamePathRequiredDesc"),
+      positiveText: t("settings.prompt.goToSettings"),
+      negativeText: t("common.cancel"),
+      onPositiveClick: () => {
+        highlight("game-path")
+        router.push("/settings")
+      },
+      maskClosable: true,
+    })
+  }
 
   async function doLaunchGame() {
     launchingGame.value = true
@@ -42,6 +61,13 @@ export function useSidebarActions() {
     try {
       // 从后端读取当前设置（避免模块级 ref 不同步）
       const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+
+      // 0. 游戏路径未设置则弹窗引导
+      if (!bootstrap.gameDirectory) {
+        showGamePathPrompt()
+        return
+      }
+
       if (bootstrap.launchCheckCloudSave) {
         try {
           const cloudStatus = await invoke<CloudSaveStatus>("get_cloud_save_status")
@@ -55,15 +81,17 @@ export function useSidebarActions() {
         }
       }
       // 2. 原版预设下已启用模组提示
-      const enabledCount = bootstrap.installedCount - bootstrap.disabledCount
-      if (enabledCount > 0) {
-        const profiles = await invoke<ModProfile[]>("list_profiles")
-        const activeProfile = profiles.find(p => p.name === bootstrap.activeProfileName)
-        if (activeProfile?.id === BUILTIN_VANILLA_ID) {
-          vanillaLaunchEnabledCount.value = enabledCount
-          showVanillaLaunchDialog.value = true
-          return
-        }
+      if (bootstrap.installedCount > 0 && bootstrap.activeProfileId === BUILTIN_VANILLA_ID) {
+        vanillaLaunchEnabledCount.value = bootstrap.installedCount
+        showVanillaLaunchDialog.value = true
+        return
+      }
+      // 3. 检测游戏是否已在运行
+      const running = await invoke<boolean>("is_game_running")
+      if (running) {
+        message.warning(t("library.info.gameAlreadyRunning"))
+        launchingGame.value = false
+        return
       }
       await doLaunchGame()
     } catch {
@@ -97,12 +125,6 @@ export function useSidebarActions() {
       }
     } catch { /* best effort */ }
     await doLaunchGame()
-  }
-
-  /** 原版预设启动冲突：直接启动 */
-  function handleVanillaLaunchAnyway() {
-    showVanillaLaunchDialog.value = false
-    doLaunchGame()
   }
 
   /** 原版预设启动冲突：取消 */
@@ -153,7 +175,6 @@ export function useSidebarActions() {
     handleGoToSaves,
     handleLaunchAnyway,
     handleVanillaLaunchDisable,
-    handleVanillaLaunchAnyway,
     handleVanillaLaunchCancel,
     quickPresetId,
     quickPresetOptions,

@@ -21,7 +21,6 @@ const {
   handleGoToSaves,
   handleLaunchAnyway,
   handleVanillaLaunchDisable,
-  handleVanillaLaunchAnyway,
   handleVanillaLaunchCancel,
   quickPresetId,
   quickPresetOptions,
@@ -248,24 +247,25 @@ onMounted(() => {
   <AppDialog
     :show="showVanillaLaunchDialog"
     @update:show="(v: boolean) => { if (!v) { showVanillaLaunchDialog = false; launchingGame = false } }"
-    width="440px"
+    width="520px"
   >
     <template #header>
-      <div class="flex items-center gap-2">
-        <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
-        <span class="font-semibold">{{ t("library.vanillaConflict.title") }}</span>
+      <div class="flex items-center gap-3">
+        <div class="flex items-center justify-center w-9 h-9 rounded-full" :style="{ backgroundColor: 'color-mix(in srgb, #f0a020 18%, transparent)' }">
+          <NIcon :size="20" color="#f0a020"><AlertTriangle /></NIcon>
+        </div>
+        <span class="text-base font-semibold">{{ t("library.vanillaConflict.title") }}</span>
       </div>
     </template>
-    <NSpace vertical :size="12">
-      <p class="text-sm text-c-secondary">
+    <div class="space-y-5">
+      <p class="text-sm leading-relaxed text-c-secondary">
         {{ t("library.vanillaConflict.content", { n: vanillaLaunchEnabledCount }) }}
       </p>
-      <div class="flex justify-end gap-2">
-        <NButton size="small" @click="handleVanillaLaunchCancel">{{ t("common.cancel") }}</NButton>
-        <NButton size="small" secondary @click="handleVanillaLaunchAnyway">{{ t("library.launchMismatch.forceLaunch") }}</NButton>
-        <NButton size="small" type="warning" @click="handleVanillaLaunchDisable">{{ t("library.vanillaConflict.disableAll") }}</NButton>
+      <div class="flex justify-end gap-2 pt-1">
+        <NButton @click="handleVanillaLaunchCancel">{{ t("common.cancel") }}</NButton>
+        <NButton type="warning" @click="handleVanillaLaunchDisable">{{ t("library.vanillaConflict.disableAll") }}</NButton>
       </div>
-    </NSpace>
+    </div>
   </AppDialog>
 </template>
 

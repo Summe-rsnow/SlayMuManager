@@ -235,6 +235,7 @@ export interface AppBootstrap {
   installedCount: number
   disabledCount: number
   activeProfileName: string
+  activeProfileId: string | null
   locale: string
   saveAutoSync: boolean
   saveSyncPairs: SaveSyncPair[]

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, reactive, watch, onMounted, onBeforeUnmount } from "vue"
 import { onBeforeRouteLeave } from "vue-router"
+import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen, type UnlistenFn } from "@tauri-apps/api/event"
 import {
-  NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, NModal, NPopover, useMessage,
+  NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, NModal, NPopover, useMessage, useDialog,
 } from "naive-ui"
 import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown, List, Languages, RefreshCw } from "lucide-vue-next"
 import type { RemoteMod, RemoteModSearchResult, AppBootstrap } from "../types"
@@ -14,11 +15,15 @@ import { currentLocale } from "../i18n"
 import { translateText, showTranslateQuotaTip } from "../composables/useTranslation"
 import { discoverColumns } from "../composables/useDiscoverColumns"
 import { prefetchEnabled, getPageCache, setPageCache } from "../composables/usePageCache"
+import { useSettingsHighlight } from "../composables/useSettingsHighlight"
 import TruncatedText from "../components/TruncatedText.vue"
 import EmptyState from "../components/EmptyState.vue"
 
 const { t } = useI18n()
 const message = useMessage()
+const dialog = useDialog()
+const router = useRouter()
+const { highlight } = useSettingsHighlight()
 const { isActive } = useIsActive()
 
 // --- 发现页列数映射 ---
@@ -296,8 +301,34 @@ onBeforeRouteLeave(() => {
   imageLoadFailed.value = {}
 })
 
-// 刷新按钮
-function handleRefresh() {
+// --- 用户操作入口：未配置 API Key 时弹窗引导 ---
+const showApiKeyDialog = () => {
+  dialog.warning({
+    title: t("settings.prompt.apiKeyRequired"),
+    content: t("settings.prompt.apiKeyRequiredDesc"),
+    positiveText: t("settings.prompt.goToSettings"),
+    negativeText: t("common.cancel"),
+    onPositiveClick: () => {
+      highlight("nexus")
+      router.push("/settings")
+    },
+    maskClosable: true,
+  })
+}
+
+function handleUserSearch() {
+  if (!hasApiKey.value) {
+    showApiKeyDialog()
+    return
+  }
+  doSearch(true)
+}
+
+function handleUserRefresh() {
+  if (!hasApiKey.value) {
+    showApiKeyDialog()
+    return
+  }
   doSearch(true)
 }
 
@@ -317,7 +348,7 @@ function handleRefresh() {
         size="large"
         :placeholder="t('discover.searchPlaceholder')"
         clearable
-        @keyup.enter="doSearch()"
+        @keyup.enter="handleUserSearch()"
       >
         <template #prefix>
           <NIcon :size="18"><Search /></NIcon>
@@ -330,10 +361,10 @@ function handleRefresh() {
         size="large"
         @update:value="onSortChange"
       />
-      <NButton size="large" type="primary" :loading="loading" @click="doSearch()">
+      <NButton size="large" type="primary" :loading="loading" @click="handleUserSearch()">
         {{ t("common.search") }}
       </NButton>
-      <NButton size="large" secondary :loading="loading" @click="handleRefresh">
+      <NButton size="large" secondary :loading="loading" @click="handleUserRefresh">
         <template #icon><NIcon :size="18"><RefreshCw /></NIcon></template>
         {{ t("common.refresh") }}
       </NButton>

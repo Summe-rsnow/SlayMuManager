@@ -41,6 +41,7 @@ pub fn run() {
             app::commands::update_game_root_dir,
             app::commands::update_app_locale,
             // 5.2 游戏操作
+            app::commands::is_game_running,
             app::commands::launch_game,
             app::commands::open_path_in_explorer,
             app::commands::open_url_in_browser,
