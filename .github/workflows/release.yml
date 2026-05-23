@@ -2,6 +2,7 @@
 # SlayMuManager 自动发布工作流
 # 推送 v* 标签时触发，自动创建 GitHub Release（仅源码）
 # GitHub 会自动为 Release 附加源码压缩包
+# Release body 使用 tag 所在 commit 的 message body
 # ============================================================
 
 name: Release
@@ -19,9 +20,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract changelog from commit message
+        run: |
+          git log -1 --format="%B" > ${{ runner.temp }}/release_body.md
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: ${{ runner.temp }}/release_body.md
           draft: false
-          generate_release_notes: true
