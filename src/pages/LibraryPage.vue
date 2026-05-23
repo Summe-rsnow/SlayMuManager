@@ -336,7 +336,7 @@ let unlistenDragDrop: (() => void) | null = null
 
 function isSupportedImport(path: string): boolean {
   const lower = path.toLowerCase()
-  if (lower.endsWith(".zip") || lower.endsWith(".7z")) return true
+  if (lower.endsWith(".zip") || lower.endsWith(".7z") || lower.endsWith(".rar")) return true
   const base = path.split(/[\\/]/).pop() ?? ""
   if (!base.includes(".")) return true
   return false
@@ -751,7 +751,7 @@ watch(presetAppliedTick, () => {
     </AppDialog>
 
     <!-- 拖拽导入遮罩 -->
-    <DragOverlay :accept-ext="['zip', '7z']" title="松开以导入模组" />
+    <DragOverlay :accept-ext="['zip', '7z', 'rar']" title="松开以导入模组" />
 
   </div>
 </template>

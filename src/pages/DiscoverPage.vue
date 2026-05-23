@@ -24,19 +24,19 @@ const { isActive } = useIsActive()
 // --- 发现页列数映射 ---
 const gridColsClass = computed(() => {
   const map: Record<number, string> = {
-    1: "grid grid-cols-1 gap-4 mb-6 items-start",
-    2: "grid grid-cols-2 gap-4 mb-6 items-start",
-    3: "grid grid-cols-3 gap-4 mb-6 items-start",
-    4: "grid grid-cols-4 gap-4 mb-6 items-start",
+    1: "columns-1 gap-4 mb-6",
+    2: "columns-2 gap-4 mb-6",
+    3: "columns-3 gap-4 mb-6",
+    4: "columns-4 gap-4 mb-6",
   }
   return map[discoverColumns.value] || map[3]
 })
 const skeletonColsClass = computed(() => {
   const map: Record<number, string> = {
-    1: "grid grid-cols-1 gap-4 items-start",
-    2: "grid grid-cols-2 gap-4 items-start",
-    3: "grid grid-cols-3 gap-4 items-start",
-    4: "grid grid-cols-4 gap-4 items-start",
+    1: "columns-1 gap-4",
+    2: "columns-2 gap-4",
+    3: "columns-3 gap-4",
+    4: "columns-4 gap-4",
   }
   return map[discoverColumns.value] || map[3]
 })
@@ -343,7 +343,7 @@ function handleRefresh() {
 
     <!-- 初始加载骨架屏 -->
     <div v-if="initialLoading" :class="skeletonColsClass">
-      <NCard v-for="i in pageSize" :key="i" :style="{ minHeight: '150px' }">
+      <NCard v-for="i in pageSize" :key="i" class="break-inside-avoid mb-4" :style="{ minHeight: '150px' }">
         <div class="flex gap-4 h-full animate-pulse">
           <div class="w-28 h-28 rounded-lg flex-shrink-0 bg-c-secondary" />
           <div class="flex-1 flex flex-col">
@@ -370,7 +370,7 @@ function handleRefresh() {
         <NCard
           v-for="mod in results"
           :key="mod.remoteId"
-          class="discover-card hover:shadow-md transition-shadow"
+          class="discover-card break-inside-avoid mb-4 hover:shadow-md transition-shadow"
           :style="{ minHeight: '150px' }"
         >
           <div class="flex gap-4 h-full">
@@ -408,12 +408,7 @@ function handleRefresh() {
               <!-- 标题 + 版本号 + 跳转按钮 -->
               <div class="flex items-start justify-between gap-2">
                 <div class="flex items-center gap-2 min-w-0 flex-1">
-                  <NPopover v-if="mod.name" trigger="hover" placement="top" :width="320">
-                    <template #trigger>
-                      <span class="font-semibold text-base truncate cursor-help text-c-primary">{{ mod.name }}</span>
-                    </template>
-                    <div class="text-xs leading-relaxed break-words max-w-xs">{{ mod.name }}</div>
-                  </NPopover>
+                  <span class="font-semibold text-base text-c-primary truncate">{{ mod.name }}</span>
                   <span v-if="mod.latestVersion" class="text-xs font-mono flex-shrink-0 text-c-muted">
                     v{{ mod.latestVersion }}
                   </span>

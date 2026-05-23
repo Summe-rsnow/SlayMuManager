@@ -17,6 +17,7 @@ dependencies = [
  "cipher",
  "cpubits",
  "cpufeatures 0.3.0",
+ "zeroize",
 ]
 
 [[package]]
@@ -2196,7 +2197,7 @@ version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47bb1e988e6fb779cf720ad431242d3f03167c1b3f2b1aae7f1a94b2495b36ae"
 dependencies = [
- "sha2",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -2989,6 +2990,63 @@ dependencies = [
 ]
 
 [[package]]
+name = "rars"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e385994385a8221ead5c792fc377e405d3b0d76cdd6f627df80516cf50b8b27"
+dependencies = [
+ "rars-format",
+]
+
+[[package]]
+name = "rars-codec"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b21dc60fd960ab7637028250fb512d8406ee0838023a9da6d67acb10094917ce"
+dependencies = [
+ "rars-crc32",
+]
+
+[[package]]
+name = "rars-crc32"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a93840010743de5a1022858f3600ad0d9e57cff18fd575ee948ca9432df9a6e5"
+
+[[package]]
+name = "rars-crypto"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e7910397dd5a5d4eafc68c275df95784e4af1a952fe35ad30213fd44993eb387"
+dependencies = [
+ "aes",
+ "hmac",
+ "rars-crc32",
+ "sha1",
+ "sha2 0.11.0",
+ "zeroize",
+]
+
+[[package]]
+name = "rars-format"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4cd2969c08aedf8676f076a78cf03e052d92a15a525c2292af17dfbd1ad25b82"
+dependencies = [
+ "getrandom 0.4.2",
+ "rars-codec",
+ "rars-crc32",
+ "rars-crypto",
+ "rars-recovery",
+]
+
+[[package]]
+name = "rars-recovery"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b4ef1c520509e91297d85af798578606ce92fbe1e406082d72ab0a24c4ae062"
+
+[[package]]
 name = "raw-window-handle"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3572,7 +3630,7 @@ dependencies = [
  "js-sys",
  "lzma-rust",
  "nt-time",
- "sha2",
+ "sha2 0.10.9",
  "wasm-bindgen",
 ]
 
@@ -3596,6 +3654,17 @@ dependencies = [
  "cfg-if",
  "cpufeatures 0.2.17",
  "digest 0.10.7",
+]
+
+[[package]]
+name = "sha2"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "446ba717509524cb3f22f17ecc096f10f4822d76ab5c0b9822c5f9c284e825f4"
+dependencies = [
+ "cfg-if",
+ "cpufeatures 0.3.0",
+ "digest 0.11.3",
 ]
 
 [[package]]
@@ -3640,7 +3709,7 @@ checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
 
 [[package]]
 name = "slaymumanager"
-version = "1.5.9"
+version = "1.5.10"
 dependencies = [
  "chrono",
  "dirs-next",
@@ -3648,6 +3717,7 @@ dependencies = [
  "infer",
  "lru",
  "notify",
+ "rars",
  "reqwest",
  "rfd",
  "serde",
@@ -4000,7 +4070,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "sha2",
+ "sha2 0.10.9",
  "syn 2.0.117",
  "tauri-utils",
  "thiserror 2.0.18",
@@ -5589,7 +5659,7 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "raw-window-handle",
- "sha2",
+ "sha2 0.10.9",
  "soup3",
  "tao-macros",
  "thiserror 2.0.18",
@@ -5693,6 +5763,20 @@ name = "zeroize"
 version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
+dependencies = [
+ "zeroize_derive",
+]
+
+[[package]]
+name = "zeroize_derive"
+version = "1.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85a5b4158499876c763cb03bc4e49185d3cccbabb15b33c627f7884f43db852e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
 
 [[package]]
 name = "zerotrie"

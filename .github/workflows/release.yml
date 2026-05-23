@@ -1,6 +1,7 @@
 # ============================================================
 # SlayMuManager 自动发布工作流
-# 推送 v* 标签时触发，构建 MSI 并创建 GitHub Release
+# 推送 v* 标签时触发，自动创建 GitHub Release（仅源码）
+# GitHub 会自动为 Release 附加源码压缩包
 # ============================================================
 
 name: Release
@@ -9,48 +10,18 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    runs-on: windows-latest
-
+  release:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: latest
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: src-tauri
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build Tauri app (MSI)
-        run: pnpm tauri build
-        env:
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
-
-      - name: Upload MSI to Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/target/release/bundle/msi/*.msi
           draft: false
+          generate_release_notes: true

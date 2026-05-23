@@ -153,8 +153,8 @@
 
   "import": {
     "title": "Import Mod",
-    "singleZip": "Import Single ZIP",
-    "multiZip": "Import Multiple ZIPs",
+    "singleZip": "Import Single Archive",
+    "multiZip": "Import Multiple Archives",
     "fromFolder": "Import from Folder",
     "scanning": "Scanning archives...",
     "preview": {
@@ -182,7 +182,7 @@
       "installing": "Installing mods..."
     },
     "done": "Installation complete",
-    "dropZoneHint": "Drag and drop .zip / .7z files or folders here",
+    "dropZoneHint": "Drag and drop .zip / .7z / .rar files or folders here",
     "dropZoneDropHint": "Release to import files",
     "dropZoneOrUseButton": "or use the buttons below to select files",
     "success": {

@@ -10,9 +10,9 @@ const { t } = useI18n()
 const props = defineProps<{
   /** 拖放提示主标题（默认：松开以导入文件） */
   title?: string
-  /** 拖放提示副标题（默认：拖放 .zip / .7z 文件或文件夹到此处） */
+  /** 拖放提示副标题（默认：拖放 .zip / .7z / .rar 文件或文件夹到此处） */
   subtitle?: string
-  /** 接受的文件扩展名（小写，不含点），如 ['zip', '7z']。默认接受所有文件。 */
+  /** 接受的文件扩展名（小写，不含点），如 ['zip', '7z', 'rar']。默认接受所有文件。 */
   acceptExt?: string[]
   /** 是否接受文件夹（无扩展名路径），默认 true */
   acceptFolders?: boolean

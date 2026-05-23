@@ -153,8 +153,8 @@
 
   "import": {
     "title": "导入 Mod",
-    "singleZip": "导入单个 ZIP",
-    "multiZip": "导入多个 ZIP",
+    "singleZip": "导入单个归档",
+    "multiZip": "导入多个归档",
     "fromFolder": "从文件夹导入",
     "scanning": "正在扫描归档文件...",
     "preview": {
@@ -182,7 +182,7 @@
       "installing": "正在安装 Mod..."
     },
     "done": "安装完成",
-    "dropZoneHint": "拖放 .zip / .7z 文件或文件夹到此处",
+    "dropZoneHint": "拖放 .zip / .7z / .rar 文件或文件夹到此处",
     "dropZoneDropHint": "松开以导入文件",
     "dropZoneOrUseButton": "或使用下方按钮选择文件",
     "success": {

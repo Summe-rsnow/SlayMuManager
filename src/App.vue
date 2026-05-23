@@ -76,7 +76,7 @@ const { minimize, toggleMaximize, close } = useWindow()
                 </svg>
                 <div class="flex items-baseline gap-1.5">
                   <span class="text-base font-semibold text-c-primary">SlayMuManager</span>
-                  <span class="text-xs text-c-muted">v1.5.9</span>
+                  <span class="text-xs text-c-muted">v1.5.10</span>
                 </div>
               </div>
               <div class="flex items-center -mr-2 h-full">

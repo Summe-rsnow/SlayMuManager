@@ -6,6 +6,7 @@ use crate::integrations::manifest::ModManifest;
 use crate::services::mod_service;
 use crate::services::save_service;
 use crate::utils::error::AppError;
+use rars::ArchiveReader;
 use serde::Serialize;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -26,6 +27,7 @@ const MAX_DISCOVERY_DEPTH: u32 = 3;
 pub enum ArchiveFormat {
     Zip,
     SevenZ,
+    Rar,
 }
 
 /// 检测归档格式：优先魔数，其次扩展名
@@ -44,6 +46,13 @@ pub fn detect_archive_format(path: &Path) -> Option<ArchiveFormat> {
             {
                 return Some(ArchiveFormat::SevenZ);
             }
+            // RAR: 52 61 72 21 1A 07 00 (1.5-4.x) | 52 61 72 21 1A 07 01 00 (5.0+)
+            if buf[0] == 0x52 && buf[1] == 0x61 && buf[2] == 0x72
+                && buf[3] == 0x21 && buf[4] == 0x1A && buf[5] == 0x07
+                && (buf[6] == 0x00 || buf[6] == 0x01)
+            {
+                return Some(ArchiveFormat::Rar);
+            }
         }
     }
 
@@ -52,6 +61,7 @@ pub fn detect_archive_format(path: &Path) -> Option<ArchiveFormat> {
     match ext.as_str() {
         "zip" => Some(ArchiveFormat::Zip),
         "7z" | "7zip" => Some(ArchiveFormat::SevenZ),
+        "rar" => Some(ArchiveFormat::Rar),
         _ => None,
     }
 }
@@ -76,6 +86,7 @@ pub fn extract_archive(archive_path: &Path) -> Result<PathBuf, AppError> {
     match format {
         ArchiveFormat::Zip => extract_zip(archive_path, &temp_dir)?,
         ArchiveFormat::SevenZ => extract_7z(archive_path, &temp_dir)?,
+        ArchiveFormat::Rar => extract_rar(archive_path, &temp_dir)?,
     }
 
     Ok(temp_dir)
@@ -111,6 +122,28 @@ fn extract_zip(archive_path: &Path, output_dir: &Path) -> Result<(), AppError> {
 fn extract_7z(archive_path: &Path, output_dir: &Path) -> Result<(), AppError> {
     sevenz_rust::decompress_file(archive_path, output_dir)
         .map_err(|e| AppError::Other(format!("7z 解压失败: {}", e)))?;
+    Ok(())
+}
+
+fn extract_rar(archive_path: &Path, output_dir: &Path) -> Result<(), AppError> {
+    let archive = ArchiveReader::read_path(archive_path)
+        .map_err(|e| AppError::Other(format!("RAR 读取失败: {}", e)))?;
+    archive
+        .extract_to(None, |meta| {
+            let path_str = meta.name_lossy();
+            let out_path = output_dir.join(&path_str);
+            if meta.is_directory {
+                std::fs::create_dir_all(&out_path)?;
+                Ok(Box::new(std::io::sink()) as Box<dyn std::io::Write>)
+            } else {
+                if let Some(parent) = out_path.parent() {
+                    std::fs::create_dir_all(parent)?;
+                }
+                let file = std::fs::File::create(&out_path)?;
+                Ok(Box::new(file) as Box<dyn std::io::Write>)
+            }
+        })
+        .map_err(|e| AppError::Other(format!("RAR 解压失败: {}", e)))?;
     Ok(())
 }
 
@@ -851,7 +884,7 @@ pub fn batch_preview(
                 folder_name: String::new(),
                 status: DiscoveredModStatus::UnsupportedFormat,
                 conflicts: Vec::new(),
-                status_message: Some("不支持的格式，仅支持 .zip / .7z 归档和文件夹".to_string()),
+                status_message: Some("不支持的格式，仅支持 .zip / .7z / .rar 归档和文件夹".to_string()),
                 source_archive: Some(path_str.clone()),
                 source_type: DiscoveredModSourceType::Archive,
             });

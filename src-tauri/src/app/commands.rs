@@ -536,7 +536,7 @@ pub fn get_mod_files(mod_id: String, state: State<AppState>) -> Result<Vec<Strin
 #[tauri::command]
 pub async fn pick_archive_file() -> Result<Option<String>, String> {
     let file = rfd::AsyncFileDialog::new()
-        .add_filter("归档文件", &["zip", "7z"])
+        .add_filter("归档文件", &["zip", "7z", "rar"])
         .pick_file()
         .await;
     Ok(file.map(|f| f.path().to_string_lossy().to_string()))
@@ -545,7 +545,7 @@ pub async fn pick_archive_file() -> Result<Option<String>, String> {
 #[tauri::command]
 pub async fn pick_archive_files() -> Result<Vec<String>, String> {
     let files = rfd::AsyncFileDialog::new()
-        .add_filter("归档文件", &["zip", "7z"])
+        .add_filter("归档文件", &["zip", "7z", "rar"])
         .pick_files()
         .await;
     Ok(files
