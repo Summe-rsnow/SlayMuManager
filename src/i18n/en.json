@@ -3,6 +3,16 @@
     "title": "SlayMuManager"
   },
 
+  "update": {
+    "title": "New Version Available",
+    "latestVersion": "Latest Version",
+    "currentVersion": "Current Version",
+    "github": "GitHub",
+    "downloadNetdisk": "Cloud Drive",
+    "later": "Remind Me Later",
+    "dontRemind": "Don't Remind Again"
+  },
+
   "nav": {
     "library": "Mods",
     "discover": "Discover",
@@ -275,7 +285,8 @@
       "checkUpdate": "Check for Updates",
       "checking": "Checking...",
       "upToDate": "Up to date",
-      "newVersion": "New version: {ver}"
+      "newVersion": "New version: {ver}",
+      "autoCheckUpdate": "Check for updates on startup"
     },
     "language": {
       "zhCN": "简体中文",

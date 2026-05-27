@@ -50,6 +50,7 @@ pub struct AppBootstrap {
     pub theme_color: String,
     pub launch_mode: String,
     pub launch_check_cloud_save: bool,
+    pub auto_check_update: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -114,6 +115,7 @@ pub fn get_app_bootstrap(state: State<AppState>) -> AppBootstrap {
         theme_color: settings.theme_color.clone(),
         launch_mode: settings.launch_mode.clone(),
         launch_check_cloud_save: settings.launch_check_cloud_save,
+        auto_check_update: settings.auto_check_update,
     }
 }
 
@@ -1607,6 +1609,18 @@ pub fn update_launch_mode(mode: String, state: State<AppState>) -> Result<(), St
 pub fn update_launch_check_cloud_save(check: bool, state: State<AppState>) -> Result<(), String> {
     let mut settings = state.settings.write().unwrap();
     settings.launch_check_cloud_save = check;
+    let _ = settings_repo::save_settings(&settings);
+    Ok(())
+}
+
+// =========================================================================
+// 5.10.x 应用更新设置
+// =========================================================================
+
+#[tauri::command]
+pub fn update_auto_check_update(enabled: bool, state: State<AppState>) -> Result<(), String> {
+    let mut settings = state.settings.write().unwrap();
+    settings.auto_check_update = enabled;
     let _ = settings_repo::save_settings(&settings);
     Ok(())
 }

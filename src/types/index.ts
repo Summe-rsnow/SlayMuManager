@@ -249,4 +249,5 @@ export interface AppBootstrap {
   themeColor: string
   launchMode: string
   launchCheckCloudSave: boolean
+  autoCheckUpdate: boolean
 }

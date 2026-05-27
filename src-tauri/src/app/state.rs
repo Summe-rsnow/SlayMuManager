@@ -58,6 +58,7 @@ pub struct AppSettings {
     pub theme_color: String,
     pub launch_mode: String,
     pub launch_check_cloud_save: bool,
+    pub auto_check_update: bool,
 }
 
 impl Default for AppSettings {
@@ -78,6 +79,7 @@ impl Default for AppSettings {
             theme_color: "indigo".to_string(),
             launch_mode: "steam".to_string(),
             launch_check_cloud_save: true,
+            auto_check_update: true,
         }
     }
 }

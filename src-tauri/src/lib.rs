@@ -112,6 +112,8 @@ pub fn run() {
             app::commands::update_theme_color,
             app::commands::update_launch_mode,
             app::commands::update_launch_check_cloud_save,
+            // 5.10.x 应用更新
+            app::commands::update_auto_check_update,
             // 5.11 日志
             app::commands::list_activity_logs,
             // 5.12 翻译

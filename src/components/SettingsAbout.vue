@@ -1,15 +1,31 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NCard, NSpace, NButton } from "naive-ui"
+import { NCard, NSpace, NButton, NSwitch } from "naive-ui"
 import { version as APP_VERSION } from "../../package.json"
+import type { AppBootstrap } from "../types"
 
 const { t } = useI18n()
 
 const updateStatus = ref<"idle" | "checking" | "uptodate" | "available">("idle")
 const latestVersion = ref("")
 const updateUrl = ref("")
+const autoCheckUpdate = ref(true)
+
+onMounted(async () => {
+  try {
+    const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+    autoCheckUpdate.value = bootstrap.autoCheckUpdate
+  } catch { /* 忽略 */ }
+})
+
+async function toggleAutoCheck(val: boolean) {
+  autoCheckUpdate.value = val
+  try {
+    await invoke("update_auto_check_update", { enabled: val })
+  } catch { /* 忽略 */ }
+}
 
 function openUrl(url: string) {
   invoke("open_url_in_browser", { url })
@@ -92,6 +108,15 @@ async function checkForUpdate() {
             网盘下载
           </NButton>
         </div>
+      </div>
+      <div class="border-t border-c-default"></div>
+      <div class="flex items-center justify-between">
+        <span class="text-sm">{{ t("settings.about.autoCheckUpdate") }}</span>
+        <NSwitch
+          :value="autoCheckUpdate"
+          size="small"
+          @update:value="toggleAutoCheck"
+        />
       </div>
     </NSpace>
   </NCard>
