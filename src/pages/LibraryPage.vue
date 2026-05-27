@@ -7,13 +7,13 @@ import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
 import {
-  NSpace, NCard, NTag, NButton, NInput, NIcon,
+  NSpace, NCard, NTag, NButton, NInput, NIcon, NPopover,
   NCheckbox, useMessage, useDialog,
 } from "naive-ui"
 import { useSettingsHighlight } from "../composables/useSettingsHighlight"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
-  AlertTriangle, Filter, X, PackageOpen, Check, ArrowUp, HardDrive,
+  AlertTriangle, Filter, X, PackageOpen, Check, ArrowUp, HardDrive, HelpCircle,
 } from "lucide-vue-next"
 import DragOverlay from "../components/DragOverlay.vue"
 import ModCard from "../components/ModCard.vue"
@@ -466,6 +466,12 @@ watch(presetAppliedTick, () => {
           <NButton size="small" secondary :loading="checkingUpdates" @click="checkUpdates">
             <template #icon><NIcon :size="14"><ArrowUp /></NIcon></template>
             {{ t("library.updateCheck.check") }}
+            <NPopover trigger="hover" placement="bottom" :width="240">
+              <template #trigger>
+                <NIcon :size="14" class="text-c-muted cursor-help ml-1" style="vertical-align:middle"><HelpCircle /></NIcon>
+              </template>
+              <span class="text-xs">{{ t("library.updateCheck.supportHint") }}</span>
+            </NPopover>
           </NButton>
           <NButton size="small" secondary :loading="loading" @click="fetchMods">
             <template #icon><NIcon :size="14"><RefreshCw /></NIcon></template>

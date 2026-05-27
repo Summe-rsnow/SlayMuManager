@@ -10,7 +10,7 @@ import SettingsAppearance from "../components/SettingsAppearance.vue"
 import SettingsDiscover from "../components/SettingsDiscover.vue"
 import SettingsBackup from "../components/SettingsBackup.vue"
 import SettingsAbout from "../components/SettingsAbout.vue"
-import SettingsDefaultPage from "../components/SettingsDefaultPage.vue"
+import SettingsLaunchGame from "../components/SettingsLaunchGame.vue"
 
 const { t } = useI18n()
 const { highlightedSetting, clearHighlight } = useSettingsHighlight()
@@ -36,12 +36,12 @@ watch(highlightedSetting, (val) => {
 
     <div class="max-w-2xl mx-auto flex flex-col gap-4">
       <SettingsGamePath />
-      <SettingsLaunch />
       <SettingsNexus />
+      <SettingsLaunch />
+      <SettingsLaunchGame />
       <SettingsProxy />
       <SettingsAppearance />
       <SettingsDiscover />
-      <SettingsDefaultPage />
       <SettingsBackup />
       <SettingsAbout />
     </div>

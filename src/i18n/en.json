@@ -46,7 +46,7 @@
     "enabledCountLabel": "Enabled:",
     "disabledCountLabel": "Disabled:",
     "refreshing": "Refreshing...",
-    "launchGame": "Launch Game",
+    "launch": "Launch Game",
     "quickPresetPlaceholder": "Quick Preset...",
     "preset": "Preset",
     "openModsDir": "Mods Folder",
@@ -159,7 +159,8 @@
       "error": "Update check failed: {e}",
       "noApiKey": "Please configure Nexus API Key in Settings first",
       "noGamePath": "Please set the game path first",
-      "openNexus": "Open on Nexus"
+      "openNexus": "Open on Nexus",
+      "supportHint": "Only mods with a version number on Nexus can be checked. Other mods cannot be auto-checked for updates."
     },
     "vanillaConflict": {
       "title": "Mod State Conflict",
@@ -272,6 +273,11 @@
     },
     "launch": {
       "title": "Launch",
+      "defaultPageLabel": "Default Page",
+      "autoCheck": "Auto check for updates"
+    },
+    "launchGame": {
+      "title": "Launch Game",
       "mode": "Launch Mode",
       "steam": "Steam Protocol",
       "direct": "Direct EXE",
@@ -285,8 +291,7 @@
       "checkUpdate": "Check for Updates",
       "checking": "Checking...",
       "upToDate": "Up to date",
-      "newVersion": "New version: {ver}",
-      "autoCheckUpdate": "Check for updates on startup"
+      "newVersion": "New version: {ver}"
     },
     "language": {
       "zhCN": "简体中文",
@@ -309,10 +314,6 @@
       "prefetch": "Prefetch Adjacent Pages",
       "prefetchDesc": "Cache adjacent pages in background for faster navigation",
       "translateQuotaTip": "Translate Quota Tip"
-    },
-    "defaultPage": {
-      "title": "Default Page",
-      "description": "Auto-navigate on startup"
     },
     "prompt": {
       "apiKeyRequired": "Nexus API Key Required",

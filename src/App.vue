@@ -111,7 +111,7 @@ const { minimize, toggleMaximize, close } = useWindow()
             <div class="flex h-full pt-12 box-border">
               <SideNav />
               <main
-                class="flex-1 overflow-auto px-12 pt-0 pb-6"
+                class="flex-1 overflow-auto px-16 pt-0 pb-6"
                 :style="{
                   backgroundColor: 'var(--color-main-bg)',
                 }"
