@@ -201,7 +201,7 @@ onMounted(() => {
             <Play v-if="!launchingGame" />
             <LoaderCircle v-else class="animate-spin" />
           </NIcon>
-          <span class="text-[17px] font-medium whitespace-nowrap">{{ t("library.launchGame") }}</span>
+          <span class="text-[17px] font-medium whitespace-nowrap">{{ t("library.launch") }}</span>
         </div>
       </button>
     </div>
