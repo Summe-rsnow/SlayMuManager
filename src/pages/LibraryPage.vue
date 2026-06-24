@@ -8,13 +8,13 @@ import { listen } from "@tauri-apps/api/event"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
 import {
   NSpace, NCard, NTag, NButton, NInput, NIcon, NPopover,
-  NCheckbox, useMessage, useDialog,
+  NCheckbox, NSwitch, useMessage, useDialog,
 } from "naive-ui"
 import { useSettingsHighlight } from "../composables/useSettingsHighlight"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
   AlertTriangle, Filter, X, PackageOpen, Check, ArrowUp, HardDrive, HelpCircle,
-} from "lucide-vue-next"
+} from "@lucide/vue"
 import DragOverlay from "../components/DragOverlay.vue"
 import ModCard from "../components/ModCard.vue"
 import AppDialog from "../components/AppDialog.vue"
@@ -45,10 +45,12 @@ const {
   activePresetId,
   presetSnapshot,
   presetAppliedTick,
+  vanillaLaunch,
+  handleToggleVanillaLaunch,
 } = useSidebarActions()
 
 const {
-  busyId, batchBusy, showSaveGuardDialog, saveGuardInfo, isActivePresetBuiltin,
+  busyId, batchBusy, showSaveGuardDialog, saveGuardInfo,
   handleToggle, handleUninstall, handleOpenFolder, handleOpenModsDir,
   enableAllMods, disableAllMods, dismissSaveGuard,
 } = useModOperations()
@@ -196,13 +198,6 @@ const saveAsPresetModIds = ref<string[] | null>(null)
 
 function openNewPreset() {
   saveAsPresetModIds.value = null
-  newPresetName.value = ""
-  showNewPresetDialog.value = true
-}
-
-/** 原版预设警告条：将当前已启用 Mod 保存为新预设 */
-function openSaveAsPreset() {
-  saveAsPresetModIds.value = enabledMods.value.map((m: InstalledMod) => m.id)
   newPresetName.value = ""
   showNewPresetDialog.value = true
 }
@@ -363,10 +358,7 @@ const anyFilterActive = computed(() =>
 const hasGamePath = ref<boolean | null>(null)
 const emptyReason = computed(() => {
   if (hasGamePath.value === false && !hasMods.value) return "noGamePath"
-  if (!hasMods.value) {
-    if (isActivePresetBuiltin) return "vanillaNoMods"
-    return "noMods"
-  }
+  if (!hasMods.value) return "noMods"
   if (anyFilterActive.value &&
       filteredEnabled.value.length + filteredDisabled.value.length === 0) return "filtered"
   if (hasSearch.value && filteredEnabled.value.length + filteredDisabled.value.length === 0) return "search"
@@ -410,7 +402,7 @@ onMounted(async () => {
       const active = profiles.find(p => p.id === bootstrap.activeProfileId)
       if (active) {
         activePresetId.value = active.id
-        activePresetName.value = active.id === "__builtin__vanilla" ? t("profiles.builtinVanilla") : active.name
+        activePresetName.value = active.name
         quickPresetId.value = active.id
         presetSnapshot.value = new Set(active.modIds)
       }
@@ -454,7 +446,19 @@ watch(presetAppliedTick, () => {
           <span>{{ activePresetName }}</span>
         </span>
         <span v-if="loading" class="text-xs text-c-muted animate-pulse">{{ t("library.refreshing") }}</span>
-        <div class="flex gap-2 ml-4">
+        <div class="flex items-center gap-3 ml-4">
+          <div class="flex items-center gap-1">
+            <span class="text-xs text-c-muted whitespace-nowrap">{{ t("library.vanillaLaunch") }}</span>
+            <NPopover trigger="hover" placement="bottom" :width="260">
+              <template #trigger>
+                <NIcon :size="13" class="text-c-muted cursor-help" style="vertical-align:middle"><HelpCircle /></NIcon>
+              </template>
+              <span class="text-xs">{{ t("library.vanillaLaunchHint") }}</span>
+            </NPopover>
+          </div>
+          <NSwitch :value="vanillaLaunch" size="small" @update:value="handleToggleVanillaLaunch" />
+        </div>
+        <div class="flex gap-2 ml-2">
           <NButton size="small" secondary @click="handleOpenModsDir">
             <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
             {{ t("library.openModsDir") }}
@@ -588,11 +592,6 @@ watch(presetAppliedTick, () => {
             <p class="text-lg">{{ t("library.empty.noMods") }}</p>
             <p class="text-sm mt-1">{{ t("library.empty.noModsHint") }}</p>
           </template>
-          <template v-else-if="emptyReason === 'vanillaNoMods'">
-            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Bookmark /></NIcon>
-            <p class="text-lg">{{ t("library.empty.vanillaNoMods") }}</p>
-            <p class="text-sm mt-1">{{ t("library.empty.vanillaNoModsHint") }}</p>
-          </template>
           <template v-else-if="emptyReason === 'filtered'">
             <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Filter /></NIcon>
             <p>{{ t("library.empty.filterNoResults") }}</p>
@@ -621,7 +620,7 @@ watch(presetAppliedTick, () => {
                   </NTag>
                 </div>
                 <NButton
-                  v-if="filteredEnabled.length > 0 && !isActivePresetBuiltin"
+                  v-if="filteredEnabled.length > 0"
                   size="small"
                   secondary
                   :disabled="batchBusy"
@@ -636,31 +635,7 @@ watch(presetAppliedTick, () => {
 
             <div v-if="filteredEnabled.length === 0" class="text-center py-8 text-c-muted">
               <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
-              <p v-else-if="isActivePresetBuiltin">{{ t("library.empty.vanillaNoEnabled") }}</p>
               <p v-else>{{ t("library.empty.noEnabledMods") }}</p>
-            </div>
-
-            <!-- 原版预设下已启用 Mod 提示条 -->
-            <div
-              v-if="filteredEnabled.length > 0 && isActivePresetBuiltin"
-              class="mx-3 mt-3 flex items-center justify-between gap-3 rounded-lg px-4 py-3 text-sm"
-              :style="{
-                backgroundColor: 'color-mix(in srgb, var(--color-warning) 12%, transparent)',
-                color: 'var(--color-text-primary)',
-              }"
-            >
-              <div class="flex items-center gap-2">
-                <NIcon :size="16" color="#f0a020"><AlertTriangle /></NIcon>
-                <span>{{ t("library.vanillaConflict.content", { n: filteredEnabled.length }) }}</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <NButton size="tiny" secondary @click="openSaveAsPreset">
-                  {{ t("library.vanillaConflict.saveAsPreset") }}
-                </NButton>
-                <NButton size="tiny" secondary :loading="batchBusy" @click="disableAllMods">
-                  {{ t("library.vanillaConflict.disableAll") }}
-                </NButton>
-              </div>
             </div>
 
             <NSpace v-if="filteredEnabled.length > 0" vertical :size="8">
@@ -670,7 +645,7 @@ watch(presetAppliedTick, () => {
                 :mod="mod"
                 :enabled="true"
                 :busy="busyId === mod.id"
-                :toggle-disabled="isActivePresetBuiltin"
+                :toggle-disabled="false"
                 :has-update="hasUpdate(mod.id)"
                 :update-info="getUpdateInfo(mod.id) ?? null"
                 @toggle="handleToggle"
@@ -692,7 +667,7 @@ watch(presetAppliedTick, () => {
                   </NTag>
                 </div>
                 <NButton
-                  v-if="filteredDisabled.length > 0 && !isActivePresetBuiltin"
+                  v-if="filteredDisabled.length > 0"
                   size="small"
                   secondary
                   :disabled="batchBusy"
@@ -717,7 +692,7 @@ watch(presetAppliedTick, () => {
                 :mod="mod"
                 :enabled="false"
                 :busy="busyId === mod.id"
-                :toggle-disabled="isActivePresetBuiltin"
+                :toggle-disabled="false"
                 :has-update="hasUpdate(mod.id)"
                 :update-info="getUpdateInfo(mod.id) ?? null"
                 @toggle="handleToggle"

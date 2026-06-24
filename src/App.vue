@@ -13,7 +13,7 @@ import {
   enUS,
   dateEnUS,
 } from "naive-ui"
-import { Minus, Square, X, PackageOpen } from "lucide-vue-next"
+import { Minus, Square, X, PackageOpen } from "@lucide/vue"
 import { currentLocale } from "./i18n"
 import { naiveTheme, naiveThemeOverrides } from "./theme"
 import { useWindow } from "./composables/useWindow"

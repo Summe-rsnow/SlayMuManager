@@ -47,13 +47,15 @@
     "disabledCountLabel": "Disabled:",
     "refreshing": "Refreshing...",
     "launch": "Launch Game",
+    "vanillaLaunch": "Vanilla Launch",
+    "vanillaLaunchHint": "Adds --nomods on launch to skip all mods (including Workshop) for a clean vanilla run.",
     "quickPresetPlaceholder": "Quick Preset...",
     "preset": "Preset",
     "openModsDir": "Mods Folder",
     "newPreset": "New Preset",
     "newPresetHint": "Create an empty preset and switch to it",
     "saveAsPreset": "Save as New Preset",
-    "saveAsPresetHint": "Save {n} enabled mod(s) to a new preset, then auto-disable vanilla",
+    "saveAsPresetHint": "Save {n} enabled mod(s) to a new preset",
     "enableAll": "Enable All",
     "disableAll": "Disable All",
     "importMod": "Import Mod",
@@ -75,9 +77,6 @@
       "noModsHint": "Click \"Import Mod\" or search and install from the Discover page",
       "noGamePath": "Game Path Not Set",
       "noGamePathHint": "Please configure the game directory in Settings first",
-      "vanillaNoMods": "Vanilla Preset Has No Mods",
-      "vanillaNoModsHint": "Create a new preset or switch to another preset to manage mods",
-      "vanillaNoEnabled": "Mods cannot be enabled on the vanilla preset. Switch or create a preset",
       "filterNoResults": "No results for current filters",
       "clearAllFilters": "Clear all filters",
       "searchNoMatch": "No mods matching \"{q}\"",
@@ -98,7 +97,9 @@
       "note": "Note",
       "notePlaceholder": "Add note...",
       "openFolder": "Open folder",
-      "uninstall": "Uninstall"
+      "uninstall": "Uninstall",
+      "workshop": "Workshop",
+      "workshopHint": "Steam Workshop mods cannot be uninstalled or toggled here. Unsubscribe in Steam to remove."
     },
     "savePreset": {
       "title": "Save as Preset",
@@ -161,13 +162,6 @@
       "noGamePath": "Please set the game path first",
       "openNexus": "Open on Nexus",
       "supportHint": "Only mods with a version number on Nexus can be checked. Other mods cannot be auto-checked for updates."
-    },
-    "vanillaConflict": {
-      "title": "Mod State Conflict",
-      "content": "The vanilla preset is active, but {n} mod(s) are enabled. Disable all mods to restore vanilla state?",
-      "disableAll": "Disable All Mods",
-      "later": "Not Now",
-      "saveAsPreset": "Save as New Preset"
     }
   },
 
@@ -488,12 +482,11 @@
     "importBundle": "Import Preset",
     "create": "New Preset",
     "builtin": "Built-in",
-    "builtinVanilla": "Vanilla",
     "active": "Active",
     "noDescription": "No description",
     "modCount": "{n} mod(s)",
     "confirmDelete": "Delete \"{name}\"?",
-    "confirmDeleteActive": "\"{name}\" is currently active. Deleting it will reset the active preset to Vanilla. Are you sure?",
+    "confirmDeleteActive": "\"{name}\" is currently active. Are you sure you want to delete it?",
     "empty": {
       "noProfiles": "No presets",
       "noProfilesHint": "Save your current mod configuration from the Library, or click New Preset above"

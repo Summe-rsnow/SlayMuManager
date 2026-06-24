@@ -3,16 +3,14 @@ import { invoke } from "@tauri-apps/api/core"
 import { useMessage, useDialog } from "naive-ui"
 import { useI18n } from "vue-i18n"
 import { useRouter } from "vue-router"
-import type { CloudSaveStatus, ModProfile, AppBootstrap, ApplyProfileResult, InstalledMod } from "../types"
+import type { CloudSaveStatus, ModProfile, AppBootstrap, ApplyProfileResult } from "../types"
 import { useSettingsHighlight } from "./useSettingsHighlight"
 
 // --- 模块级共享状态（SideNav + LibraryPage 共用同一实例）---
-const BUILTIN_VANILLA_ID = "__builtin__vanilla"
 const launchingGame = ref(false)
 const showLaunchMismatchDialog = ref(false)
 const launchMismatchStatus = ref<CloudSaveStatus | null>(null)
-const showVanillaLaunchDialog = ref(false)
-const vanillaLaunchEnabledCount = ref(0)
+const vanillaLaunch = ref(false)
 const quickPresetId = ref<string | null>(null)
 const quickPresetOptions = ref<Array<{ label: string; value: string }>>([])
 const activePresetName = ref("")
@@ -80,13 +78,7 @@ export function useSidebarActions() {
           // 云存档检查失败，继续启动
         }
       }
-      // 2. 原版预设下已启用模组提示
-      if (bootstrap.installedCount > 0 && bootstrap.activeProfileId === BUILTIN_VANILLA_ID) {
-        vanillaLaunchEnabledCount.value = bootstrap.installedCount
-        showVanillaLaunchDialog.value = true
-        return
-      }
-      // 3. 检测游戏是否已在运行
+      // 检测游戏是否已在运行
       const running = await invoke<boolean>("is_game_running")
       if (running) {
         message.warning(t("library.info.gameAlreadyRunning"))
@@ -97,7 +89,7 @@ export function useSidebarActions() {
     } catch {
       await doLaunchGame()
     } finally {
-      if (!showLaunchMismatchDialog.value && !showVanillaLaunchDialog.value) {
+      if (!showLaunchMismatchDialog.value) {
         launchingGame.value = false
       }
     }
@@ -114,33 +106,22 @@ export function useSidebarActions() {
     await doLaunchGame()
   }
 
-  /** 原版预设启动冲突：禁用所有模组并启动 */
-  async function handleVanillaLaunchDisable() {
-    showVanillaLaunchDialog.value = false
-    try {
-      const allMods = await invoke<InstalledMod[]>("list_installed_mods")
-      const enabled = allMods.filter(m => m.state === "enabled")
-      for (const mod of enabled) {
-        await invoke("disable_mod", { modId: mod.id })
-      }
-    } catch { /* best effort */ }
-    await doLaunchGame()
-  }
-
-  /** 原版预设启动冲突：取消 */
-  function handleVanillaLaunchCancel() {
-    showVanillaLaunchDialog.value = false
-    launchingGame.value = false
+  async function handleToggleVanillaLaunch(val: boolean) {
+    vanillaLaunch.value = val
+    try { await invoke("update_vanilla_launch", { enabled: val }) } catch { /* ignore */ }
   }
 
   async function loadQuickPresets() {
     try {
+      // 同步后端状态
+      const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+      vanillaLaunch.value = bootstrap.vanillaLaunch
       const profiles = await invoke<ModProfile[]>("list_profiles")
       quickPresetOptions.value = profiles.map((p) => ({
-        label: p.id === BUILTIN_VANILLA_ID ? t("profiles.builtinVanilla") : p.name,
+        label: p.name,
         value: p.id,
       }))
-      // 默认选中第一个（始终是原版）
+      // 默认选中第一个
       if (!quickPresetId.value && profiles.length > 0) {
         quickPresetId.value = profiles[0].id
       }
@@ -169,13 +150,11 @@ export function useSidebarActions() {
     launchingGame,
     showLaunchMismatchDialog,
     launchMismatchStatus,
-    showVanillaLaunchDialog,
-    vanillaLaunchEnabledCount,
     handleLaunchGame,
     handleGoToSaves,
     handleLaunchAnyway,
-    handleVanillaLaunchDisable,
-    handleVanillaLaunchCancel,
+    vanillaLaunch,
+    handleToggleVanillaLaunch,
     quickPresetId,
     quickPresetOptions,
     loadQuickPresets,

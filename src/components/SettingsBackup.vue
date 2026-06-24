@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSwitch, NInputNumber, NPopover, NIcon } from "naive-ui"
-import { HelpCircle } from "lucide-vue-next"
+import { HelpCircle } from "@lucide/vue"
 import type { AppBootstrap } from "../types"
 
 const { t } = useI18n()

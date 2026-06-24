@@ -50,6 +50,8 @@ pub struct AppBootstrap {
     pub theme_color: String,
     pub launch_mode: String,
     pub launch_check_cloud_save: bool,
+    pub vanilla_launch: bool,
+    pub has_workshop_mods: bool,
     pub auto_check_update: bool,
 }
 
@@ -75,20 +77,21 @@ pub fn get_app_bootstrap(state: State<AppState>) -> AppBootstrap {
         .map(|d| game_service::contains_game_executable(Path::new(d)))
         .unwrap_or(false);
 
-    // 统计已安装/禁用的 Mod 数量（只有 mods 就绪时才有 Mod）
-    let (installed_count, disabled_count) = if let Some(ref root) = settings.game_root_dir {
-        if game_service::has_mods_dir(Path::new(root)) {
+    // 统计已安装/禁用的 Mod 数量（含创意工坊）
+    let (installed_count, disabled_count, has_workshop_mods) =
+        if let Some(ref root) = settings.game_root_dir {
             let game_root = Path::new(root);
-            (
-                mod_service::scan_enabled_mods(game_root).len(),
-                mod_service::scan_disabled_mods(game_root).len(),
-            )
+            let enabled = mod_service::scan_enabled_mods(game_root);
+            let disabled = if game_service::has_mods_dir(game_root) {
+                mod_service::scan_disabled_mods(game_root)
+            } else {
+                Vec::new()
+            };
+            let workshop = enabled.iter().any(|m| m.source == "workshop");
+            (enabled.len(), disabled.len(), workshop)
         } else {
-            (0, 0)
-        }
-    } else {
-        (0, 0)
-    };
+            (0, 0, false)
+        };
 
     AppBootstrap {
         app_name: "SlayMuManager".to_string(),
@@ -115,6 +118,8 @@ pub fn get_app_bootstrap(state: State<AppState>) -> AppBootstrap {
         theme_color: settings.theme_color.clone(),
         launch_mode: settings.launch_mode.clone(),
         launch_check_cloud_save: settings.launch_check_cloud_save,
+        vanilla_launch: settings.vanilla_launch,
+        has_workshop_mods,
         auto_check_update: settings.auto_check_update,
     }
 }
@@ -216,25 +221,51 @@ pub fn is_game_running() -> bool {
 #[tauri::command]
 pub fn launch_game(state: State<AppState>) -> Result<(), String> {
     let settings = state.settings.read().unwrap();
+    let vanilla = settings.vanilla_launch;
+    let mode = settings.launch_mode.clone();
+    let exe_dir = settings.game_root_dir.clone();
+    drop(settings);
 
-    if settings.launch_mode == "direct" {
-        // 直接启动 exe
-        let exe_path = settings
-            .game_root_dir
+    if mode == "direct" {
+        let exe_path = exe_dir
             .as_ref()
             .map(|d| std::path::Path::new(d).join("SlayTheSpire2.exe"))
             .filter(|p| p.exists())
             .ok_or_else(|| "游戏路径未设置或 SlayTheSpire2.exe 不存在".to_string())?;
 
-        std::process::Command::new(&exe_path)
-            .spawn()
-            .map_err(|e| format!("启动游戏失败: {}", e))?;
+        let mut cmd = std::process::Command::new(&exe_path);
+        if vanilla {
+            cmd.arg("--nomods");
+        }
+        cmd.spawn().map_err(|e| format!("启动游戏失败: {}", e))?;
         return Ok(());
     }
 
-    // Steam 协议启动
-    let steam_url = "steam://rungameid/2868840";
+    // Steam 启动
+    if vanilla {
+        // 加 --nomods 参数 → 用 steam.exe -applaunch 传参
+        match find_steam_path() {
+            Some(steam_path) => {
+                std::process::Command::new(steam_path.join("steam.exe"))
+                    .args(["-applaunch", "2868840", "--nomods"])
+                    .spawn()
+                    .map_err(|e| format!("启动游戏失败: {}", e))?;
+            }
+            None => {
+                // 找不到 steam.exe 则回退到 steam:// 协议（此时无法传参）
+                launch_via_steam_url()?;
+            }
+        }
+    } else {
+        launch_via_steam_url()?;
+    }
 
+    Ok(())
+}
+
+/// 通过 steam:// 协议启动（不传递命令行参数）
+fn launch_via_steam_url() -> Result<(), String> {
+    let steam_url = "steam://rungameid/2868840";
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new("cmd")
@@ -256,8 +287,14 @@ pub fn launch_game(state: State<AppState>) -> Result<(), String> {
             .spawn()
             .map_err(|e| format!("启动游戏失败: {}", e))?;
     }
-
     Ok(())
+}
+
+/// 查找 Steam 安装路径下的 steam.exe
+fn find_steam_path() -> Option<std::path::PathBuf> {
+    let path = crate::integrations::steam::get_steam_install_path()?;
+    let exe = path.join("steam.exe");
+    if exe.exists() { Some(path) } else { None }
 }
 
 #[tauri::command]
@@ -408,13 +445,7 @@ pub fn list_installed_mods(state: State<AppState>) -> Result<Vec<InstalledMod>, 
         .game_root_dir
         .as_ref()
         .ok_or("游戏目录未设置")?;
-    let root = Path::new(game_root);
-
-    if !game_service::has_mods_dir(root) {
-        return Err("游戏目录无效（缺少 mods/ 目录）".to_string());
-    }
-
-    Ok(mod_service::scan_enabled_mods(root))
+    Ok(mod_service::scan_enabled_mods(Path::new(game_root)))
 }
 
 #[tauri::command]
@@ -427,7 +458,7 @@ pub fn list_disabled_mods(state: State<AppState>) -> Result<Vec<InstalledMod>, S
     let root = Path::new(game_root);
 
     if !game_service::has_mods_dir(root) {
-        return Err("游戏目录无效（缺少 mods/ 目录）".to_string());
+        return Ok(Vec::new());
     }
 
     Ok(mod_service::scan_disabled_mods(root))
@@ -491,12 +522,22 @@ pub fn open_mod_folder(mod_id: String, state: State<AppState>) -> Result<(), Str
         .as_ref()
         .ok_or("游戏目录未设置")?;
 
+    // 先尝试本地目录
     let plugins_dir = Path::new(game_root).join("mods");
     let disabled_dir = Path::new(game_root).join("mods_disabled");
 
-    let mod_folder = mod_service::find_mod_folder(&plugins_dir, &mod_id)
+    let mod_folder = match mod_service::find_mod_folder(&plugins_dir, &mod_id)
         .or_else(|_| mod_service::find_mod_folder(&disabled_dir, &mod_id))
-        ?;
+    {
+        Ok(p) => p,
+        Err(_) => {
+            // 回退：在已启用的 mod 列表中按 id 查找（含创意工坊）
+            let all = mod_service::scan_enabled_mods(Path::new(game_root));
+            let m = all.iter().find(|m| m.id == mod_id)
+                .ok_or_else(|| format!("Mod 未找到: {}", mod_id))?;
+            std::path::PathBuf::from(&m.install_dir)
+        }
+    };
 
     #[cfg(target_os = "windows")]
     {
@@ -1609,6 +1650,14 @@ pub fn update_launch_mode(mode: String, state: State<AppState>) -> Result<(), St
 pub fn update_launch_check_cloud_save(check: bool, state: State<AppState>) -> Result<(), String> {
     let mut settings = state.settings.write().unwrap();
     settings.launch_check_cloud_save = check;
+    let _ = settings_repo::save_settings(&settings);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn update_vanilla_launch(enabled: bool, state: State<AppState>) -> Result<(), String> {
+    let mut settings = state.settings.write().unwrap();
+    settings.vanilla_launch = enabled;
     let _ = settings_repo::save_settings(&settings);
     Ok(())
 }

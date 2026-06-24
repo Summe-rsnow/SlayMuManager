@@ -186,6 +186,52 @@ pub fn get_cloud_save_dir(steam_user_id: &str) -> Option<PathBuf> {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Steam 创意工坊
+// ---------------------------------------------------------------------------
+
+/// 获取所有 Steam 库路径下的 workshop 目录（用于扫描 STS2 创意工坊 Mod）
+pub fn get_workshop_dirs() -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+    let steam_path = match get_steam_install_path() {
+        Some(p) => p,
+        None => return dirs,
+    };
+
+    // 默认路径
+    let default = steam_path.join("steamapps").join("workshop").join("content").join(STS2_APP_ID);
+    if default.exists() {
+        dirs.push(default);
+    }
+
+    // 从 libraryfolders.vdf 扫描其他库
+    let vdf_path = steam_path.join("steamapps").join("libraryfolders.vdf");
+    if let Ok(content) = std::fs::read_to_string(&vdf_path) {
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if let Some(rest) = trimmed.strip_prefix("\"path\"") {
+                let rest = rest.trim();
+                if let Some(start) = rest.find('"') {
+                    let after_quote = &rest[start + 1..];
+                    if let Some(end) = after_quote.find('"') {
+                        let lib_path = after_quote[..end].replace("\\\\", "\\");
+                        let candidate = PathBuf::from(&lib_path)
+                            .join("steamapps")
+                            .join("workshop")
+                            .join("content")
+                            .join(STS2_APP_ID);
+                        if candidate.exists() && !dirs.iter().any(|d| d == &candidate) {
+                            dirs.push(candidate);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    dirs
+}
+
 /// 列出所有 Steam 用户 ID（扫描 userdata 目录下的数字子目录）
 /// 优先返回注册表中的活跃用户
 pub fn list_steam_users() -> Vec<String> {

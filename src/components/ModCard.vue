@@ -5,7 +5,7 @@ import { useI18n } from "vue-i18n"
 import {
   NTag, NButton, NIcon, NSwitch, NPopconfirm, NPopover, NCheckbox, NSpace, NInput,
 } from "naive-ui"
-import { FolderOpen, Trash2, Plus, StickyNote } from "lucide-vue-next"
+import { FolderOpen, Trash2, Plus, StickyNote } from "@lucide/vue"
 import { useModTags, PRESET_TAGS } from "../composables/useModTags"
 import { useModNotes } from "../composables/useModNotes"
 import type { InstalledMod } from "../types"
@@ -74,6 +74,9 @@ const cardStyle = computed(() => ({
         >
           ↑ {{ updateInfo!.remoteVersion }}
         </span>
+        <NTag v-if="mod.source === 'workshop'" type="info" size="tiny" :bordered="false">
+          {{ t("library.mod.workshop") }}
+        </NTag>
         <NTag v-if="mod.affectsGameplay" type="warning" size="tiny" :bordered="false">
           {{ t("library.mod.affectsGameplay") }}
         </NTag>
@@ -151,7 +154,7 @@ const cardStyle = computed(() => ({
       <NButton text size="tiny" :disabled="busy" :aria-label="t('library.mod.openFolder')" @click="emit('openFolder', mod)">
         <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
       </NButton>
-      <NPopconfirm @positive-click="() => emit('uninstall', mod)">
+      <NPopconfirm v-if="mod.source !== 'workshop'" @positive-click="() => emit('uninstall', mod)">
         <template #trigger>
           <NButton text size="tiny" type="error" :disabled="busy" :aria-label="t('library.mod.uninstall')">
             <template #icon><NIcon :size="14"><Trash2 /></NIcon></template>
@@ -159,7 +162,19 @@ const cardStyle = computed(() => ({
         </template>
         {{ t("library.mod.confirmUninstall", { name: mod.name }) }}
       </NPopconfirm>
+      <NPopover v-if="mod.source === 'workshop'" trigger="hover" placement="left" :width="200">
+        <template #trigger>
+          <span>
+            <NSwitch
+              :value="enabled"
+              :disabled="true"
+            />
+          </span>
+        </template>
+        <span class="text-xs">{{ t("library.mod.workshopHint") }}</span>
+      </NPopover>
       <NSwitch
+        v-else
         :value="enabled"
         :disabled="busy || toggleDisabled"
         @update:value="() => emit('toggle', mod)"

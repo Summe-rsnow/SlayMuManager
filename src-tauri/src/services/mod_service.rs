@@ -9,12 +9,17 @@ use std::path::{Path, PathBuf};
 // ---------------------------------------------------------------------------
 
 /// 扫描 mods/ 下所有已启用的 Mod（Manifest 无效的标记为 Broken）
+/// 包含创意工坊中已安装的 Mod（始终标记为 Enabled）
 pub fn scan_enabled_mods(game_root: &Path) -> Vec<InstalledMod> {
     let plugins_dir = game_root.join("mods");
-    if !plugins_dir.exists() {
-        return Vec::new();
-    }
-    scan_mods_in_dir(&plugins_dir, InstalledModState::Enabled)
+    let mut mods = if plugins_dir.exists() {
+        scan_mods_in_dir(&plugins_dir, InstalledModState::Enabled, "local")
+    } else {
+        Vec::new()
+    };
+    // 合并创意工坊 mod（始终为 enabled）
+    mods.extend(scan_workshop_mods());
+    mods
 }
 
 /// 扫描 mods_disabled/ 下所有已禁用的 Mod
@@ -23,11 +28,74 @@ pub fn scan_disabled_mods(game_root: &Path) -> Vec<InstalledMod> {
     if !disabled_dir.exists() {
         return Vec::new();
     }
-    scan_mods_in_dir(&disabled_dir, InstalledModState::Disabled)
+    scan_mods_in_dir(&disabled_dir, InstalledModState::Disabled, "local")
+}
+
+/// 扫描 Steam 创意工坊中已安装的 Mod
+fn scan_workshop_mods() -> Vec<InstalledMod> {
+    let workshop_dirs = crate::integrations::steam::get_workshop_dirs();
+    let mut mods = Vec::new();
+
+    for workshop_dir in &workshop_dirs {
+        let entries = match std::fs::read_dir(workshop_dir) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+
+            let workshop_id = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("")
+                .to_string();
+
+            let (manifest_path, manifest): (Option<PathBuf>, Option<ModManifest>) =
+                ModManifest::find_in_dir(&path)
+                    .map(|(p, m)| (Some(p), Some(m)))
+                    .unwrap_or((None, None));
+
+            let id = manifest
+                .as_ref()
+                .and_then(|m| m.id.clone())
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or_else(|| format!("workshop:{}", workshop_id));
+
+            let name = manifest
+                .as_ref()
+                .and_then(|m| m.name.clone())
+                .filter(|s| !s.trim().is_empty())
+                .unwrap_or_else(|| format!("Workshop Mod {}", workshop_id));
+
+            mods.push(InstalledMod {
+                id,
+                name,
+                version: manifest.as_ref().and_then(|m| m.version.clone()),
+                author: manifest.as_ref().and_then(|m| m.author.clone()),
+                folder_name: workshop_id.clone(),
+                install_dir: path.to_string_lossy().to_string(),
+                manifest_path: manifest_path.map(|p| p.to_string_lossy().to_string()),
+                affects_gameplay: manifest
+                    .as_ref()
+                    .map(|m| m.affects_gameplay)
+                    .unwrap_or(false),
+                state: InstalledModState::Enabled,
+                source: "workshop".to_string(),
+                workshop_id: Some(workshop_id),
+            });
+        }
+    }
+
+    mods.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    mods
 }
 
 /// 在指定目录下扫描所有子文件夹，每个子文件夹当作一个 Mod
-fn scan_mods_in_dir(dir: &Path, default_state: InstalledModState) -> Vec<InstalledMod> {
+fn scan_mods_in_dir(dir: &Path, default_state: InstalledModState, source: &str) -> Vec<InstalledMod> {
     let mut mods = Vec::new();
     let entries = match std::fs::read_dir(dir) {
         Ok(e) => e,
@@ -89,6 +157,8 @@ fn scan_mods_in_dir(dir: &Path, default_state: InstalledModState) -> Vec<Install
                 .map(|m: &ModManifest| m.affects_gameplay)
                 .unwrap_or(false),
             state,
+            source: source.to_string(),
+            workshop_id: None,
         });
     }
 
@@ -128,6 +198,18 @@ fn toggle_mod(
     sync_pairs: &[SaveSyncPair],
     backup_on_switch: bool,
 ) -> Result<ModToggleResult, AppError> {
+    // 检查是否为创意工坊 mod，工坊 mod 不支持通过管理器启用/禁用
+    {
+        let enabled = scan_enabled_mods(game_root);
+        if let Some(m) = enabled.iter().find(|m| m.id == mod_id) {
+            if m.source == "workshop" {
+                return Err(AppError::Other(
+                    "创意工坊 Mod 无法通过管理器切换，请在 Steam 创意工坊中取消订阅以禁用".to_string(),
+                ));
+            }
+        }
+    }
+
     let plugins_dir = game_root.join("mods");
     let disabled_dir = game_root.join("mods_disabled");
 
@@ -192,6 +274,8 @@ fn toggle_mod(
             .map(|m| m.affects_gameplay)
             .unwrap_or(false),
         state: new_state,
+        source: "local".to_string(),
+        workshop_id: None,
     };
 
     // Save Guard：检测 mods/ 空↔非空切换 + 自动同步存档

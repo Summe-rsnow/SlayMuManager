@@ -11,7 +11,7 @@ import SlotCard from "../components/SlotCard.vue"
 import {
   HardDrive, ArrowRightLeft, RefreshCw, Database,
   History, RotateCcw, Trash2, Upload, Download, Cloud, AlertTriangle, User,
-} from "lucide-vue-next"
+} from "@lucide/vue"
 import type {
   SaveSlot, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
   CloudSaveStatus, CloudSaveDiffEntry, AppBootstrap,

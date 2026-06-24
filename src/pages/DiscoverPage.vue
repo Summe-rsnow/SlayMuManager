@@ -8,7 +8,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event"
 import {
   NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, NModal, NPopover, useMessage, useDialog,
 } from "naive-ui"
-import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown, List, Languages, RefreshCw } from "lucide-vue-next"
+import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown, List, Languages, RefreshCw } from "@lucide/vue"
 import type { RemoteMod, RemoteModSearchResult, AppBootstrap } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import { currentLocale } from "../i18n"

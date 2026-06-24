@@ -47,13 +47,15 @@
     "disabledCountLabel": "已禁用:",
     "refreshing": "刷新中...",
     "launch": "启动游戏",
+    "vanillaLaunch": "原版启动",
+    "vanillaLaunchHint": "启动时添加 --nomods 参数跳过所有 Mod（含创意工坊），以纯净原版运行。",
     "quickPresetPlaceholder": "快速预设...",
     "preset": "预设切换",
     "openModsDir": "模组目录",
     "newPreset": "新增预设",
     "newPresetHint": "将创建一个空的预设并切换到该预设",
     "saveAsPreset": "保存为新预设",
-    "saveAsPresetHint": "将保存 {n} 个已启用 Mod 到新预设，创建后自动清空原版预设",
+    "saveAsPresetHint": "将保存 {n} 个已启用 Mod 到新预设",
     "enableAll": "全部启用",
     "disableAll": "全部禁用",
     "importMod": "导入模组",
@@ -75,9 +77,6 @@
       "noModsHint": "点击\"导入模组\"或从发现页面搜索并安装",
       "noGamePath": "未设置游戏路径",
       "noGamePathHint": "请先在设置中配置游戏安装目录",
-      "vanillaNoMods": "原版预设未启用 Mod",
-      "vanillaNoModsHint": "可创建新预设或切换到其他预设来启用 Mod",
-      "vanillaNoEnabled": "原版预设不可启用 Mod，请切换或创建预设",
       "filterNoResults": "筛选无结果",
       "clearAllFilters": "清除所有筛选",
       "searchNoMatch": "未找到匹配「{q}」的 Mod",
@@ -98,7 +97,9 @@
       "note": "备注",
       "notePlaceholder": "添加备注...",
       "openFolder": "打开文件夹",
-      "uninstall": "卸载"
+      "uninstall": "卸载",
+      "workshop": "创意工坊",
+      "workshopHint": "Steam 创意工坊 Mod 无法在此卸载或切换，请在 Steam 中取消订阅。"
     },
     "savePreset": {
       "title": "保存为预设",
@@ -161,13 +162,6 @@
       "noGamePath": "请先设置游戏路径",
       "openNexus": "前往 Nexus",
       "supportHint": "仅支持检查 Nexus 上标注了版本号的模组，其他模组不支持自动检查更新。"
-    },
-    "vanillaConflict": {
-      "title": "模组状态不一致",
-      "content": "当前为原版预设，但检测到 {n} 个已启用的模组。是否禁用所有模组恢复原版预设？",
-      "disableAll": "禁用所有模组",
-      "later": "以后再说",
-      "saveAsPreset": "创建为新预设"
     }
   },
 
@@ -488,12 +482,11 @@
     "importBundle": "导入预设",
     "create": "新建预设",
     "builtin": "内置",
-    "builtinVanilla": "原版",
     "active": "当前生效",
     "noDescription": "暂无描述",
     "modCount": "{n} 个 Mod",
     "confirmDelete": "确定要删除「{name}」？",
-    "confirmDeleteActive": "「{name}」是当前生效的预设，删除后生效预设将重置为原版。确定删除？",
+    "confirmDeleteActive": "「{name}」是当前生效的预设，确定删除？",
     "empty": {
       "noProfiles": "暂无预设",
       "noProfilesHint": "在模组库保存当前 Mod 组合，或点击上方新建"

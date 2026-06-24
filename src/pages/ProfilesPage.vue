@@ -9,7 +9,7 @@ import {
 } from "naive-ui"
 import {
   Plus, FolderHeart, Edit3, Trash2, Play, Download, Search, Loader2,
-} from "lucide-vue-next"
+} from "@lucide/vue"
 import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
 import { useIsActive } from "../composables/useIsActive"
 import { useSidebarActions } from "../composables/useSidebarActions"

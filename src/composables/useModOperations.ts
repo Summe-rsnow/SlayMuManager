@@ -1,4 +1,4 @@
-import { ref, computed } from "vue"
+import { ref } from "vue"
 import { invoke } from "@tauri-apps/api/core"
 import { useMessage } from "naive-ui"
 import { useI18n } from "vue-i18n"
@@ -6,8 +6,6 @@ import type { InstalledMod, ModToggleResult } from "../types"
 import { useSidebarActions } from "./useSidebarActions"
 import { useIsActive } from "./useIsActive"
 import { useModCache } from "./useModCache"
-
-const BUILTIN_VANILLA_ID = "__builtin__vanilla"
 
 /**
  * 模组操作：启用/禁用/卸载/打开文件夹/批量操作
@@ -27,8 +25,6 @@ export function useModOperations() {
   const batchBusy = ref(false)
   const showSaveGuardDialog = ref(false)
   const saveGuardInfo = ref<ModToggleResult | null>(null)
-
-  const isActivePresetBuiltin = computed(() => activePresetId.value === BUILTIN_VANILLA_ID)
 
   /** 切换单个 Mod 的启用/禁用状态 */
   async function handleToggle(mod: InstalledMod) {
@@ -50,7 +46,7 @@ export function useModOperations() {
       }
       await fetchMods()
       // 同步激活预设快照
-      if (activePresetId.value && !isActivePresetBuiltin.value) {
+      if (activePresetId.value) {
         const next = new Set(presetSnapshot.value)
         if (isEnabling) next.add(mod.id)
         else next.delete(mod.id)
@@ -161,7 +157,6 @@ export function useModOperations() {
     batchBusy,
     showSaveGuardDialog,
     saveGuardInfo,
-    isActivePresetBuiltin,
     handleToggle,
     handleUninstall,
     handleOpenFolder,

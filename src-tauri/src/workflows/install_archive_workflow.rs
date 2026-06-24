@@ -697,6 +697,8 @@ pub fn install_discovered_mods(
                 .map(|m| m.affects_gameplay)
                 .unwrap_or(false),
             state,
+            source: "local".to_string(),
+            workshop_id: None,
         });
     }
 

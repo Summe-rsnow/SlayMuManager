@@ -13,6 +13,12 @@ pub struct InstalledMod {
     #[serde(default)]
     pub affects_gameplay: bool,
     pub state: InstalledModState,
+    /// "local"（mods/ 或 mods_disabled/）或 "workshop"（创意工坊）
+    #[serde(default)]
+    pub source: String,
+    /// 创意工坊 mod 的订阅 ID（仅 source="workshop" 时有效）
+    #[serde(default)]
+    pub workshop_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

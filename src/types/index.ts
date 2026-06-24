@@ -15,6 +15,8 @@ export interface InstalledMod {
   manifestPath: string | null
   affectsGameplay: boolean
   state: ModState
+  source: "local" | "workshop"
+  workshopId: string | null
 }
 
 export type ModState = "enabled" | "disabled" | "update_available" | "conflict" | "broken" | "unknown"
@@ -249,5 +251,7 @@ export interface AppBootstrap {
   themeColor: string
   launchMode: string
   launchCheckCloudSave: boolean
+  vanillaLaunch: boolean
+  hasWorkshopMods: boolean
   autoCheckUpdate: boolean
 }

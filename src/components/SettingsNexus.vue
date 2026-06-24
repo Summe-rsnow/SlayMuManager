@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSpace, NInput, NButton, NIcon } from "naive-ui"
-import { Key, ChevronDown } from "lucide-vue-next"
+import { Key, ChevronDown } from "@lucide/vue"
 import type { AppBootstrap } from "../types"
 import { useSettingsHighlight } from "../composables/useSettingsHighlight"
 

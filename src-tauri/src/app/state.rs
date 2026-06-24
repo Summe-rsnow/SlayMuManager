@@ -58,6 +58,7 @@ pub struct AppSettings {
     pub theme_color: String,
     pub launch_mode: String,
     pub launch_check_cloud_save: bool,
+    pub vanilla_launch: bool,
     pub auto_check_update: bool,
 }
 
@@ -65,7 +66,7 @@ impl Default for AppSettings {
     fn default() -> Self {
         Self {
             game_root_dir: None,
-            active_profile_name: "原版".to_string(),
+            active_profile_name: String::new(),
             locale: "zh-CN".to_string(),
             save_auto_sync: false,
             save_sync_pairs: Vec::new(),
@@ -79,6 +80,7 @@ impl Default for AppSettings {
             theme_color: "indigo".to_string(),
             launch_mode: "steam".to_string(),
             launch_check_cloud_save: true,
+            vanilla_launch: false,
             auto_check_update: true,
         }
     }

@@ -4,7 +4,7 @@ import { useI18n } from "vue-i18n"
 import { useMessage } from "naive-ui"
 import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSpace, NInput, NButton, NIcon } from "naive-ui"
-import { Globe } from "lucide-vue-next"
+import { Globe } from "@lucide/vue"
 import type { AppBootstrap } from "../types"
 
 const { t } = useI18n()

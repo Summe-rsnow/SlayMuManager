@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n"
 import { NCard, NSwitch, NRadioGroup, NRadio, NPopover, NIcon } from "naive-ui"
-import { HelpCircle } from "lucide-vue-next"
+import { HelpCircle } from "@lucide/vue"
 import { discoverColumns, setDiscoverColumns } from "../composables/useDiscoverColumns"
 import { prefetchEnabled, setPrefetchEnabled } from "../composables/usePageCache"
 import { showTranslateQuotaTip, setShowTranslateQuotaTip } from "../composables/useTranslation"

@@ -2,9 +2,6 @@ use crate::domain::profile::ModProfile;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-/// 内置"原版"预设的固定 ID（不可修改/删除）
-const BUILTIN_VANILLA_ID: &str = "__builtin__vanilla";
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct ProfileStore {
     profiles: Vec<ModProfile>,
@@ -18,26 +15,16 @@ fn profiles_path() -> PathBuf {
     base.join("profiles.json")
 }
 
-/// 创建内置"原版"预设（不加载任何 Mod）
-fn builtin_vanilla_profile() -> ModProfile {
-    ModProfile {
-        id: BUILTIN_VANILLA_ID.to_string(),
-        name: "原版".to_string(),
-        description: Some("不使用任何模组，纯净原版游戏".to_string()),
-        mod_ids: vec![],
-        created_at: "2025-01-01T00:00:00+08:00".to_string(),
-        updated_at: "2025-01-01T00:00:00+08:00".to_string(),
-        builtin: true,
-    }
-}
+/// 旧版内置原版预设的固定 ID（用于迁移清理）
+const LEGACY_BUILTIN_VANILLA_ID: &str = "__builtin__vanilla";
 
 pub fn load_profiles() -> Vec<ModProfile> {
     let path = profiles_path();
 
-    let mut profiles = if path.exists() {
+    let profiles = if path.exists() {
         let content = match std::fs::read_to_string(&path) {
             Ok(c) => c,
-            Err(_) => return vec![builtin_vanilla_profile()],
+            Err(_) => return Vec::new(),
         };
         let store: ProfileStore = serde_json::from_str(&content).unwrap_or(ProfileStore {
             profiles: Vec::new(),
@@ -47,23 +34,19 @@ pub fn load_profiles() -> Vec<ModProfile> {
         Vec::new()
     };
 
-    // 确保内置"原版"预设始终存在且排在最前面
-    if !profiles.iter().any(|p| p.id == BUILTIN_VANILLA_ID) {
-        let vanilla = builtin_vanilla_profile();
-        profiles.insert(0, vanilla);
-        // 首次注入时持久化
-        let _ = save_profiles(&profiles);
-    } else {
-        // 移到最前面（可能被用户编辑过顺序）
-        if let Some(pos) = profiles.iter().position(|p| p.id == BUILTIN_VANILLA_ID) {
-            if pos != 0 {
-                let vanilla = profiles.remove(pos);
-                profiles.insert(0, vanilla);
-            }
-        }
+    // 迁移：移除旧版内置原版预设（已替换为原版启动开关）
+    let before = profiles.len();
+    let filtered: Vec<ModProfile> = profiles
+        .into_iter()
+        .filter(|p| p.id != LEGACY_BUILTIN_VANILLA_ID)
+        .collect();
+
+    if filtered.len() != before {
+        // 持久化清理结果
+        let _ = save_profiles(&filtered);
     }
 
-    profiles
+    filtered
 }
 
 pub fn save_profiles(profiles: &[ModProfile]) -> Result<(), String> {

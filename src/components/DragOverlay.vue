@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
 import { NIcon } from "naive-ui"
-import { Upload } from "lucide-vue-next"
+import { Upload } from "@lucide/vue"
 
 const { t } = useI18n()
 
