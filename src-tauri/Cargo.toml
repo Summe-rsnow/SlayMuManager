@@ -1,6 +1,6 @@
 [package]
 name = "slaymumanager"
-version = "1.6.0"
+version = "1.6.1"
 description = "Slay the Spire 2 Mod Manager"
 authors = []
 edition = "2024"

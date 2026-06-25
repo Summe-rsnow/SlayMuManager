@@ -32,6 +32,8 @@ pub fn scan_disabled_mods(game_root: &Path) -> Vec<InstalledMod> {
 }
 
 /// 扫描 Steam 创意工坊中已安装的 Mod
+/// 部分工坊 mod 的 manifest 在子目录中（如 workshop_id/BaseLib/BaseLib.json），
+/// 因此当顶层扫描不到 manifest 时还会尝试子目录。
 fn scan_workshop_mods() -> Vec<InstalledMod> {
     let workshop_dirs = crate::integrations::steam::get_workshop_dirs();
     let mut mods = Vec::new();
@@ -54,10 +56,13 @@ fn scan_workshop_mods() -> Vec<InstalledMod> {
                 .unwrap_or("")
                 .to_string();
 
-            let (manifest_path, manifest): (Option<PathBuf>, Option<ModManifest>) =
-                ModManifest::find_in_dir(&path)
-                    .map(|(p, m)| (Some(p), Some(m)))
-                    .unwrap_or((None, None));
+            // 先在顶层找 manifest，再搜子目录（兼容嵌套结构）
+            let (manifest_path, manifest) = find_manifest_recursive(&path);
+
+            let manifest_dir = manifest_path
+                .as_ref()
+                .and_then(|p| p.parent())
+                .unwrap_or(&path);
 
             let id = manifest
                 .as_ref()
@@ -77,7 +82,7 @@ fn scan_workshop_mods() -> Vec<InstalledMod> {
                 version: manifest.as_ref().and_then(|m| m.version.clone()),
                 author: manifest.as_ref().and_then(|m| m.author.clone()),
                 folder_name: workshop_id.clone(),
-                install_dir: path.to_string_lossy().to_string(),
+                install_dir: manifest_dir.to_string_lossy().to_string(),
                 manifest_path: manifest_path.map(|p| p.to_string_lossy().to_string()),
                 affects_gameplay: manifest
                     .as_ref()
@@ -92,6 +97,25 @@ fn scan_workshop_mods() -> Vec<InstalledMod> {
 
     mods.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     mods
+}
+
+/// 在 workshop mod 目录中递归搜索 manifest（最多深 1 层子目录）
+fn find_manifest_recursive(dir: &Path) -> (Option<PathBuf>, Option<ModManifest>) {
+    if let Some((p, m)) = ModManifest::find_in_dir(dir) {
+        return (Some(p), Some(m));
+    }
+    // 顶层没找到 → 搜一级子目录
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let sub = entry.path();
+            if sub.is_dir() {
+                if let Some((p, m)) = ModManifest::find_in_dir(&sub) {
+                    return (Some(p), Some(m));
+                }
+            }
+        }
+    }
+    (None, None)
 }
 
 /// 在指定目录下扫描所有子文件夹，每个子文件夹当作一个 Mod
