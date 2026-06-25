@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::path::{Path, PathBuf};
 
 /// Mod 的 manifest JSON 结构
@@ -12,7 +12,7 @@ pub struct ModManifest {
     #[serde(default)]
     pub affects_gameplay: bool,
     pub description: Option<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_dependencies")]
     pub dependencies: Vec<String>,
     #[serde(default)]
     pub has_pck: Option<bool>,
@@ -94,4 +94,28 @@ impl ModManifest {
         None
     }
 
+}
+
+/// 依赖字段兼容两种格式：
+/// - 字符串数组：["BaseLib"]
+/// - 对象数组：[{"id": "BaseLib", "min_version": "3.3.0"}]
+fn deserialize_dependencies<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde_json::Value;
+    let raw: Value = Deserialize::deserialize(deserializer)?;
+    match raw {
+        Value::Array(arr) => Ok(arr
+            .into_iter()
+            .filter_map(|v| match v {
+                Value::String(s) => Some(s),
+                Value::Object(mut m) => m
+                    .remove("id")
+                    .and_then(|v| v.as_str().map(String::from)),
+                _ => None,
+            })
+            .collect()),
+        _ => Ok(Vec::new()),
+    }
 }
