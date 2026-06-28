@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { watch, nextTick } from "vue"
 import { useI18n } from "vue-i18n"
-import { useSettingsHighlight } from "../composables/useSettingsHighlight"
-import SettingsGamePath from "../components/SettingsGamePath.vue"
-import SettingsLaunch from "../components/SettingsLaunch.vue"
-import SettingsNexus from "../components/SettingsNexus.vue"
-import SettingsProxy from "../components/SettingsProxy.vue"
-import SettingsAppearance from "../components/SettingsAppearance.vue"
-import SettingsDiscover from "../components/SettingsDiscover.vue"
-import SettingsBackup from "../components/SettingsBackup.vue"
-import SettingsAbout from "../components/SettingsAbout.vue"
-import SettingsLaunchGame from "../components/SettingsLaunchGame.vue"
+import { useSettingsHighlight } from "@/composables/useSettingsHighlight"
+import SettingsGamePath from "@/components/SettingsGamePath.vue"
+import SettingsLaunch from "@/components/SettingsLaunch.vue"
+import SettingsNexus from "@/components/SettingsNexus.vue"
+import SettingsProxy from "@/components/SettingsProxy.vue"
+import SettingsAppearance from "@/components/SettingsAppearance.vue"
+import SettingsDiscover from "@/components/SettingsDiscover.vue"
+import SettingsBackup from "@/components/SettingsBackup.vue"
+import SettingsAbout from "@/components/SettingsAbout.vue"
+import SettingsLaunchGame from "@/components/SettingsLaunchGame.vue"
 
 const { t } = useI18n()
 const { highlightedSetting, clearHighlight } = useSettingsHighlight()

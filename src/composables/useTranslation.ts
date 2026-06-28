@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core"
-import { currentLocale } from "../i18n"
+import { currentLocale } from "@/i18n"
 import { useStorage } from "./useStorage"
 
 // 翻译缓存: `${targetLang}:${text}` -> translatedText

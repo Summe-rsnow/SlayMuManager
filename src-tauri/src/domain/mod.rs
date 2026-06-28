@@ -3,3 +3,4 @@ pub mod profile;
 pub mod remote_mod;
 pub mod save;
 pub mod task;
+pub mod workshop_mod;

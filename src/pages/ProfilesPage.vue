@@ -11,12 +11,12 @@ import {
   Plus, FolderHeart, Edit3, Trash2, Play, Download, Search, Loader2,
 } from "@lucide/vue"
 import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
-import { useIsActive } from "../composables/useIsActive"
-import { useSidebarActions } from "../composables/useSidebarActions"
-import { useExportState } from "../composables/useExportState"
-import EmptyState from "../components/EmptyState.vue"
-import DragOverlay from "../components/DragOverlay.vue"
-import AppDialog from "../components/AppDialog.vue"
+import { useIsActive } from "@/composables/useIsActive"
+import { useSidebarActions } from "@/composables/useSidebarActions"
+import { useExportState } from "@/composables/useExportState"
+import EmptyState from "@/components/EmptyState.vue"
+import DragOverlay from "@/components/DragOverlay.vue"
+import AppDialog from "@/components/AppDialog.vue"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -397,18 +397,13 @@ watch(presetAppliedTick, () => {
                 <NButton v-if="!p.builtin" text size="tiny" @click="() => openEdit(p)">
                   <template #icon><NIcon :size="14"><Edit3 /></NIcon></template>
                 </NButton>
-                <NPopconfirm v-if="!p.builtin && p.name !== activePresetName" @positive-click="() => handleDelete(p)">
+                <NPopconfirm v-if="!p.builtin" @positive-click="() => handleDelete(p)">
                   <template #trigger>
                     <NButton text size="tiny" type="error">
                       <template #icon><NIcon :size="14"><Trash2 /></NIcon></template>
                     </NButton>
                   </template>
-                  <template v-if="p.name === activePresetName">
-                    {{ t("profiles.confirmDeleteActive", { name: p.name }) }}
-                  </template>
-                  <template v-else>
-                    {{ t("profiles.confirmDelete", { name: p.name }) }}
-                  </template>
+                  {{ t("profiles.confirmDelete", { name: p.name }) }}
                 </NPopconfirm>
               </NSpace>
             </div>

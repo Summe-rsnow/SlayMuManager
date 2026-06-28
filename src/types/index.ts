@@ -255,3 +255,21 @@ export interface AppBootstrap {
   hasWorkshopMods: boolean
   autoCheckUpdate: boolean
 }
+
+export interface WorkshopSearchResult {
+  items: WorkshopMod[]
+  totalCount: number
+}
+
+export interface WorkshopMod {
+  id: number
+  name: string
+  author: string
+  description: string
+  previewUrl: string | null
+  tags: string[]
+  subscribers: number
+  votesUp: number
+  votesDown: number
+  subscribed: boolean
+}

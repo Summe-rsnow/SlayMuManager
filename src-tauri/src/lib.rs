@@ -102,7 +102,12 @@ pub fn run() {
             app::commands::start_mod_update_check,
             app::commands::check_mod_updates,
             app::commands::get_cached_mod_updates,
-            // 5.10 设置
+            // 5.10 Steam 创意工坊
+            app::commands::check_steam_status,
+            app::commands::search_workshop,
+            app::commands::subscribe_workshop_mod,
+            app::commands::unsubscribe_workshop_mod,
+            // 5.11 设置
             app::commands::update_nexus_api_key,
             app::commands::update_proxy_url,
             app::commands::test_proxy,

@@ -2,9 +2,9 @@
 import { useI18n } from "vue-i18n"
 import { NTag, NButton, NIcon, NSpace, NPopconfirm } from "naive-ui"
 import { Clock, Upload, Database, Trash2, ShieldAlert } from "@lucide/vue"
-import { currentLocale } from "../i18n"
+import { currentLocale } from "@/i18n"
 import type { SaveSlot } from "../types"
-import { kindLabel } from "../utils/kindLabel"
+import { kindLabel } from "@/utils/kindLabel"
 
 const props = defineProps<{
   slot: SaveSlot

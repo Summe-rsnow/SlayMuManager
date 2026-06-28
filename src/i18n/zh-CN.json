@@ -94,10 +94,15 @@
       "unknownAuthor": "未知作者",
       "selectTag": "选择标签",
       "confirmUninstall": "确定要卸载「{name}」吗？此操作不可撤销。",
+      "confirmUnsubscribe": "确定要取消订阅「{name}」吗？",
       "note": "备注",
       "notePlaceholder": "添加备注...",
       "openFolder": "打开文件夹",
       "uninstall": "卸载",
+      "unsubscribe": "取消订阅",
+      "unsubscribed": "已取消订阅",
+      "copyId": "复制 ID",
+      "copied": "已复制",
       "workshop": "创意工坊",
       "workshopHint": "Steam 创意工坊 Mod 无法在此卸载或切换，请在 Steam 中取消订阅。"
     },
@@ -326,7 +331,7 @@
 
   "discover": {
     "title": "发现",
-    "subtitle": "在 Nexus Mods 上搜索 Slay the Spire 2 模组",
+    "subtitle": "浏览并搜索 Slay the Spire 2 模组",
     "searchPlaceholder": "搜索模组（留空浏览全部）...",
     "sort": {
       "latestAdded": "最新发布",
@@ -351,6 +356,16 @@
     "translateQuota": "翻译服务每日有限额，翻译失败时可稍后重试（可在设置关闭该提示）",
     "error": {
       "searchFailed": "搜索失败: {e}"
+    },
+    "workshop": {
+      "tab": "Steam 创意工坊",
+      "searchPlaceholder": "搜索创意工坊 Mod（留空浏览全部）...",
+      "needSteam": "需启动 Steam 并登录后方可使用",
+      "subscribe": "订阅",
+      "unsubscribe": "取消订阅",
+      "subscribed": "已订阅",
+      "subscribing": "订阅中...",
+      "resultCount": "共 {total} 个结果"
     }
   },
 
@@ -486,7 +501,6 @@
     "noDescription": "暂无描述",
     "modCount": "{n} 个 Mod",
     "confirmDelete": "确定要删除「{name}」？",
-    "confirmDeleteActive": "「{name}」是当前生效的预设，确定删除？",
     "empty": {
       "noProfiles": "暂无预设",
       "noProfilesHint": "在模组库保存当前 Mod 组合，或点击上方新建"

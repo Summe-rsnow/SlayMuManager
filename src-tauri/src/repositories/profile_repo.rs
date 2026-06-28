@@ -58,3 +58,18 @@ pub fn save_profiles(profiles: &[ModProfile]) -> Result<(), String> {
     std::fs::write(&path, content).map_err(|e| format!("写入失败: {}", e))?;
     Ok(())
 }
+
+/// 创建默认预设（当删除到最后一个时自动生成）
+/// locale 用于本地化预设名称：zh-CN → "默认预设", en → "Default"
+pub fn create_default_profile(locale: &str) -> ModProfile {
+    let name = if locale == "zh-CN" { "默认预设" } else { "Default" };
+    ModProfile {
+        id: uuid::Uuid::new_v4().to_string(),
+        name: name.to_string(),
+        description: Some("自动创建的默认预设".to_string()),
+        mod_ids: vec![],
+        created_at: chrono::Utc::now().to_rfc3339(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+        builtin: false,
+    }
+}

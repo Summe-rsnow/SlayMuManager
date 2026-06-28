@@ -4,8 +4,8 @@ import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { NMenu, NIcon, NSelect, NButton, NSpace, type MenuOption } from "naive-ui"
 import { Library, Compass, FolderHeart, Save, Settings, Play, LoaderCircle, AlertTriangle, Menu } from "@lucide/vue"
-import { useSidebarActions } from "../composables/useSidebarActions"
-import AppDialog from "../components/AppDialog.vue"
+import { useSidebarActions } from "@/composables/useSidebarActions"
+import AppDialog from "@/components/AppDialog.vue"
 
 const { t } = useI18n()
 const route = useRoute()

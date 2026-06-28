@@ -4,7 +4,7 @@ import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSwitch, NSelect } from "naive-ui"
-import { useStorage } from "../composables/useStorage"
+import { useStorage } from "@/composables/useStorage"
 import type { AppBootstrap } from "../types"
 
 const { t, te } = useI18n()

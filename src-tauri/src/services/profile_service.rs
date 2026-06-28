@@ -73,7 +73,7 @@ pub fn update_profile(
     Ok(updated)
 }
 
-pub fn delete_profile(id: &str) -> Result<(), AppError> {
+pub fn delete_profile(id: &str, locale: &str) -> Result<(), AppError> {
     let mut profiles = profile_repo::load_profiles();
 
     let idx = profiles
@@ -81,13 +81,14 @@ pub fn delete_profile(id: &str) -> Result<(), AppError> {
         .position(|p| p.id == id)
         .ok_or_else(|| AppError::Other(format!("预设不存在: {}", id)))?;
 
-    // 内置预设不可删除
-    if profiles[idx].builtin {
-        return Err(AppError::Other("内置预设不可删除".to_string()));
-    }
-
     profiles.remove(idx);
     profile_repo::save_profiles(&profiles).map_err(|e| AppError::Other(e))?;
+
+    // 如果删除后为空，创建一个默认预设
+    if profiles.is_empty() {
+        let default = profile_repo::create_default_profile(locale);
+        profile_repo::save_profiles(&[default.clone()]).map_err(|e| AppError::Other(e))?;
+    }
 
     Ok(())
 }

@@ -855,17 +855,23 @@ pub fn update_profile(
 
 #[tauri::command]
 pub fn delete_profile(id: String, state: State<AppState>) -> Result<(), String> {
-    // 禁止删除当前激活的预设
-    let is_active = {
-        let settings = state.settings.read().unwrap();
-        let profiles = profile_service::list_profiles();
-        profiles.iter().any(|p| p.id == id && p.name == settings.active_profile_name)
-    };
-    if is_active {
-        return Err("当前激活的预设不能直接删除，请先切换到其他预设".to_string());
-    }
+    let locale = state.settings.read().unwrap().locale.clone();
+    profile_service::delete_profile(&id, &locale)?;
 
-    profile_service::delete_profile(&id)?;
+    // 如果这是最后一个预设，delete_profile 会自动生成默认预设，自动应用它
+    let profiles = profile_service::list_profiles();
+    if profiles.len() == 1 {
+        let default_p = &profiles[0];
+        let settings = state.settings.read().unwrap();
+        if settings.active_profile_name != default_p.name
+            && settings.active_profile_name == id
+        {
+            drop(settings);
+            let mut w = state.settings.write().unwrap();
+            w.active_profile_name = default_p.name.clone();
+            let _ = crate::repositories::settings_repo::save_settings(&w);
+        }
+    }
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1389,6 +1395,30 @@ pub fn search_remote_mods(
         &sort_by.unwrap_or_else(|| "latest_added".to_string()),
     )
     .map_err(|e| e.to_string())
+}
+
+// =========================================================================
+// 5.10 Steam 创意工坊集成
+// =========================================================================
+
+#[tauri::command]
+pub fn check_steam_status() -> bool {
+    crate::integrations::workshop::is_steam_running()
+}
+
+#[tauri::command]
+pub fn search_workshop(query: String, page: u32, page_size: u32) -> Result<crate::domain::workshop_mod::WorkshopSearchResult, String> {
+    crate::integrations::workshop::search_workshop(&query, page, page_size)
+}
+
+#[tauri::command]
+pub fn subscribe_workshop_mod(published_file_id: u64) -> Result<(), String> {
+    crate::integrations::workshop::subscribe_mod(published_file_id)
+}
+
+#[tauri::command]
+pub fn unsubscribe_workshop_mod(published_file_id: u64) -> Result<(), String> {
+    crate::integrations::workshop::unsubscribe_mod(published_file_id)
 }
 
 // =========================================================================

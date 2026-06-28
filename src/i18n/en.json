@@ -94,10 +94,15 @@
       "unknownAuthor": "Unknown author",
       "selectTag": "Select tag",
       "confirmUninstall": "Are you sure you want to uninstall \"{name}\"? This cannot be undone.",
+      "confirmUnsubscribe": "Unsubscribe from \"{name}\"?",
       "note": "Note",
       "notePlaceholder": "Add note...",
       "openFolder": "Open folder",
       "uninstall": "Uninstall",
+      "unsubscribe": "Unsubscribe",
+      "unsubscribed": "Unsubscribed",
+      "copyId": "Copy ID",
+      "copied": "Copied",
       "workshop": "Workshop",
       "workshopHint": "Steam Workshop mods cannot be uninstalled or toggled here. Unsubscribe in Steam to remove."
     },
@@ -326,7 +331,7 @@
 
   "discover": {
     "title": "Discover",
-    "subtitle": "Search Slay the Spire 2 mods on Nexus Mods",
+    "subtitle": "Browse and search Slay the Spire 2 mods",
     "searchPlaceholder": "Search mods (leave empty to browse all)...",
     "sort": {
       "latestAdded": "Latest Added",
@@ -351,6 +356,16 @@
     "translateQuota": "Translation service has daily quota limits. Retry later if it fails. (Can be disabled in Settings)",
     "error": {
       "searchFailed": "Search failed: {e}"
+    },
+    "workshop": {
+      "tab": "Steam Workshop",
+      "searchPlaceholder": "Search Workshop mods (leave empty to browse all)...",
+      "needSteam": "Steam must be running and logged in to use this",
+      "subscribe": "Subscribe",
+      "unsubscribe": "Unsubscribe",
+      "subscribed": "Subscribed",
+      "subscribing": "Subscribing...",
+      "resultCount": "{total} result(s)"
     }
   },
 
@@ -486,7 +501,6 @@
     "noDescription": "No description",
     "modCount": "{n} mod(s)",
     "confirmDelete": "Delete \"{name}\"?",
-    "confirmDeleteActive": "\"{name}\" is currently active. Are you sure you want to delete it?",
     "empty": {
       "noProfiles": "No presets",
       "noProfilesHint": "Save your current mod configuration from the Library, or click New Preset above"

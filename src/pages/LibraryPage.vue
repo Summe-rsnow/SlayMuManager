@@ -2,29 +2,30 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue"
 import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
-import { currentLocale } from "../i18n"
+import { currentLocale } from "@/i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
 import {
-  NSpace, NCard, NTag, NButton, NInput, NIcon, NPopover,
+  NSpace, NCard, NTag, NButton, NInput, NIcon,
   NCheckbox, NSwitch, useMessage, useDialog,
 } from "naive-ui"
-import { useSettingsHighlight } from "../composables/useSettingsHighlight"
+import { useSettingsHighlight } from "@/composables/useSettingsHighlight"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
-  AlertTriangle, Filter, X, PackageOpen, Check, ArrowUp, HardDrive, HelpCircle,
+  AlertTriangle, Filter, X, PackageOpen, Check, ArrowUp, HardDrive,
 } from "@lucide/vue"
-import DragOverlay from "../components/DragOverlay.vue"
-import ModCard from "../components/ModCard.vue"
-import AppDialog from "../components/AppDialog.vue"
-import { useModCache } from "../composables/useModCache"
-import { useModUpdates } from "../composables/useModUpdates"
-import { useModTags, PRESET_TAGS } from "../composables/useModTags"
+import DragOverlay from "@/components/DragOverlay.vue"
+import TipIcon from "@/components/TipIcon.vue"
+import ModCard from "@/components/ModCard.vue"
+import AppDialog from "@/components/AppDialog.vue"
+import { useModCache } from "@/composables/useModCache"
+import { useModUpdates } from "@/composables/useModUpdates"
+import { useModTags, PRESET_TAGS } from "@/composables/useModTags"
 import type { InstalledMod, ModProfile, AppBootstrap, BatchImportPreview, BatchInstallResult } from "../types"
-import { useIsActive } from "../composables/useIsActive"
-import { useSidebarActions } from "../composables/useSidebarActions"
-import { useModOperations } from "../composables/useModOperations"
+import { useIsActive } from "@/composables/useIsActive"
+import { useSidebarActions } from "@/composables/useSidebarActions"
+import { useModOperations } from "@/composables/useModOperations"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -244,6 +245,24 @@ async function handleCreateNewPreset() {
   }
 }
 
+// --- 创意工坊取消订阅 ---
+const unsubscribing = ref<Set<string>>(new Set())
+async function handleUnsubscribe(workshopId: string) {
+  if (unsubscribing.value.has(workshopId)) return
+  unsubscribing.value = new Set(unsubscribing.value).add(workshopId)
+  try {
+    await invoke("unsubscribe_workshop_mod", { publishedFileId: Number(workshopId) })
+    message.success(t("library.mod.unsubscribed"))
+    await fetchMods()
+  } catch (e: unknown) {
+    message.error(t("library.error.operationFailed", { e }))
+  } finally {
+    const next = new Set(unsubscribing.value)
+    next.delete(workshopId)
+    unsubscribing.value = next
+  }
+}
+
 // --- 侧边栏筛选 ---
 const showFilterPanel = ref(false)
 const filterAffectsGameplay = ref(false)
@@ -449,12 +468,7 @@ watch(presetAppliedTick, () => {
         <div class="flex items-center gap-3 ml-4">
           <div class="flex items-center gap-1">
             <span class="text-xs text-c-muted whitespace-nowrap">{{ t("library.vanillaLaunch") }}</span>
-            <NPopover trigger="hover" placement="bottom" :width="260">
-              <template #trigger>
-                <NIcon :size="13" class="text-c-muted cursor-help" style="vertical-align:middle"><HelpCircle /></NIcon>
-              </template>
-              <span class="text-xs">{{ t("library.vanillaLaunchHint") }}</span>
-            </NPopover>
+            <TipIcon :text="t('library.vanillaLaunchHint')" />
           </div>
           <NSwitch :value="vanillaLaunch" size="small" @update:value="handleToggleVanillaLaunch" />
         </div>
@@ -470,12 +484,7 @@ watch(presetAppliedTick, () => {
           <NButton size="small" secondary :loading="checkingUpdates" @click="checkUpdates">
             <template #icon><NIcon :size="14"><ArrowUp /></NIcon></template>
             {{ t("library.updateCheck.check") }}
-            <NPopover trigger="hover" placement="bottom" :width="240">
-              <template #trigger>
-                <NIcon :size="14" class="text-c-muted cursor-help ml-1" style="vertical-align:middle"><HelpCircle /></NIcon>
-              </template>
-              <span class="text-xs">{{ t("library.updateCheck.supportHint") }}</span>
-            </NPopover>
+            <TipIcon :text="t('library.updateCheck.supportHint')" :width="240" />
           </NButton>
           <NButton size="small" secondary :loading="loading" @click="fetchMods">
             <template #icon><NIcon :size="14"><RefreshCw /></NIcon></template>
@@ -652,6 +661,7 @@ watch(presetAppliedTick, () => {
                 @open-folder="handleOpenFolder"
                 @uninstall="handleUninstall"
                 @open-update-url="openUpdateUrl"
+                @unsubscribe="handleUnsubscribe"
               />
             </NSpace>
           </NCard>
@@ -699,6 +709,7 @@ watch(presetAppliedTick, () => {
                 @open-folder="handleOpenFolder"
                 @uninstall="handleUninstall"
                 @open-update-url="openUpdateUrl"
+                @unsubscribe="handleUnsubscribe"
               />
             </NSpace>
           </NCard>

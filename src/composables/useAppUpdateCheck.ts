@@ -1,6 +1,6 @@
 import { ref, computed } from "vue"
 import { invoke } from "@tauri-apps/api/core"
-import { version as APP_VERSION } from "../../package.json"
+import { version as APP_VERSION } from "@/../package.json"
 import type { AppBootstrap } from "../types"
 
 export type UpdateStatus = "idle" | "checking" | "uptodate" | "available"

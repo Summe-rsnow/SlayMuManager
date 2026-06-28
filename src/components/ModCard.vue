@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from "vue"
-import { currentLocale } from "../i18n"
+import { currentLocale } from "@/i18n"
 import { useI18n } from "vue-i18n"
 import {
   NTag, NButton, NIcon, NSwitch, NPopconfirm, NPopover, NCheckbox, NSpace, NInput,
 } from "naive-ui"
-import { FolderOpen, Trash2, Plus, StickyNote } from "@lucide/vue"
-import { useModTags, PRESET_TAGS } from "../composables/useModTags"
-import { useModNotes } from "../composables/useModNotes"
+import { FolderOpen, Trash2, Plus, StickyNote, Copy, Check } from "@lucide/vue"
+import IconBtn from "./IconBtn.vue"
+import { useModTags, PRESET_TAGS } from "@/composables/useModTags"
+import { useModNotes } from "@/composables/useModNotes"
 import type { InstalledMod } from "../types"
 
 import type { ModUpdateInfo } from "../types"
@@ -26,6 +27,7 @@ const emit = defineEmits<{
   (e: "openFolder", mod: InstalledMod): void
   (e: "uninstall", mod: InstalledMod): void
   (e: "openUpdateUrl", mod: InstalledMod): void
+  (e: "unsubscribe", workshopId: string): void
 }>()
 
 const { t } = useI18n()
@@ -46,6 +48,17 @@ const cardStyle = computed(() => ({
   borderColor: "var(--color-border)",
   borderLeftColor: props.enabled ? "var(--primary-color)" : "var(--color-text-muted)",
 }))
+
+const copied = ref(false)
+let copyTimer: ReturnType<typeof setTimeout> | null = null
+async function copyModId() {
+  try {
+    await navigator.clipboard.writeText(props.mod.id)
+    copied.value = true
+    if (copyTimer) clearTimeout(copyTimer)
+    copyTimer = setTimeout(() => { copied.value = false }, 1500)
+  } catch { /* ignore */ }
+}
 </script>
 
 <template>
@@ -57,7 +70,7 @@ const cardStyle = computed(() => ({
     <div class="flex-1 min-w-0" style="position:relative;z-index:2">
       <!-- 名称 + 版本 + 标签 -->
       <div class="flex items-center gap-1.5 flex-wrap">
-        <span class="font-medium truncate max-w-[180px] text-c-primary">
+        <span class="font-medium truncate max-w-[320px] text-c-primary" :title="mod.name">
           {{ mod.name }}
         </span>
         <span class="text-xs text-c-muted font-mono truncate">{{ mod.version ?? "—" }}</span>
@@ -107,61 +120,77 @@ const cardStyle = computed(() => ({
 
     <!-- 操作按钮 -->
     <div class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4">
-      <!-- 添加标签 -->
-      <NPopover trigger="click" placement="bottom-end">
-        <template #trigger>
-          <NButton text size="tiny" :disabled="busy" :aria-label="t('library.mod.selectTag')">
-            <template #icon><NIcon :size="14"><Plus /></NIcon></template>
-          </NButton>
+      <IconBtn :icon="Plus" :tip="t('library.mod.selectTag')">
+        <template #trigger="{ disabled: d }">
+          <NPopover trigger="click" placement="bottom-end">
+            <template #trigger>
+              <NButton text size="tiny" :disabled="d">
+                <template #icon><NIcon :size="14"><Plus /></NIcon></template>
+              </NButton>
+            </template>
+            <div class="w-52">
+              <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.selectTag") }}</div>
+              <NSpace vertical :size="4">
+                <NCheckbox v-for="t in PRESET_TAGS" :key="t.id" size="small"
+                  :checked="getTags(mod.id).includes(t.id)"
+                  @update:checked="() => toggleTag(mod.id, t.id)">
+                  <span class="text-xs">{{ getTagLabel(t.id, currentLocale) }}</span>
+                </NCheckbox>
+              </NSpace>
+            </div>
+          </NPopover>
         </template>
-        <div class="w-52">
-          <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.selectTag") }}</div>
-          <NSpace vertical :size="4">
-            <NCheckbox
-              v-for="t in PRESET_TAGS"
-              :key="t.id"
-              size="small"
-              :checked="getTags(mod.id).includes(t.id)"
-              @update:checked="() => toggleTag(mod.id, t.id)"
-            >
-              <span class="text-xs">{{ getTagLabel(t.id, currentLocale) }}</span>
-            </NCheckbox>
-          </NSpace>
-        </div>
-      </NPopover>
+      </IconBtn>
 
-      <!-- 备注 -->
-      <NPopover trigger="click" placement="bottom" @update:show="(v: boolean) => v && openNotePopover(mod.id)">
-        <template #trigger>
-          <NButton text size="tiny" :disabled="busy">
-            <template #icon><NIcon :size="14"><StickyNote /></NIcon></template>
-          </NButton>
+      <IconBtn :icon="StickyNote" :tip="t('library.mod.note')">
+        <template #trigger="{ disabled: d }">
+          <NPopover trigger="click" placement="bottom" @update:show="(v: boolean) => v && openNotePopover(mod.id)">
+            <template #trigger>
+              <NButton text size="tiny" :disabled="d">
+                <template #icon><NIcon :size="14"><StickyNote /></NIcon></template>
+              </NButton>
+            </template>
+            <div class="w-56">
+              <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.note") }}</div>
+              <NInput :value="noteDraft" type="textarea" size="small"
+                :placeholder="t('library.mod.notePlaceholder')"
+                :autosize="{ minRows: 2, maxRows: 6 }"
+                @update:value="(v: string) => noteDraft = v"
+                @blur="saveNote(mod.id)" />
+            </div>
+          </NPopover>
         </template>
-        <div class="w-56">
-          <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.note") }}</div>
-          <NInput
-            :value="noteDraft"
-            type="textarea"
-            size="small"
-            :placeholder="t('library.mod.notePlaceholder')"
-            :autosize="{ minRows: 2, maxRows: 6 }"
-            @update:value="(v: string) => noteDraft = v"
-            @blur="saveNote(mod.id)"
-          />
-        </div>
-      </NPopover>
+      </IconBtn>
 
-      <NButton text size="tiny" :disabled="busy" :aria-label="t('library.mod.openFolder')" @click="emit('openFolder', mod)">
-        <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
-      </NButton>
-      <NPopconfirm v-if="mod.source !== 'workshop'" @positive-click="() => emit('uninstall', mod)">
-        <template #trigger>
-          <NButton text size="tiny" type="error" :disabled="busy" :aria-label="t('library.mod.uninstall')">
-            <template #icon><NIcon :size="14"><Trash2 /></NIcon></template>
-          </NButton>
+      <IconBtn :icon="FolderOpen" :tip="t('library.mod.openFolder')" @click="emit('openFolder', mod)" />
+
+      <IconBtn v-if="mod.source !== 'workshop'" :icon="Trash2" :tip="t('library.mod.uninstall')" type="error">
+        <template #trigger="{ icon: ic, disabled: d, type: tty }">
+          <NPopconfirm @positive-click="() => emit('uninstall', mod)">
+            <template #trigger>
+              <NButton text size="tiny" :disabled="d" :type="tty">
+                <template #icon><NIcon :size="14"><component :is="ic" /></NIcon></template>
+              </NButton>
+            </template>
+            {{ t("library.mod.confirmUninstall", { name: mod.name }) }}
+          </NPopconfirm>
         </template>
-        {{ t("library.mod.confirmUninstall", { name: mod.name }) }}
-      </NPopconfirm>
+      </IconBtn>
+
+      <IconBtn v-if="mod.source === 'workshop' && mod.workshopId" :icon="Trash2" :tip="t('library.mod.unsubscribe')" type="error">
+        <template #trigger="{ icon: ic, disabled: d, type: tty }">
+          <NPopconfirm @positive-click="() => emit('unsubscribe', mod.workshopId!)">
+            <template #trigger>
+              <NButton text size="tiny" :disabled="d" :type="tty">
+                <template #icon><NIcon :size="14"><component :is="ic" /></NIcon></template>
+              </NButton>
+            </template>
+            {{ t("library.mod.confirmUnsubscribe", { name: mod.name }) }}
+          </NPopconfirm>
+        </template>
+      </IconBtn>
+      <IconBtn :icon="copied ? Check : Copy" :tip="copied ? t('library.mod.copied') : t('library.mod.copyId')"
+        @click="copyModId" />
       <NPopover v-if="mod.source === 'workshop'" trigger="hover" placement="left" :width="200">
         <template #trigger>
           <span>

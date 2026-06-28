@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSpace, NInput, NButton, NIcon } from "naive-ui"
 import { Key, ChevronDown } from "@lucide/vue"
 import type { AppBootstrap } from "../types"
-import { useSettingsHighlight } from "../composables/useSettingsHighlight"
+import { useSettingsHighlight } from "@/composables/useSettingsHighlight"
 
 const { t } = useI18n()
 const { highlightedSetting } = useSettingsHighlight()

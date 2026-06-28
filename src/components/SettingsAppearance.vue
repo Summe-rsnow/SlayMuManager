@@ -3,8 +3,8 @@ import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSpace, NSelect, NRadioGroup, NRadio } from "naive-ui"
-import { setLocale } from "../i18n"
-import { displayMode, setDisplayMode, themeColorKey, setThemeColor, colorPalettes, type ThemeColorKey, type DisplayMode } from "../theme"
+import { setLocale } from "@/i18n"
+import { displayMode, setDisplayMode, themeColorKey, setThemeColor, colorPalettes, type ThemeColorKey, type DisplayMode } from "@/theme"
 
 const { t } = useI18n()
 

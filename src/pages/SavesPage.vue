@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
-import { currentLocale } from "../i18n"
+import { currentLocale } from "@/i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
   NCard, NButton, NTag, NIcon, NSpace, NPopconfirm, NSwitch,
   NSelect, NRadioGroup, NRadio, useMessage,
 } from "naive-ui"
-import SlotCard from "../components/SlotCard.vue"
+import SlotCard from "@/components/SlotCard.vue"
 import {
   HardDrive, ArrowRightLeft, RefreshCw, Database,
   History, RotateCcw, Trash2, Upload, Download, Cloud, AlertTriangle, User,
@@ -16,10 +16,10 @@ import type {
   SaveSlot, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
   CloudSaveStatus, CloudSaveDiffEntry, AppBootstrap,
 } from "../types"
-import { useStorage } from "../composables/useStorage"
-import { kindLabel } from "../utils/kindLabel"
-import EmptyState from "../components/EmptyState.vue"
-import AppDialog from "../components/AppDialog.vue"
+import { useStorage } from "@/composables/useStorage"
+import { kindLabel } from "@/utils/kindLabel"
+import EmptyState from "@/components/EmptyState.vue"
+import AppDialog from "@/components/AppDialog.vue"
 
 const { t } = useI18n()
 const message = useMessage()

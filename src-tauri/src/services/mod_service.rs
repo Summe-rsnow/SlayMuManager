@@ -243,10 +243,8 @@ fn toggle_mod(
         (&plugins_dir, &disabled_dir, InstalledModState::Disabled)
     };
 
-    // 在 rename 之前记录 mods/ 是否为空（用于 Save Guard 路径切换检测）
-    let plugins_was_empty = std::fs::read_dir(&plugins_dir)
-        .map(|mut rd| rd.next().is_none())
-        .unwrap_or(true);
+    // 在 rename 之前检查是否有任何活跃的 Mod（本地 + 工坊）
+    let had_any_mods = has_any_active_mods(game_root);
 
     // 查找 source 中的 mod 文件夹
     let mod_folder = find_mod_folder(source_dir, mod_id)?;
@@ -302,20 +300,18 @@ fn toggle_mod(
         workshop_id: None,
     };
 
-    // Save Guard：检测 mods/ 空↔非空切换 + 自动同步存档
+    // Save Guard：检测是否有任何 Mod 切换（本地 + 工坊），触发存档路径变更提醒
     let (path_switched, direction): (bool, Option<String>) = if enable {
-        // 启用：rename 之前已检查 mods/ 是否为空
-        if plugins_was_empty {
+        // 启用：之前没有任何 mod → 现在有了
+        if !had_any_mods {
             (true, Some("vanilla_to_modded".to_string()))
         } else {
             (false, None)
         }
     } else {
-        // 禁用：rename 之后 mods/ 是否变空（mod 已移出）
-        let is_now_empty = std::fs::read_dir(&plugins_dir)
-            .map(|mut rd| rd.next().is_none())
-            .unwrap_or(true);
-        if is_now_empty {
+        // 禁用后是否没有任何 mod 了
+        let now_has_mods = has_any_active_mods(game_root);
+        if !now_has_mods {
             (true, Some("modded_to_vanilla".to_string()))
         } else {
             (false, None)
@@ -350,6 +346,27 @@ fn toggle_mod(
 // ---------------------------------------------------------------------------
 // 卸载
 // ---------------------------------------------------------------------------
+
+/// 检查是否存在任何活跃的 Mod（本地 mods/ + 创意工坊）
+fn has_any_active_mods(game_root: &Path) -> bool {
+    // 本地 mods/ 内有子目录
+    let local_dir = game_root.join("mods");
+    if let Ok(entries) = std::fs::read_dir(&local_dir) {
+        if entries.filter_map(|e| e.ok()).any(|e| e.path().is_dir()) {
+            return true;
+        }
+    }
+    // 工坊目录有任何子文件夹
+    let workshop_dirs = crate::integrations::steam::get_workshop_dirs();
+    for wd in &workshop_dirs {
+        if let Ok(entries) = std::fs::read_dir(wd) {
+            if entries.filter_map(|e| e.ok()).any(|e| e.path().is_dir()) {
+                return true;
+            }
+        }
+    }
+    false
+}
 
 /// 卸载 Mod：删除其文件夹。先在 plugins/ 找，再在 mods_disabled/ 找
 pub fn uninstall_mod(game_root: &Path, mod_id: &str) -> Result<(), AppError> {

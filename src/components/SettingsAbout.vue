@@ -3,7 +3,7 @@ import { ref } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { NCard, NSpace, NButton } from "naive-ui"
-import { version as APP_VERSION } from "../../package.json"
+import { version as APP_VERSION } from "@/../package.json"
 
 const { t } = useI18n()
 

@@ -5,7 +5,7 @@
 import { ref, watch, computed, type Ref } from "vue"
 import { darkTheme, type GlobalTheme, type GlobalThemeOverrides } from "naive-ui"
 import { colorPalettes, type ThemeColorKey } from "./colors"
-import { useStorage } from "../composables/useStorage"
+import { useStorage } from "@/composables/useStorage"
 
 // 重新导出供外部使用
 export { colorPalettes } from "./colors"

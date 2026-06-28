@@ -1,23 +1,23 @@
 <script setup lang="ts">
-import { ref, computed, reactive, watch, onMounted, onBeforeUnmount } from "vue"
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue"
 import { onBeforeRouteLeave } from "vue-router"
 import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen, type UnlistenFn } from "@tauri-apps/api/event"
 import {
-  NCard, NButton, NInput, NIcon, NSelect, NPagination, NInputNumber, NModal, NPopover, useMessage, useDialog,
+  NButton, NInput, NIcon, NSelect, NPopconfirm, useMessage, useDialog,
 } from "naive-ui"
-import { Search, ExternalLink, ThumbsUp, PackageOpen, ArrowDown, List, Languages, RefreshCw } from "@lucide/vue"
-import type { RemoteMod, RemoteModSearchResult, AppBootstrap } from "../types"
-import { useIsActive } from "../composables/useIsActive"
-import { currentLocale } from "../i18n"
-import { translateText, showTranslateQuotaTip } from "../composables/useTranslation"
-import { discoverColumns } from "../composables/useDiscoverColumns"
-import { prefetchEnabled, getPageCache, setPageCache } from "../composables/usePageCache"
-import { useSettingsHighlight } from "../composables/useSettingsHighlight"
-import TruncatedText from "../components/TruncatedText.vue"
-import EmptyState from "../components/EmptyState.vue"
+import { Search, ExternalLink, ThumbsUp, ArrowDown, PackageOpen, RefreshCw, Plus, X } from "@lucide/vue"
+import type { RemoteMod, RemoteModSearchResult, AppBootstrap, WorkshopMod, WorkshopSearchResult } from "../types"
+import { useIsActive } from "@/composables/useIsActive"
+import { discoverColumns } from "@/composables/useDiscoverColumns"
+import { prefetchEnabled, getPageCache, setPageCache } from "@/composables/usePageCache"
+import { useSettingsHighlight } from "@/composables/useSettingsHighlight"
+import { useModCache } from "@/composables/useModCache"
+import EmptyState from "@/components/EmptyState.vue"
+import DiscoverPagination from "@/components/DiscoverPagination.vue"
+import DiscoverCard from "@/components/DiscoverCard.vue"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -25,6 +25,7 @@ const dialog = useDialog()
 const router = useRouter()
 const { highlight } = useSettingsHighlight()
 const { isActive } = useIsActive()
+const { fetchMods } = useModCache()
 
 // --- 发现页列数映射 ---
 const gridColsClass = computed(() => {
@@ -55,12 +56,87 @@ const sortOptions = computed(() => [
 ])
 
 // --- 状态 ---
+const tab = ref("nexus")
+const isNexus = computed(() => tab.value === "nexus")
 const query = ref("")
 const sortBy = ref("latest_added")
 const results = ref<RemoteMod[]>([])
 const totalCount = ref(0)
 const page = ref(1)
 const pageSize = ref(12)
+
+// --- 创意工坊状态 ---
+const workshopQuery = ref("")
+const workshopResults = ref<WorkshopMod[]>([])
+const workshopLoading = ref(false)
+const workshopSearched = ref(false)
+const workshopPage = ref(1)
+const workshopPageSize = ref(12)
+const workshopTotalCount = ref(0)
+const subscribingWorkshop = ref(new Set<number>())
+const unsubscribingWorkshop = ref(new Set<number>())
+
+function switchWorkshopTab() {
+  tab.value = "workshop"
+  if (!workshopSearched.value) {
+    searchWorkshop()
+  }
+}
+
+async function searchWorkshop(page?: number) {
+  workshopLoading.value = true
+  workshopSearched.value = true
+  const pg = page ?? workshopPage.value
+  try {
+    const result = await invoke<WorkshopSearchResult>("search_workshop", {
+      query: workshopQuery.value,
+      page: pg,
+      pageSize: workshopPageSize.value,
+    })
+    workshopResults.value = result.items
+    workshopTotalCount.value = result.totalCount
+    workshopPage.value = pg
+  } catch (e: unknown) {
+    console.error("Workshop search error:", e)
+    message.error(String(e))
+  } finally {
+    workshopLoading.value = false
+  }
+}
+
+async function subscribeToWorkshop(id: number) {
+  subscribingWorkshop.value = new Set(subscribingWorkshop.value).add(id)
+  try {
+    await invoke("subscribe_workshop_mod", { publishedFileId: id })
+    const mod = workshopResults.value.find(m => m.id === id)
+    if (mod) mod.subscribed = true
+  } catch (e: unknown) {
+    console.error("Workshop subscribe error:", e)
+    message.error(String(e))
+  } finally {
+    const next = new Set(subscribingWorkshop.value)
+    next.delete(id)
+    subscribingWorkshop.value = next
+  }
+}
+
+async function unsubscribeFromWorkshop(id: number) {
+  unsubscribingWorkshop.value = new Set(unsubscribingWorkshop.value).add(id)
+  try {
+    await invoke("unsubscribe_workshop_mod", { publishedFileId: id })
+    const mod = workshopResults.value.find(m => m.id === id)
+    if (mod) mod.subscribed = false
+    message.success(t("library.mod.unsubscribed"))
+    await fetchMods()
+  } catch (e: unknown) {
+    console.error("Workshop unsubscribe error:", e)
+    message.error(String(e))
+  } finally {
+    const next = new Set(unsubscribingWorkshop.value)
+    next.delete(id)
+    unsubscribingWorkshop.value = next
+  }
+}
 
 // 请求计数器：递增 ID 匹配事件，忽略过期响应
 const searchReqId = ref(0)
@@ -82,36 +158,6 @@ const loading = ref(false)
 const initialLoading = ref(true)
 const searched = ref(false)
 const hasApiKey = ref(true)
-const imageLoadFailed = ref<Record<string, boolean>>({})
-function onImgError(modId: string) {
-  imageLoadFailed.value = { ...imageLoadFailed.value, [modId]: true }
-}
-
-// --- 翻译 ---
-const translatedTexts = reactive<Record<string, string>>({})
-const translatingMods = reactive<Record<string, boolean>>({})
-const showTranslation = reactive<Record<string, boolean>>({})
-
-async function handleTranslate(mod: RemoteMod) {
-  if (!mod.summary || translatingMods[mod.remoteId]) return
-  translatingMods[mod.remoteId] = true
-  try {
-    const result = await translateText(mod.summary)
-    if (result.ok) {
-      translatedTexts[mod.remoteId] = result.text
-      showTranslation[mod.remoteId] = true
-    } else {
-      console.warn("[discover] translate failed:", result.error)
-      message.warning(t("discover.translateFailed") + ": " + result.error)
-    }
-  } finally {
-    translatingMods[mod.remoteId] = false
-  }
-}
-
-function toggleTranslation(modId: string) {
-  showTranslation[modId] = !showTranslation[modId]
-}
 
 // --- 后台搜索事件 ---
 
@@ -242,23 +288,23 @@ function onPageSizeChange(val: number) {
   doSearch(true)
 }
 
-const jumpPage = ref<number | null>(null)
-const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
-
-function jumpToPage() {
-  const p = jumpPage.value
-  if (p == null || p < 1 || p > totalPages.value) return
-  onPageChange(p)
-  jumpPage.value = null
+function onWorkshopPageChange(p: number) {
+  workshopPage.value = p
+  searchWorkshop(p)
 }
 
-const showImagePreview = ref(false)
-const previewImageUrl = ref("")
-
-function openImagePreview(url: string) {
-  previewImageUrl.value = url
-  showImagePreview.value = true
+function onWorkshopPageSizeChange(val: number) {
+  workshopPageSize.value = val
+  workshopPage.value = 1
+  searchWorkshop(1)
 }
+
+const showPagination = computed(() => {
+  if (isNexus.value) {
+    return !initialLoading.value && results.value.length > 0 && totalCount.value > pageSize.value
+  }
+  return workshopResults.value.length > 0 && workshopTotalCount.value > workshopResults.value.length
+})
 
 function openModPage(url: string) {
   invoke("open_url_in_browser", { url }).catch(() => {})
@@ -298,7 +344,6 @@ onBeforeUnmount(() => {
 // 离开发现页时提前清空结果，避免大量图片拖慢页面切换
 onBeforeRouteLeave(() => {
   results.value = []
-  imageLoadFailed.value = {}
 })
 
 // --- 用户操作入口：未配置 API Key 时弹窗引导 ---
@@ -339,8 +384,16 @@ function handleUserRefresh() {
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-c-primary">{{ t("discover.title") }}</h1>
       <p class="text-sm mt-1 text-c-secondary">{{ t("discover.subtitle") }}</p>
+      <div class="flex gap-1 mt-3">
+        <NButton size="small" :type="tab === 'nexus' ? 'primary' : 'default'" @click="tab = 'nexus'">Nexus</NButton>
+        <NButton size="small" :type="tab === 'workshop' ? 'primary' : 'default'" @click="switchWorkshopTab">
+          {{ t("discover.workshop.tab") }}
+        </NButton>
+      </div>
     </div>
 
+    <!-- Nexus 搜索 -->
+    <template v-if="isNexus">
     <!-- 搜索栏 + 排序 + 刷新 -->
     <div class="flex gap-2 mb-4">
       <NInput
@@ -398,115 +451,26 @@ function handleUserRefresh() {
       </div>
 
       <div :class="gridColsClass">
-        <NCard
+        <DiscoverCard
           v-for="mod in results"
           :key="mod.remoteId"
-          class="discover-card break-inside-avoid mb-4 hover:shadow-md transition-shadow"
-          :style="{ minHeight: '150px' }"
+          :name="mod.name"
+          :image-url="mod.pictureUrl"
+          :description="mod.summary"
+          :author="mod.author ?? t('discover.unknownAuthor')"
+          :version="mod.latestVersion"
+          :stats="[
+            { icon: ThumbsUp, value: formatCount(mod.endorsementCount) },
+            { icon: ArrowDown, value: formatCount(mod.downloadCount) },
+          ]"
         >
-          <div class="flex gap-4 h-full">
-            <!-- 左侧：缩略图 -->
-            <div
-              v-if="mod.pictureUrl"
-              class="w-28 h-28 rounded-lg flex-shrink-0 overflow-hidden bg-c-secondary"
-            >
-              <img
-                v-show="!imageLoadFailed[mod.remoteId]"
-                :src="mod.pictureUrl"
-                :alt="mod.name"
-                class="w-full h-full object-cover cursor-pointer"
-                loading="lazy"
-                referrerpolicy="no-referrer"
-                @error="onImgError(mod.remoteId)"
-                @click="openImagePreview(mod.pictureUrl!)"
-              />
-              <div
-                v-show="imageLoadFailed[mod.remoteId]"
-                class="w-full h-full flex items-center justify-center"
-              >
-                <NIcon :size="32" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
-              </div>
-            </div>
-            <div
-              v-else
-              class="w-28 h-28 rounded-lg flex-shrink-0 flex items-center justify-center bg-c-secondary"
-            >
-              <NIcon :size="32" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
-            </div>
-
-            <!-- 右侧：标题 + 说明 + 统计 -->
-            <div class="flex-1 flex flex-col min-w-0">
-              <!-- 标题 + 版本号 + 跳转按钮 -->
-              <div class="flex items-start justify-between gap-2">
-                <div class="flex items-center gap-2 min-w-0 flex-1">
-                  <span class="font-semibold text-base text-c-primary truncate">{{ mod.name }}</span>
-                  <span v-if="mod.latestVersion" class="text-xs font-mono flex-shrink-0 text-c-muted">
-                    v{{ mod.latestVersion }}
-                  </span>
-                </div>
-                <NButton size="small" secondary class="flex-shrink-0" @click="openModPage(mod.detailUrl)">
-                  <template #icon><NIcon :size="13"><ExternalLink /></NIcon></template>
-                  {{ t("discover.details") }}
-                </NButton>
-              </div>
-
-              <!-- 说明 + 翻译（内容撑开） -->
-              <div class="min-h-0 mt-2">
-                <TruncatedText :text="mod.summary" />
-
-                <!-- 翻译区域（仅中文用户） -->
-                <div v-if="mod.summary && currentLocale === 'zh-CN'" class="flex flex-wrap items-start gap-x-1.5 mt-1">
-                  <!-- 已翻译：切换按钮 + 译文 -->
-                  <template v-if="translatedTexts[mod.remoteId]">
-                    <button
-                      class="translate-toggle"
-                      @click="toggleTranslation(mod.remoteId)"
-                    >
-                      <NIcon :size="12"><Languages /></NIcon>
-                      {{ showTranslation[mod.remoteId] ? t("discover.showOriginal") : t("discover.translate") }}
-                    </button>
-                    <p
-                      v-if="showTranslation[mod.remoteId]"
-                      class="text-xs leading-relaxed w-full mt-0.5 text-c-secondary"
-                    >
-                      {{ translatedTexts[mod.remoteId] }}
-                    </p>
-                  </template>
-                  <!-- 翻译中 -->
-                  <span v-else-if="translatingMods[mod.remoteId]" class="text-xs text-c-muted">
-                    {{ t("discover.translating") }}
-                  </span>
-                  <!-- 未翻译：显示翻译按钮（带配额提示） -->
-                  <NPopover v-else trigger="hover" placement="top" :width="240" :disabled="!showTranslateQuotaTip">
-                    <template #trigger>
-                      <button
-                        class="translate-toggle"
-                        @click="handleTranslate(mod)"
-                      >
-                        <NIcon :size="12"><Languages /></NIcon>
-                        {{ t("discover.translate") }}
-                      </button>
-                    </template>
-                    <span class="text-xs">{{ t("discover.translateQuota") }}</span>
-                  </NPopover>
-                </div>
-              </div>
-
-              <!-- 统计：靠底部 -->
-              <div class="flex items-center gap-3 text-xs pt-2 mt-auto text-c-muted">
-                <span>{{ mod.author ?? t("discover.unknownAuthor") }}</span>
-                <span class="flex items-center gap-1">
-                  <NIcon :size="13"><ThumbsUp /></NIcon>
-                  {{ formatCount(mod.endorsementCount) }}
-                </span>
-                <span class="flex items-center gap-1">
-                  <NIcon :size="13"><ArrowDown /></NIcon>
-                  {{ formatCount(mod.downloadCount) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </NCard>
+          <template #actions>
+            <NButton size="small" secondary class="flex-shrink-0" @click="openModPage(mod.detailUrl)">
+              <template #icon><NIcon :size="13"><ExternalLink /></NIcon></template>
+              {{ t("discover.details") }}
+            </NButton>
+          </template>
+        </DiscoverCard>
       </div>
     </div>
 
@@ -514,104 +478,80 @@ function handleUserRefresh() {
 
     <EmptyState v-else :icon="PackageOpen" :title="t('discover.empty.startSearch')" :description="hasApiKey ? undefined : t('discover.empty.needsApiKey')" bordered />
     </div>
+    </template>
 
-    <!-- 分页 + 每页条数（浮动药丸） -->
-    <div v-if="!initialLoading && results.length > 0 && totalCount > pageSize" class="flex justify-center sticky bottom-0 z-10 py-4">
-      <div class="discover-pagination-bar flex items-center gap-3 px-5 py-2.5 rounded-full border shadow-lg backdrop-blur-xl"
-        :style="{
-          backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 70%, transparent)',
-          borderColor: 'var(--color-border)',
-        }"
-      >
-        <div class="flex items-center gap-1.5">
-          <NIcon :size="14" class="text-c-muted"><List /></NIcon>
-          <NSelect
-            :value="pageSize"
-            :options="pageSizeOptions"
-            style="width: 80px"
-            size="tiny"
-            @update:value="onPageSizeChange"
-          />
-        </div>
-        <div class="discover-pagination">
-        <NPagination
-          :page="page"
-          :page-size="pageSize"
-          :item-count="totalCount"
-          @update:page="onPageChange"
-          size="small"
-        />
-        </div>
-        <span class="text-xs text-c-muted">{{ t("discover.jumpTo") }}</span>
-        <NInputNumber
-          v-model:value="jumpPage"
-          size="tiny"
-          :min="1"
-          :max="totalPages"
-          :placeholder="String(page)"
-          style="width: 70px"
-          @keyup.enter="jumpToPage"
-        />
-        <NButton size="tiny" secondary @click="jumpToPage">{{ t("discover.jumpToBtn") }}</NButton>
+    <!-- Steam 创意工坊 -->
+    <div v-show="tab === 'workshop'">
+      <div class="flex gap-2 mb-4">
+        <NInput v-model:value="workshopQuery" size="large" :placeholder="t('discover.workshop.searchPlaceholder')"
+          clearable @keyup.enter="searchWorkshop()">
+          <template #prefix>
+            <NIcon :size="18"><Search /></NIcon>
+          </template>
+        </NInput>
+        <NButton size="large" type="primary" :loading="workshopLoading" @click="searchWorkshop(1)">
+          {{ t("common.search") }}
+        </NButton>
       </div>
+      <div v-if="workshopResults.length > 0">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm text-c-muted">{{ t("discover.resultCount", { total: workshopTotalCount }) }}</span>
+        </div>
+        <div :class="gridColsClass">
+          <DiscoverCard
+            v-for="mod in workshopResults"
+            :key="mod.id"
+            :name="mod.name"
+            :image-url="mod.previewUrl"
+            :description="mod.description"
+            :author="mod.author"
+            :stats="[
+              { icon: ThumbsUp, value: mod.votesUp },
+            ]"
+          >
+            <template #actions>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <NPopconfirm v-if="mod.subscribed" @positive-click="unsubscribeFromWorkshop(mod.id)">
+                  <template #trigger>
+                    <NButton size="small" secondary :loading="unsubscribingWorkshop.has(mod.id)">
+                      <template #icon><NIcon :size="13"><X /></NIcon></template>
+                      {{ t("discover.workshop.unsubscribe") }}
+                    </NButton>
+                  </template>
+                  {{ t("library.mod.confirmUnsubscribe", { name: mod.name }) }}
+                </NPopconfirm>
+                <NButton v-else size="small" secondary :loading="subscribingWorkshop.has(mod.id)" @click="subscribeToWorkshop(mod.id)">
+                  <template #icon><NIcon :size="13"><Plus /></NIcon></template>
+                  {{ t("discover.workshop.subscribe") }}
+                </NButton>
+              </div>
+            </template>
+          </DiscoverCard>
+        </div>
+      </div>
+      <EmptyState v-else-if="workshopSearched && !workshopLoading" :icon="Search" :title="t('discover.empty.notFound')" bordered />
     </div>
 
-    <!-- 图片放大预览 -->
-    <NModal
-      :show="showImagePreview"
-      :overlay-style="{
-        backdropFilter: 'blur(var(--blur-backdrop)) saturate(1.3)',
-        WebkitBackdropFilter: 'blur(var(--blur-backdrop)) saturate(1.3)',
-        background: 'var(--blur-backdrop-bg)',
-      }"
-      @update:show="(v: boolean) => !v && (showImagePreview = false)"
-    >
-      <div
-        class="flex items-center justify-center"
-        style="max-width: 90vw; max-height: 90vh;"
-        @click="showImagePreview = false"
-      >
-        <img
-          v-if="previewImageUrl"
-          :src="previewImageUrl"
-          class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain"
-          style="max-width: 85vw;"
-        />
-      </div>
-    </NModal>
+    <!-- 分页栏（浮动药丸） -->
+    <div v-if="showPagination" class="flex justify-center sticky bottom-0 z-10 py-4">
+      <DiscoverPagination
+        v-if="isNexus"
+        :page="page"
+        :page-size="pageSize"
+        :total-count="totalCount"
+        :page-size-options="pageSizeOptions"
+        @update:page="onPageChange"
+        @update:page-size="onPageSizeChange"
+      />
+      <DiscoverPagination
+        v-else
+        :page="workshopPage"
+        :page-size="workshopPageSize"
+        :total-count="workshopTotalCount"
+        :page-size-options="pageSizeOptions"
+        @update:page="onWorkshopPageChange"
+        @update:page-size="onWorkshopPageSizeChange"
+      />
+    </div>
   </div>
 </template>
-
-<style scoped>
-.discover-card {
-  --n-border-color: color-mix(in srgb, var(--color-border), var(--color-text-muted) 50%);
-}
-
-/* 翻译切换按钮 */
-.translate-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 0.7rem;
-  line-height: 1;
-  padding: 1px 5px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-  color: var(--primary-color);
-  background-color: color-mix(in srgb, var(--primary-color) 8%, transparent);
-  transition: background-color 0.15s;
-  white-space: nowrap;
-}
-.translate-toggle:hover {
-  background-color: color-mix(in srgb, var(--primary-color) 18%, transparent);
-}
-
-/* 分页按钮药丸形状 */
-.discover-pagination :deep(.n-pagination-item) {
-  border-radius: 9999px !important;
-}
-.discover-pagination :deep(.n-pagination-item.n-pagination-item--active) {
-  border-radius: 9999px !important;
-}
-</style>
