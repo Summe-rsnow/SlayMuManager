@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue"
+import { defineOptions } from "vue"
 import { storeToRefs } from "pinia"
-import { onBeforeRouteLeave, useRouter } from "vue-router"
+import { useRouter, useRoute } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen, type UnlistenFn } from "@tauri-apps/api/event"
@@ -12,22 +13,29 @@ import { Search, ExternalLink, ThumbsUp, ArrowDown, PackageOpen, RefreshCw, Plus
 import type { RemoteMod, RemoteModSearchResult, AppBootstrap, WorkshopMod, WorkshopSearchResult } from "../types"
 import { useIsActive } from "@/composables/useIsActive"
 import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
-import { getPageCache, setPageCache } from "@/utils/pageCache"
+import { useSearchPrefetch } from "@/composables/useSearchPrefetch"
 import { useHighlightStore } from "@/stores/useHighlightStore"
 import { useModCacheStore } from "@/stores/useModCacheStore"
 import EmptyState from "@/components/EmptyState.vue"
 import DiscoverPagination from "@/components/DiscoverPagination.vue"
 import DiscoverCard from "@/components/DiscoverCard.vue"
 
+defineOptions({ name: "DiscoverPage" })
+
 const { t } = useI18n()
 const message = useMessage()
 const dialog = useDialog()
 const router = useRouter()
+const route = useRoute()
 const highlightStore = useHighlightStore()
 const { isActive } = useIsActive()
 const { fetchMods } = useModCacheStore()
 const prefStore = useDiscoverPrefStore()
 const { discoverColumns, prefetchEnabled } = storeToRefs(prefStore)
+
+// --- 预取缓存（Nexus + Workshop 共用泛型 composable）---
+const nexusCache = useSearchPrefetch<RemoteMod>("nx")
+const workshopCache = useSearchPrefetch<WorkshopMod>("ws")
 
 // --- 发现页列数映射 ---
 const gridColsClass = computed(() => {
@@ -58,7 +66,7 @@ const sortOptions = computed(() => [
 ])
 
 // --- 状态 ---
-const tab = ref("nexus")
+const tab = ref(route.query.tab === "workshop" ? "workshop" : "nexus")
 const isNexus = computed(() => tab.value === "nexus")
 const query = ref("")
 const sortBy = ref("latest_added")
@@ -69,6 +77,7 @@ const pageSize = ref(12)
 
 // --- 创意工坊状态 ---
 const workshopQuery = ref("")
+const workshopSortBy = ref("latest_added")
 const workshopResults = ref<WorkshopMod[]>([])
 const workshopLoading = ref(false)
 const workshopSearched = ref(false)
@@ -78,32 +87,32 @@ const workshopTotalCount = ref(0)
 const subscribingWorkshop = ref(new Set<number>())
 const unsubscribingWorkshop = ref(new Set<number>())
 
+function switchNexusTab() {
+  tab.value = "nexus"
+  const q = { ...route.query }
+  delete q.tab
+  router.replace({ query: q })
+}
+
 function switchWorkshopTab() {
   tab.value = "workshop"
+  router.replace({ query: { ...route.query, tab: "workshop" } })
   if (!workshopSearched.value) {
     searchWorkshop()
   }
 }
 
-async function searchWorkshop(page?: number) {
-  workshopLoading.value = true
-  workshopSearched.value = true
-  const pg = page ?? workshopPage.value
+/** 静默获取一页（仅写入缓存，不更新 UI） */
+async function workshopFetchSilent(query: string, sortBy: string, page: number, pageSize: number) {
   try {
-    const result = await invoke<WorkshopSearchResult>("search_workshop", {
-      query: workshopQuery.value,
-      page: pg,
-      pageSize: workshopPageSize.value,
-    })
-    workshopResults.value = result.items
-    workshopTotalCount.value = result.totalCount
-    workshopPage.value = pg
-  } catch (e: unknown) {
-    console.error("Workshop search error:", e)
-    message.error(String(e))
-  } finally {
-    workshopLoading.value = false
-  }
+    const result = await invoke<WorkshopSearchResult>("search_workshop", { query, page, pageSize, sortBy })
+    workshopCache.setCache(query, sortBy, page, pageSize, result.items, result.totalCount)
+  } catch { /* silent */ }
+}
+
+/** 后台预取 Workshop 相邻页 */
+function workshopPrefetchAdjacent(q: string, sb: string, currentPage: number, ps: number) {
+  workshopCache.prefetchAdjacent(q, sb, currentPage, ps, workshopFetchSilent)
 }
 
 async function subscribeToWorkshop(id: number) {
@@ -214,7 +223,7 @@ function handleSearchEvent(event: DiscoverSearchEvent) {
 
   // 无论是否匹配 reqId，都写入缓存（这样预取页也能被缓存）
   if (event.result) {
-    setPageCache(event.query, event.sortBy, event.page, event.pageSize, event.result.items, event.result.totalCount)
+    nexusCache.setCache(event.query, event.sortBy, event.page, event.pageSize, event.result.items, event.result.totalCount)
   }
 
   // 仅匹配当前请求 ID 才更新 UI
@@ -242,7 +251,7 @@ async function doSearch(resetPage = true) {
 
   // 缓存命中：直接展示
   if (prefetchEnabled.value) {
-    const cached = getPageCache(q, sb, pg, ps)
+    const cached = nexusCache.getCache(q, sb, pg, ps)
     if (cached) {
       results.value = cached.items
       totalCount.value = cached.totalCount
@@ -261,18 +270,11 @@ async function doSearch(resetPage = true) {
 function prefetchAdjacentPages(
   q: string, sb: string, currentPage: number, ps: number, _mainReqId: number
 ) {
-  const pages = [currentPage - 1, currentPage + 1]
-  for (const p of pages) {
-    if (p < 1) continue
-    if (getPageCache(q, sb, p, ps)) continue // 已有缓存
+  nexusCache.prefetchAdjacent(q, sb, currentPage, ps, (query, sortBy, p, pageSize) => {
     invoke("start_remote_search", {
-      query: q,
-      page: p,
-      pageSize: ps,
-      sortBy: sb,
-      reqId: 0, // 0 永不匹配 searchReqId，仅缓存不更新 UI
+      query, page: p, pageSize, sortBy, reqId: 0,
     }).catch(() => {})
-  }
+  })
 }
 
 function onSortChange(val: string) {
@@ -299,6 +301,60 @@ function onWorkshopPageSizeChange(val: number) {
   workshopPageSize.value = val
   workshopPage.value = 1
   searchWorkshop(1)
+}
+
+function onWorkshopSortChange(val: string) {
+  workshopSortBy.value = val
+  workshopPage.value = 1
+  searchWorkshop(1)
+}
+
+function refreshWorkshop() {
+  searchWorkshop(workshopPage.value, true)
+}
+
+async function searchWorkshop(pg?: number, ignoreCache?: boolean) {
+  workshopLoading.value = true
+  workshopSearched.value = true
+  const pageNum = pg ?? workshopPage.value
+  const q = workshopQuery.value
+  const sb = workshopSortBy.value
+  const ps = workshopPageSize.value
+
+  // 缓存命中且非强制刷新：直接展示，后台静默刷新
+  if (!ignoreCache && prefetchEnabled.value) {
+    const cached = workshopCache.getCache(q, sb, pageNum, ps)
+    if (cached) {
+      workshopResults.value = cached.items
+      workshopTotalCount.value = cached.totalCount
+      workshopPage.value = pageNum
+      workshopLoading.value = false
+      workshopFetchSilent(q, sb, pageNum, ps)
+      return
+    }
+  }
+
+  try {
+    const result = await invoke<WorkshopSearchResult>("search_workshop", {
+      query: q,
+      page: pageNum,
+      pageSize: ps,
+      sortBy: sb,
+    })
+    workshopResults.value = result.items
+    workshopTotalCount.value = result.totalCount
+    workshopPage.value = pageNum
+    workshopCache.setCache(q, sb, pageNum, ps, result.items, result.totalCount)
+
+    if (prefetchEnabled.value) {
+      workshopPrefetchAdjacent(q, sb, pageNum, ps)
+    }
+  } catch (e: unknown) {
+    console.error("Workshop search error:", e)
+    message.error(String(e))
+  } finally {
+    workshopLoading.value = false
+  }
 }
 
 const showPagination = computed(() => {
@@ -343,11 +399,6 @@ onBeforeUnmount(() => {
   unlistenSearch?.()
 })
 
-// 离开发现页时提前清空结果，避免大量图片拖慢页面切换
-onBeforeRouteLeave(() => {
-  results.value = []
-})
-
 // --- 用户操作入口：未配置 API Key 时弹窗引导 ---
 const showApiKeyDialog = () => {
   dialog.warning({
@@ -387,7 +438,7 @@ function handleUserRefresh() {
       <h1 class="text-2xl font-bold text-c-primary">{{ t("discover.title") }}</h1>
       <p class="text-sm mt-1 text-c-secondary">{{ t("discover.subtitle") }}</p>
       <div class="flex gap-1 mt-3">
-        <NButton size="small" :type="tab === 'nexus' ? 'primary' : 'default'" @click="tab = 'nexus'">Nexus</NButton>
+        <NButton size="small" :type="tab === 'nexus' ? 'primary' : 'default'" @click="switchNexusTab">Nexus</NButton>
         <NButton size="small" :type="tab === 'workshop' ? 'primary' : 'default'" @click="switchWorkshopTab">
           {{ t("discover.workshop.tab") }}
         </NButton>
@@ -485,14 +536,25 @@ function handleUserRefresh() {
     <!-- Steam 创意工坊 -->
     <div v-show="tab === 'workshop'">
       <div class="flex gap-2 mb-4">
-        <NInput v-model:value="workshopQuery" size="large" :placeholder="t('discover.workshop.searchPlaceholder')"
+        <NInput v-model:value="workshopQuery" size="large" :placeholder="t('discover.searchPlaceholder')"
           clearable @keyup.enter="searchWorkshop()">
           <template #prefix>
             <NIcon :size="18"><Search /></NIcon>
           </template>
         </NInput>
+        <NSelect
+          :value="workshopSortBy"
+          :options="sortOptions"
+          style="width: 140px"
+          size="large"
+          @update:value="onWorkshopSortChange"
+        />
         <NButton size="large" type="primary" :loading="workshopLoading" @click="searchWorkshop(1)">
           {{ t("common.search") }}
+        </NButton>
+        <NButton size="large" secondary :loading="workshopLoading" @click="refreshWorkshop">
+          <template #icon><NIcon :size="18"><RefreshCw /></NIcon></template>
+          {{ t("common.refresh") }}
         </NButton>
       </div>
       <div v-if="workshopResults.length > 0">

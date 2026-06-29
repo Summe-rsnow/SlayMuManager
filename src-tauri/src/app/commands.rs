@@ -1407,8 +1407,8 @@ pub fn check_steam_status() -> bool {
 }
 
 #[tauri::command]
-pub fn search_workshop(query: String, page: u32, page_size: u32) -> Result<crate::domain::workshop_mod::WorkshopSearchResult, String> {
-    crate::integrations::workshop::search_workshop(&query, page, page_size)
+pub fn search_workshop(query: String, page: u32, page_size: u32, sort_by: String) -> Result<crate::domain::workshop_mod::WorkshopSearchResult, String> {
+    crate::integrations::workshop::search_workshop(&query, page, page_size, &sort_by)
 }
 
 #[tauri::command]

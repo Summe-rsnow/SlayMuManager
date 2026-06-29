@@ -17,7 +17,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <NTooltip v-if="tip" :tip="tip" trigger="hover" placement="top">
+  <NTooltip v-if="tip" trigger="hover" placement="top">
     <template #trigger>
       <NPopconfirm @positive-click="emit('confirm')">
         <template #trigger>
@@ -28,6 +28,7 @@ const emit = defineEmits<{
         <slot name="confirm-content">{{ confirmText }}</slot>
       </NPopconfirm>
     </template>
+    {{ tip }}
   </NTooltip>
   <NPopconfirm v-else @positive-click="emit('confirm')">
     <template #trigger>

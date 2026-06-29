@@ -118,7 +118,11 @@ const close = closeWindow
                   backgroundColor: 'var(--color-main-bg)',
                 }"
               >
-                <router-view />
+                <router-view v-slot="{ Component, route }">
+                  <KeepAlive :include="['DiscoverPage']">
+                    <component :is="Component" :key="route.name" />
+                  </KeepAlive>
+                </router-view>
               </main>
             </div>
 
@@ -231,5 +235,14 @@ const close = closeWindow
 <style scoped>
 .titlebar-btn:hover {
   background-color: color-mix(in srgb, var(--color-text-primary) 10%, transparent) !important;
+}
+</style>
+
+<style>
+.n-tooltip {
+  max-width: 420px;
+  max-height: 300px;
+  overflow-y: auto;
+  word-break: break-word;
 }
 </style>

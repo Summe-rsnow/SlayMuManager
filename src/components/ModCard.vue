@@ -3,7 +3,7 @@ import { ref, computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { currentLocale } from "@/i18n"
 import {
-  NTag, NButton, NIcon, NSwitch, NPopover, NCheckbox, NSpace, NInput,
+  NTag, NButton, NIcon, NSwitch, NPopover, NCheckbox, NSpace, NInput, NTooltip,
 } from "naive-ui"
 import { FolderOpen, Trash2, Plus, StickyNote, Copy, Check } from "@lucide/vue"
 import IconBtn from "./IconBtn.vue"
@@ -69,9 +69,14 @@ async function copyModId() {
     <div class="flex-1 min-w-0" style="position:relative;z-index:2">
       <!-- 名称 + 版本 + 标签 -->
       <div class="flex items-center gap-1.5 flex-wrap">
-        <span class="font-medium truncate max-w-[320px] text-c-primary" :title="mod.name">
+        <NTooltip trigger="hover" placement="top">
+          <template #trigger>
+            <span class="font-medium truncate max-w-[320px] text-c-primary">
+              {{ mod.name }}
+            </span>
+          </template>
           {{ mod.name }}
-        </span>
+        </NTooltip>
         <span class="text-xs text-c-muted font-mono truncate">{{ mod.version ?? "—" }}</span>
         <span
           v-if="hasUpdate && updateInfo?.remoteVersion"

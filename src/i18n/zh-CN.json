@@ -43,6 +43,7 @@
 
   "library": {
     "title": "模组",
+    "subtitle": "管理已安装的 Mod，导入、排序、切换预设",
     "enabledCountLabel": "已启用:",
     "disabledCountLabel": "已禁用:",
     "refreshing": "刷新中...",
@@ -104,7 +105,7 @@
       "copyId": "复制 ID",
       "copied": "已复制",
       "workshop": "创意工坊",
-      "workshopHint": "Steam 创意工坊 Mod 无法在此卸载或切换，请在 Steam 中取消订阅。"
+      "workshopHint": "Steam 创意工坊 Mod 无法在此卸载或切换，请取消订阅。"
     },
     "savePreset": {
       "title": "保存为预设",
@@ -218,6 +219,7 @@
 
   "settings": {
     "title": "设置",
+    "subtitle": "配置游戏路径、外观、网络与启动选项",
     "gamePath": {
       "title": "游戏路径",
       "placeholder": "游戏安装目录",
@@ -359,7 +361,6 @@
     },
     "workshop": {
       "tab": "Steam 创意工坊",
-      "searchPlaceholder": "搜索创意工坊 Mod（留空浏览全部）...",
       "needSteam": "需启动 Steam 并登录后方可使用",
       "subscribe": "订阅",
       "unsubscribe": "取消订阅",

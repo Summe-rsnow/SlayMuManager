@@ -444,12 +444,12 @@ watch(presetAppliedTick, () => {
 <template>
   <div>
     <!-- 头部 -->
-    <PageHeader :title="t('library.title')">
-      <span class="flex items-center gap-1.5">
+    <PageHeader :title="t('library.title')" :subtitle="t('library.subtitle')">
+      <span class="flex items-center gap-1.5 whitespace-nowrap">
         <span class="w-2 h-2 rounded-full bg-green-500 inline-block" />
         {{ t("library.enabledCountLabel") }} {{ enabledMods.length }}
       </span>
-      <span class="flex items-center gap-1.5">
+      <span class="flex items-center gap-1.5 whitespace-nowrap">
         <span class="w-2 h-2 rounded-full inline-block bg-c-muted" />
         {{ t("library.disabledCountLabel") }} {{ disabledMods.length }}
       </span>
@@ -593,7 +593,7 @@ watch(presetAppliedTick, () => {
         </div>
 
         <template v-else>
-          <ListSection v-if="filterShowEnabled" :title="t('library.section.enabled')" :count="filteredEnabled.length" count-type="success" :action-label="filteredEnabled.length > 0 ? t('library.disableAll') : undefined" :action-busy="batchBusy" @action="disableAllMods">
+          <ListSection v-if="filterShowEnabled" :title="t('library.section.enabled')" :action-label="filteredEnabled.length > 0 ? t('library.disableAll') : undefined" :action-busy="batchBusy" @action="disableAllMods">
             <div v-if="filteredEnabled.length === 0" class="text-center py-8 text-c-muted">
               <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
               <p v-else>{{ t("library.empty.noEnabledMods") }}</p>
@@ -617,7 +617,7 @@ watch(presetAppliedTick, () => {
             </NSpace>
           </ListSection>
 
-          <ListSection v-if="filterShowDisabled" :title="t('library.section.disabled')" :count="filteredDisabled.length" :action-label="filteredDisabled.length > 0 ? t('library.enableAll') : undefined" :action-busy="batchBusy" @action="enableAllMods">
+          <ListSection v-if="filterShowDisabled" :title="t('library.section.disabled')" :action-label="filteredDisabled.length > 0 ? t('library.enableAll') : undefined" :action-busy="batchBusy" @action="enableAllMods">
             <div v-if="filteredDisabled.length === 0" class="text-center py-8 text-c-muted">
               <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
               <p v-else>{{ t("library.empty.noDisabledMods") }}</p>

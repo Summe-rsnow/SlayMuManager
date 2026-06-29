@@ -50,7 +50,15 @@ fn poll_callback<T>(client: &Client, result: &Arc<Mutex<Option<Result<T, String>
     }
 }
 
-pub fn search_workshop(query: &str, page: u32, page_size: u32) -> Result<WorkshopSearchResult, String> {
+fn ugc_query_type_from_sort(sort_by: &str) -> UGCQueryType {
+    match sort_by {
+        "trending" => UGCQueryType::RankedByTrend,
+        "downloads" => UGCQueryType::RankedByTotalUniqueSubscriptions,
+        _ => UGCQueryType::RankedByPublicationDate,
+    }
+}
+
+pub fn search_workshop(query: &str, page: u32, page_size: u32, sort_by: &str) -> Result<WorkshopSearchResult, String> {
     init_client()?;
     with_client(|client| {
         let ugc = client.ugc();
@@ -62,7 +70,7 @@ pub fn search_workshop(query: &str, page: u32, page_size: u32) -> Result<Worksho
 
         let qh = ugc
             .query_all(
-                UGCQueryType::RankedByPublicationDate,
+                ugc_query_type_from_sort(sort_by),
                 UGCType::Items,
                 AppIDs::ConsumerAppId(AppId(2868840)),
                 page.max(1),
