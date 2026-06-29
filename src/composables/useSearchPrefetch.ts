@@ -1,5 +1,3 @@
-import { ref, readonly } from "vue"
-
 interface CacheEntry<T> { items: T[]; totalCount: number }
 
 function makeKey(prefix: string, query: string, sortBy: string, page: number, pageSize: number): string {

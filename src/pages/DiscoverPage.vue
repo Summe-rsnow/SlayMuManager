@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue"
-import { defineOptions } from "vue"
 import { storeToRefs } from "pinia"
 import { useRouter, useRoute } from "vue-router"
 import { useI18n } from "vue-i18n"

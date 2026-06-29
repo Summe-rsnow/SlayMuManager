@@ -80,30 +80,9 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
-### Project Structure
+## Download
 
-```
-src/                    # Vue frontend source
-├── pages/              # Page components (5)
-├── components/         # Shared components (28)
-├── stores/             # Pinia global state (8)
-├── composables/        # Scoped composable logic (4)
-├── utils/              # Pure utility functions (4)
-├── router/             # Route config
-├── i18n/               # Internationalization (zh-CN / en)
-├── theme/              # Theme system
-└── types/              # TypeScript type definitions
-
-src-tauri/              # Rust backend source
-└── src/
-    ├── app/            # Tauri commands & state
-    ├── domain/         # Domain models
-    ├── services/       # Business logic
-    ├── repositories/   # Data persistence
-    ├── workflows/      # Complex workflows
-    ├── integrations/   # External services (Steam/Nexus)
-    └── utils/          # Utilities & error handling
-```
+GitHub Releases or [Quark Cloud Drive](https://pan.quark.cn/s/3bd89f2513a8)
 
 ## Acknowledgements
 

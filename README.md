@@ -80,30 +80,9 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
-### 项目结构
+## 下载
 
-```
-src/                    # 前端 Vue 源码
-├── pages/              # 页面组件 (5 个)
-├── components/         # 通用组件 (28 个)
-├── stores/             # Pinia 全局状态 (8 个)
-├── composables/        # 组件内可组合逻辑 (4 个)
-├── utils/              # 纯工具函数 (4 个)
-├── router/             # 路由配置
-├── i18n/               # 国际化 (zh-CN / en)
-├── theme/              # 主题系统
-└── types/              # TypeScript 类型定义
-
-src-tauri/              # Rust 后端源码
-└── src/
-    ├── app/            # Tauri 命令与状态管理
-    ├── domain/         # 领域模型
-    ├── services/       # 业务逻辑层
-    ├── repositories/   # 数据持久化
-    ├── workflows/      # 复杂工作流
-    ├── integrations/   # 外部服务集成 (Steam/Nexus)
-    └── utils/          # 工具与错误处理
-```
+GitHub Releases 或 [夸克网盘](https://pan.quark.cn/s/3bd89f2513a8)
 
 ## 致谢
 
