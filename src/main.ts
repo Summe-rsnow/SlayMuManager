@@ -3,6 +3,7 @@ import App from "./App.vue"
 import { router } from "./router"
 import { setupI18n } from "./i18n"
 import { initTheme } from "./theme"
+import { createPinia } from "pinia"
 import "virtual:uno.css"
 import "./assets/global.css"
 
@@ -23,5 +24,6 @@ app.config.errorHandler = (err, _instance, info) => {
 
 app.use(router)
 app.use(i18n)
+app.use(createPinia())
 
 app.mount("#app")

@@ -1,14 +1,14 @@
+import { defineStore } from "pinia"
 import { ref, shallowRef } from "vue"
 import { invoke } from "@tauri-apps/api/core"
 import type { InstalledMod } from "../types"
 
-// Module-level state — singleton cache shared across all components
-const enabledMods = shallowRef<InstalledMod[]>([])
-const disabledMods = shallowRef<InstalledMod[]>([])
-const loading = ref(false)
-const lastFetched = ref<number | null>(null)
+export const useModCacheStore = defineStore("mod-cache", () => {
+  const enabledMods = shallowRef<InstalledMod[]>([])
+  const disabledMods = shallowRef<InstalledMod[]>([])
+  const loading = ref(false)
+  const lastFetched = ref<number | null>(null)
 
-export function useModCache() {
   async function fetchMods() {
     loading.value = true
     try {
@@ -27,10 +27,5 @@ export function useModCache() {
     }
   }
 
-  return {
-    enabledMods,
-    disabledMods,
-    loading,
-    fetchMods,
-  }
-}
+  return { enabledMods, disabledMods, loading, lastFetched, fetchMods }
+})

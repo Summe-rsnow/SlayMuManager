@@ -2,8 +2,10 @@
 import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NCard, NSwitch, NRadioGroup, NRadio } from "naive-ui"
+import { NSwitch, NRadioGroup, NRadio } from "naive-ui"
 import type { AppBootstrap } from "../types"
+import SettingsSection from "./SettingsSection.vue"
+import SettingsRow from "./SettingsRow.vue"
 
 const { t } = useI18n()
 
@@ -28,18 +30,16 @@ async function handleLaunchCheckCloudSaveChange(val: boolean) {
 </script>
 
 <template>
-  <NCard :title="t('settings.launchGame.title')" size="small">
-    <div class="flex items-center justify-between">
-      <span class="text-sm">{{ t("settings.launchGame.mode") }}</span>
+  <SettingsSection :title="t('settings.launchGame.title')">
+    <SettingsRow :label="t('settings.launchGame.mode')">
       <NRadioGroup :value="launchMode" size="small" @update:value="handleLaunchModeChange">
         <NRadio value="steam">{{ t("settings.launchGame.steam") }}</NRadio>
         <NRadio value="direct">{{ t("settings.launchGame.direct") }}</NRadio>
       </NRadioGroup>
-    </div>
+    </SettingsRow>
     <div class="border-t border-c-default my-3"></div>
-    <div class="flex items-center justify-between">
-      <span class="text-sm">{{ t("settings.launchGame.checkCloudSave") }}</span>
+    <SettingsRow :label="t('settings.launchGame.checkCloudSave')">
       <NSwitch :value="launchCheckCloudSave" @update:value="handleLaunchCheckCloudSaveChange" />
-    </div>
-  </NCard>
+    </SettingsRow>
+  </SettingsSection>
 </template>

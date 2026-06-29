@@ -1,29 +1,34 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue"
+import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
 import {
   NCard, NButton, NTag, NIcon, NSpace, NInput,
-  NPopconfirm, NCheckbox, NPopover, useMessage,
+  NCheckbox, NPopover, useMessage,
 } from "naive-ui"
 import {
-  Plus, FolderHeart, Edit3, Trash2, Play, Download, Search, Loader2,
+  Plus, FolderHeart, Edit3, Trash2, Play, Download, Search,
 } from "@lucide/vue"
 import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
 import { useIsActive } from "@/composables/useIsActive"
-import { useSidebarActions } from "@/composables/useSidebarActions"
-import { useExportState } from "@/composables/useExportState"
+import { useSidebarStore } from "@/stores/useSidebarStore"
+import { useExportStore } from "@/stores/useExportStore"
 import EmptyState from "@/components/EmptyState.vue"
 import DragOverlay from "@/components/DragOverlay.vue"
 import AppDialog from "@/components/AppDialog.vue"
+import PageHeader from "@/components/PageHeader.vue"
+import ConfirmBtn from "@/components/ConfirmBtn.vue"
+import LoadingOverlay from "@/components/LoadingOverlay.vue"
 
 const { t } = useI18n()
 const message = useMessage()
 
 // --- 状态 ---
 const profiles = ref<ModProfile[]>([])
-const { activePresetName, presetAppliedTick } = useSidebarActions()
+const sidebarStore = useSidebarStore()
+const { activePresetName, presetAppliedTick } = storeToRefs(sidebarStore)
 const showCreateDialog = ref(false)
 const showApplyDialog = ref(false)
 const showImportDialog = ref(false)
@@ -92,7 +97,8 @@ function deselectAllMods() {
   selectedModIds.value = []
 }
 
-const { exportingId } = useExportState()
+const exportStore = useExportStore()
+const { exportingId } = storeToRefs(exportStore)
 
 // 整合包导入
 const bundlePath = ref("")
@@ -326,22 +332,16 @@ watch(presetAppliedTick, () => {
 <template>
   <div>
     <!-- 头部 -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-c-primary">{{ t("profiles.title") }}</h1>
-        <p class="text-sm text-c-secondary mt-1">{{ t("profiles.subtitle") }}</p>
-      </div>
-      <NSpace>
-        <NButton secondary @click="startImport">
-          <template #icon><NIcon :size="16"><Download /></NIcon></template>
-          {{ t("profiles.importBundle") }}
-        </NButton>
-        <NButton type="primary" @click="openCreate">
-          <template #icon><NIcon :size="16"><Plus /></NIcon></template>
-          {{ t("profiles.create") }}
-        </NButton>
-      </NSpace>
-    </div>
+    <PageHeader :title="t('profiles.title')" :subtitle="t('profiles.subtitle')">
+      <NButton secondary @click="startImport">
+        <template #icon><NIcon :size="16"><Download /></NIcon></template>
+        {{ t("profiles.importBundle") }}
+      </NButton>
+      <NButton type="primary" @click="openCreate">
+        <template #icon><NIcon :size="16"><Plus /></NIcon></template>
+        {{ t("profiles.create") }}
+      </NButton>
+    </PageHeader>
 
     <!-- 预设列表 -->
     <Transition name="preset-fade" mode="out-in">
@@ -397,14 +397,7 @@ watch(presetAppliedTick, () => {
                 <NButton v-if="!p.builtin" text size="tiny" @click="() => openEdit(p)">
                   <template #icon><NIcon :size="14"><Edit3 /></NIcon></template>
                 </NButton>
-                <NPopconfirm v-if="!p.builtin" @positive-click="() => handleDelete(p)">
-                  <template #trigger>
-                    <NButton text size="tiny" type="error">
-                      <template #icon><NIcon :size="14"><Trash2 /></NIcon></template>
-                    </NButton>
-                  </template>
-                  {{ t("profiles.confirmDelete", { name: p.name }) }}
-                </NPopconfirm>
+                <ConfirmBtn v-if="!p.builtin" :icon="Trash2" :confirmText="t('profiles.confirmDelete', { name: p.name })" @confirm="handleDelete(p)" />
               </NSpace>
             </div>
           </NCard>
@@ -521,16 +514,7 @@ watch(presetAppliedTick, () => {
     </AppDialog>
 
     <!-- 分析导入文件时的加载遮罩 -->
-    <div
-      v-if="loading && !showImportDialog"
-      class="fixed inset-0 z-50 flex items-center justify-center"
-      style="background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px);"
-    >
-      <div class="flex flex-col items-center gap-3">
-        <NIcon :size="32" class="animate-spin text-white"><Loader2 /></NIcon>
-        <span class="text-sm text-white/90">{{ t("common.loading") }}</span>
-      </div>
-    </div>
+    <LoadingOverlay :loading="loading && !showImportDialog" :text="t('common.loading')" />
 
     <!-- 导入预设对话框 -->
     <AppDialog v-if="bundlePreview" v-model:show="showImportDialog" width="560px">

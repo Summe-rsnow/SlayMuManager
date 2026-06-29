@@ -16,7 +16,7 @@ import {
 import { Minus, Square, X, PackageOpen } from "@lucide/vue"
 import { currentLocale } from "./i18n"
 import { naiveTheme, naiveThemeOverrides } from "./theme"
-import { useWindow } from "./composables/useWindow"
+import { minimizeWindow, toggleMaximizeWindow, closeWindow } from "./utils/window"
 import { useStorage } from "./composables/useStorage"
 import { useAppUpdateCheck } from "./composables/useAppUpdateCheck"
 import { useI18n } from "vue-i18n"
@@ -86,7 +86,9 @@ router.isReady().then(() => {
 
 const naiveLocale = computed(() => (currentLocale.value === "zh-CN" ? zhCN : enUS))
 const naiveDateLocale = computed(() => (currentLocale.value === "zh-CN" ? dateZhCN : dateEnUS))
-const { minimize, toggleMaximize, close } = useWindow()
+const minimize = minimizeWindow
+const toggleMaximize = toggleMaximizeWindow
+const close = closeWindow
 </script>
 
 <template>

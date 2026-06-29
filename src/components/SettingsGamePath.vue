@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
+import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NCard, NSpace, NInput, NButton, NIcon } from "naive-ui"
+import { NInput, NButton, NIcon } from "naive-ui"
 import { FolderSearch } from "@lucide/vue"
 import type { AppBootstrap } from "../types"
-import { useSettingsHighlight } from "@/composables/useSettingsHighlight"
+import { useHighlightStore } from "@/stores/useHighlightStore"
+import SettingsSection from "./SettingsSection.vue"
 
 const { t } = useI18n()
-const { highlightedSetting } = useSettingsHighlight()
+const { highlightedSetting } = storeToRefs(useHighlightStore())
 
 const gamePath = ref("")
 const gameValid = ref(false)
@@ -64,23 +66,21 @@ async function saveGamePath() {
 </script>
 
 <template>
-  <NCard id="setting-game-path" :title="t('settings.gamePath.title')" size="small" :class="{ 'setting-highlight': highlightedSetting === 'game-path' }">
-    <NSpace vertical>
-      <div class="flex gap-2">
-        <NInput v-model:value="gamePath" :placeholder="t('settings.gamePath.placeholder')" clearable>
-          <template #prefix><NIcon :size="16"><FolderSearch /></NIcon></template>
-        </NInput>
-        <NButton secondary @click="browseGamePath">{{ t("settings.gamePath.browse") }}</NButton>
-        <NButton secondary :loading="saving" @click="saveGamePath">{{ t("common.save") }}</NButton>
-      </div>
-      <div class="flex items-center gap-2">
-        <NButton secondary size="small" :loading="detecting" @click="detectGame">
-          {{ t("settings.gamePath.autoDetect") }}
-        </NButton>
-        <span v-if="gamePath" class="text-xs" :class="gameValid ? 'text-green-600' : 'text-red-500'">
-          {{ gameValid ? t("settings.gamePath.valid") : t("settings.gamePath.invalid") }}
-        </span>
-      </div>
-    </NSpace>
-  </NCard>
+  <SettingsSection id="setting-game-path" :title="t('settings.gamePath.title')" :highlighted="highlightedSetting === 'game-path'">
+    <div class="flex gap-2">
+      <NInput v-model:value="gamePath" :placeholder="t('settings.gamePath.placeholder')" clearable>
+        <template #prefix><NIcon :size="16"><FolderSearch /></NIcon></template>
+      </NInput>
+      <NButton secondary @click="browseGamePath">{{ t("settings.gamePath.browse") }}</NButton>
+      <NButton secondary :loading="saving" @click="saveGamePath">{{ t("common.save") }}</NButton>
+    </div>
+    <div class="flex items-center gap-2">
+      <NButton secondary size="small" :loading="detecting" @click="detectGame">
+        {{ t("settings.gamePath.autoDetect") }}
+      </NButton>
+      <span v-if="gamePath" class="text-xs" :class="gameValid ? 'text-green-600' : 'text-red-500'">
+        {{ gameValid ? t("settings.gamePath.valid") : t("settings.gamePath.invalid") }}
+      </span>
+    </div>
+  </SettingsSection>
 </template>

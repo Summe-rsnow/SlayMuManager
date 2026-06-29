@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue"
-import { onBeforeRouteLeave } from "vue-router"
-import { useRouter } from "vue-router"
+import { storeToRefs } from "pinia"
+import { onBeforeRouteLeave, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen, type UnlistenFn } from "@tauri-apps/api/event"
@@ -11,10 +11,10 @@ import {
 import { Search, ExternalLink, ThumbsUp, ArrowDown, PackageOpen, RefreshCw, Plus, X } from "@lucide/vue"
 import type { RemoteMod, RemoteModSearchResult, AppBootstrap, WorkshopMod, WorkshopSearchResult } from "../types"
 import { useIsActive } from "@/composables/useIsActive"
-import { discoverColumns } from "@/composables/useDiscoverColumns"
-import { prefetchEnabled, getPageCache, setPageCache } from "@/composables/usePageCache"
-import { useSettingsHighlight } from "@/composables/useSettingsHighlight"
-import { useModCache } from "@/composables/useModCache"
+import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
+import { getPageCache, setPageCache } from "@/utils/pageCache"
+import { useHighlightStore } from "@/stores/useHighlightStore"
+import { useModCacheStore } from "@/stores/useModCacheStore"
 import EmptyState from "@/components/EmptyState.vue"
 import DiscoverPagination from "@/components/DiscoverPagination.vue"
 import DiscoverCard from "@/components/DiscoverCard.vue"
@@ -23,9 +23,11 @@ const { t } = useI18n()
 const message = useMessage()
 const dialog = useDialog()
 const router = useRouter()
-const { highlight } = useSettingsHighlight()
+const highlightStore = useHighlightStore()
 const { isActive } = useIsActive()
-const { fetchMods } = useModCache()
+const { fetchMods } = useModCacheStore()
+const prefStore = useDiscoverPrefStore()
+const { discoverColumns, prefetchEnabled } = storeToRefs(prefStore)
 
 // --- 发现页列数映射 ---
 const gridColsClass = computed(() => {
@@ -354,7 +356,7 @@ const showApiKeyDialog = () => {
     positiveText: t("settings.prompt.goToSettings"),
     negativeText: t("common.cancel"),
     onPositiveClick: () => {
-      highlight("nexus")
+      highlightStore.highlight("nexus")
       router.push("/settings")
     },
     maskClosable: true,

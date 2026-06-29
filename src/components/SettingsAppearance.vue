@@ -2,9 +2,11 @@
 import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NCard, NSpace, NSelect, NRadioGroup, NRadio } from "naive-ui"
+import { NSelect, NRadioGroup, NRadio } from "naive-ui"
 import { setLocale } from "@/i18n"
 import { displayMode, setDisplayMode, themeColorKey, setThemeColor, colorPalettes, type ThemeColorKey, type DisplayMode } from "@/theme"
+import SettingsSection from "./SettingsSection.vue"
+import SettingsRow from "./SettingsRow.vue"
 
 const { t } = useI18n()
 
@@ -56,44 +58,39 @@ async function handleThemeColorChange(val: ThemeColorKey) {
 </script>
 
 <template>
-  <NCard :title="t('settings.appearance.title')" size="small">
-    <NSpace vertical>
-      <div class="flex items-center justify-between">
-        <span class="text-sm">{{ t("settings.appearance.language") }}</span>
-        <NSelect
-          :options="languageOptions"
-          :value="locale"
-          style="width: 160px"
-          size="small"
-          @update:value="updateLocale"
+  <SettingsSection :title="t('settings.appearance.title')">
+    <SettingsRow :label="t('settings.appearance.language')">
+      <NSelect
+        :options="languageOptions"
+        :value="locale"
+        style="width: 160px"
+        size="small"
+        @update:value="updateLocale"
+      />
+    </SettingsRow>
+    <div class="border-t border-c-default"></div>
+    <SettingsRow :label="t('settings.appearance.displayMode')">
+      <NRadioGroup :value="displayMode" size="small" @update:value="handleDisplayModeChange">
+        <NRadio v-for="opt in displayModeOptions" :key="opt.value" :value="opt.value">
+          {{ opt.label }}
+        </NRadio>
+      </NRadioGroup>
+    </SettingsRow>
+    <div class="border-t border-c-default"></div>
+    <SettingsRow :label="t('settings.appearance.themeColor')">
+      <div class="flex gap-1.5">
+        <button
+          v-for="opt in themeColorOptions"
+          :key="opt.value"
+          :title="opt.label"
+          class="color-btn"
+          :class="{ active: themeColorKey === opt.value }"
+          :style="[{ backgroundColor: colorPalettes[opt.value].DEFAULT }]"
+          @click="handleThemeColorChange(opt.value)"
         />
       </div>
-      <div class="border-t border-c-default"></div>
-      <div class="flex items-center justify-between">
-        <span class="text-sm">{{ t("settings.appearance.displayMode") }}</span>
-        <NRadioGroup :value="displayMode" size="small" @update:value="handleDisplayModeChange">
-          <NRadio v-for="opt in displayModeOptions" :key="opt.value" :value="opt.value">
-            {{ opt.label }}
-          </NRadio>
-        </NRadioGroup>
-      </div>
-      <div class="border-t border-c-default"></div>
-      <div class="flex items-center justify-between">
-        <span class="text-sm">{{ t("settings.appearance.themeColor") }}</span>
-        <div class="flex gap-1.5">
-          <button
-            v-for="opt in themeColorOptions"
-            :key="opt.value"
-            :title="opt.label"
-            class="color-btn"
-            :class="{ active: themeColorKey === opt.value }"
-            :style="[{ backgroundColor: colorPalettes[opt.value].DEFAULT }]"
-            @click="handleThemeColorChange(opt.value)"
-          />
-        </div>
-      </div>
-    </NSpace>
-  </NCard>
+    </SettingsRow>
+  </SettingsSection>
 </template>
 
 <style scoped>

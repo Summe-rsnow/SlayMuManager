@@ -1,17 +1,16 @@
 <script setup lang="ts">
 import { ref, computed } from "vue"
-import { currentLocale } from "@/i18n"
 import { useI18n } from "vue-i18n"
+import { currentLocale } from "@/i18n"
 import {
-  NTag, NButton, NIcon, NSwitch, NPopconfirm, NPopover, NCheckbox, NSpace, NInput,
+  NTag, NButton, NIcon, NSwitch, NPopover, NCheckbox, NSpace, NInput,
 } from "naive-ui"
 import { FolderOpen, Trash2, Plus, StickyNote, Copy, Check } from "@lucide/vue"
 import IconBtn from "./IconBtn.vue"
-import { useModTags, PRESET_TAGS } from "@/composables/useModTags"
-import { useModNotes } from "@/composables/useModNotes"
-import type { InstalledMod } from "../types"
-
-import type { ModUpdateInfo } from "../types"
+import ConfirmBtn from "./ConfirmBtn.vue"
+import { useTagStore, PRESET_TAGS } from "@/stores/useTagStore"
+import { useNoteStore } from "@/stores/useNoteStore"
+import type { InstalledMod, ModUpdateInfo } from "../types"
 
 const props = defineProps<{
   mod: InstalledMod
@@ -31,8 +30,8 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const { getTags, toggleTag, getTagLabel, isPresetTag } = useModTags()
-const { getNote, setNote, hasNote } = useModNotes()
+const { getTags, toggleTag, getTagLabel, isPresetTag } = useTagStore()
+const { getNote, setNote, hasNote } = useNoteStore()
 
 const noteDraft = ref("")
 function openNotePopover(modId: string) {
@@ -164,31 +163,9 @@ async function copyModId() {
 
       <IconBtn :icon="FolderOpen" :tip="t('library.mod.openFolder')" @click="emit('openFolder', mod)" />
 
-      <IconBtn v-if="mod.source !== 'workshop'" :icon="Trash2" :tip="t('library.mod.uninstall')" type="error">
-        <template #trigger="{ icon: ic, disabled: d, type: tty }">
-          <NPopconfirm @positive-click="() => emit('uninstall', mod)">
-            <template #trigger>
-              <NButton text size="tiny" :disabled="d" :type="tty">
-                <template #icon><NIcon :size="14"><component :is="ic" /></NIcon></template>
-              </NButton>
-            </template>
-            {{ t("library.mod.confirmUninstall", { name: mod.name }) }}
-          </NPopconfirm>
-        </template>
-      </IconBtn>
+      <ConfirmBtn v-if="mod.source !== 'workshop'" :icon="Trash2" :tip="t('library.mod.uninstall')" :confirmText="t('library.mod.confirmUninstall', { name: mod.name })" @confirm="emit('uninstall', mod)" />
 
-      <IconBtn v-if="mod.source === 'workshop' && mod.workshopId" :icon="Trash2" :tip="t('library.mod.unsubscribe')" type="error">
-        <template #trigger="{ icon: ic, disabled: d, type: tty }">
-          <NPopconfirm @positive-click="() => emit('unsubscribe', mod.workshopId!)">
-            <template #trigger>
-              <NButton text size="tiny" :disabled="d" :type="tty">
-                <template #icon><NIcon :size="14"><component :is="ic" /></NIcon></template>
-              </NButton>
-            </template>
-            {{ t("library.mod.confirmUnsubscribe", { name: mod.name }) }}
-          </NPopconfirm>
-        </template>
-      </IconBtn>
+      <ConfirmBtn v-if="mod.source === 'workshop' && mod.workshopId" :icon="Trash2" :tip="t('library.mod.unsubscribe')" :confirmText="t('library.mod.confirmUnsubscribe', { name: mod.name })" @confirm="emit('unsubscribe', mod.workshopId!)" />
       <IconBtn :icon="copied ? Check : Copy" :tip="copied ? t('library.mod.copied') : t('library.mod.copyId')"
         @click="copyModId" />
       <NPopover v-if="mod.source === 'workshop'" trigger="hover" placement="left" :width="200">

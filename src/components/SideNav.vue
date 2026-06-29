@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { h, computed, ref, onMounted } from "vue"
+import { storeToRefs } from "pinia"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { NMenu, NIcon, NSelect, NButton, NSpace, type MenuOption } from "naive-ui"
 import { Library, Compass, FolderHeart, Save, Settings, Play, LoaderCircle, AlertTriangle, Menu } from "@lucide/vue"
-import { useSidebarActions } from "@/composables/useSidebarActions"
+import { useSidebarStore } from "@/stores/useSidebarStore"
 import AppDialog from "@/components/AppDialog.vue"
 
 const { t } = useI18n()
@@ -15,15 +16,17 @@ const {
   launchingGame,
   showLaunchMismatchDialog,
   launchMismatchStatus,
+  quickPresetId,
+  quickPresetOptions,
+  sidebarCollapsed,
+} = storeToRefs(useSidebarStore())
+const {
   handleLaunchGame,
   handleGoToSaves,
   handleLaunchAnyway,
-  quickPresetId,
-  quickPresetOptions,
   loadQuickPresets,
   handleQuickPreset,
-  sidebarCollapsed,
-} = useSidebarActions()
+} = useSidebarStore()
 
 const showPresetPanel = ref(false)
 const presetMenuOpen = ref(false)

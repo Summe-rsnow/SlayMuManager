@@ -3,9 +3,10 @@ import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { useMessage } from "naive-ui"
 import { invoke } from "@tauri-apps/api/core"
-import { NCard, NSpace, NInput, NButton, NIcon } from "naive-ui"
+import { NInput, NButton, NIcon, NSpace } from "naive-ui"
 import { Globe } from "@lucide/vue"
 import type { AppBootstrap } from "../types"
+import SettingsSection from "./SettingsSection.vue"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -45,19 +46,17 @@ async function testProxy() {
 </script>
 
 <template>
-  <NCard :title="t('settings.proxy.title')" size="small">
-    <NSpace vertical>
-      <div class="flex gap-2">
-        <NInput v-model:value="proxyUrl" placeholder="http://127.0.0.1:7890" clearable>
-          <template #prefix><NIcon :size="16"><Globe /></NIcon></template>
-        </NInput>
-        <NButton secondary @click="saveProxy">{{ t("common.save") }}</NButton>
-      </div>
-      <NSpace>
-        <NButton secondary size="small" :loading="proxyTesting" @click="testProxy">
-          {{ t("settings.proxy.testConnection") }}
-        </NButton>
-      </NSpace>
+  <SettingsSection :title="t('settings.proxy.title')">
+    <div class="flex gap-2">
+      <NInput v-model:value="proxyUrl" placeholder="http://127.0.0.1:7890" clearable>
+        <template #prefix><NIcon :size="16"><Globe /></NIcon></template>
+      </NInput>
+      <NButton secondary @click="saveProxy">{{ t("common.save") }}</NButton>
+    </div>
+    <NSpace>
+      <NButton secondary size="small" :loading="proxyTesting" @click="testProxy">
+        {{ t("settings.proxy.testConnection") }}
+      </NButton>
     </NSpace>
-  </NCard>
+  </SettingsSection>
 </template>

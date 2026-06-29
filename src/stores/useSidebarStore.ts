@@ -1,33 +1,30 @@
+import { defineStore } from "pinia"
 import { ref } from "vue"
 import { invoke } from "@tauri-apps/api/core"
 import { useMessage, useDialog } from "naive-ui"
 import { useI18n } from "vue-i18n"
 import { useRouter } from "vue-router"
 import type { CloudSaveStatus, ModProfile, AppBootstrap, ApplyProfileResult } from "../types"
-import { useSettingsHighlight } from "./useSettingsHighlight"
+import { useHighlightStore } from "./useHighlightStore"
 
-// --- 模块级共享状态（SideNav + LibraryPage 共用同一实例）---
-const launchingGame = ref(false)
-const showLaunchMismatchDialog = ref(false)
-const launchMismatchStatus = ref<CloudSaveStatus | null>(null)
-const vanillaLaunch = ref(false)
-const quickPresetId = ref<string | null>(null)
-const quickPresetOptions = ref<Array<{ label: string; value: string }>>([])
-const activePresetName = ref("")
-const activePresetId = ref<string | null>(null)
-const presetSnapshot = ref<Set<string>>(new Set())
-const presetAppliedTick = ref(0)
-const sidebarCollapsed = ref(true)
+export const useSidebarStore = defineStore("sidebar", () => {
+  const launchingGame = ref(false)
+  const showLaunchMismatchDialog = ref(false)
+  const launchMismatchStatus = ref<CloudSaveStatus | null>(null)
+  const vanillaLaunch = ref(false)
+  const quickPresetId = ref<string | null>(null)
+  const quickPresetOptions = ref<Array<{ label: string; value: string }>>([])
+  const activePresetName = ref("")
+  const activePresetId = ref<string | null>(null)
+  const presetSnapshot = ref<Set<string>>(new Set())
+  const presetAppliedTick = ref(0)
+  const sidebarCollapsed = ref(true)
 
-export function useSidebarActions() {
-  const { t } = useI18n()
-  const message = useMessage()
-  const dialog = useDialog()
-  const router = useRouter()
-  const { highlight } = useSettingsHighlight()
-
-  /** 弹窗引导前往设置游戏路径 */
   function showGamePathPrompt() {
+    const { t } = useI18n()
+    const dialog = useDialog()
+    const router = useRouter()
+    const { highlight } = useHighlightStore()
     launchingGame.value = false
     dialog.warning({
       title: t("settings.prompt.gamePathRequired"),
@@ -43,6 +40,8 @@ export function useSidebarActions() {
   }
 
   async function doLaunchGame() {
+    const { t } = useI18n()
+    const message = useMessage()
     launchingGame.value = true
     try {
       await invoke("launch_game")
@@ -55,16 +54,12 @@ export function useSidebarActions() {
   }
 
   async function handleLaunchGame() {
+    const { t } = useI18n()
+    const message = useMessage()
     launchingGame.value = true
     try {
-      // 从后端读取当前设置（避免模块级 ref 不同步）
       const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
-
-      // 0. 游戏路径未设置则弹窗引导
-      if (!bootstrap.gameDirectory) {
-        showGamePathPrompt()
-        return
-      }
+      if (!bootstrap.gameDirectory) { showGamePathPrompt(); return }
 
       if (bootstrap.launchCheckCloudSave) {
         try {
@@ -74,11 +69,8 @@ export function useSidebarActions() {
             showLaunchMismatchDialog.value = true
             return
           }
-        } catch {
-          // 云存档检查失败，继续启动
-        }
+        } catch { /* ignore */ }
       }
-      // 检测游戏是否已在运行
       const running = await invoke<boolean>("is_game_running")
       if (running) {
         message.warning(t("library.info.gameAlreadyRunning"))
@@ -89,13 +81,12 @@ export function useSidebarActions() {
     } catch {
       await doLaunchGame()
     } finally {
-      if (!showLaunchMismatchDialog.value) {
-        launchingGame.value = false
-      }
+      if (!showLaunchMismatchDialog.value) launchingGame.value = false
     }
   }
 
   function handleGoToSaves() {
+    const router = useRouter()
     showLaunchMismatchDialog.value = false
     launchingGame.value = false
     router.push("/saves")
@@ -113,31 +104,24 @@ export function useSidebarActions() {
 
   async function loadQuickPresets() {
     try {
-      // 同步后端状态
       const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
       vanillaLaunch.value = bootstrap.vanillaLaunch
       const profiles = await invoke<ModProfile[]>("list_profiles")
-      quickPresetOptions.value = profiles.map((p) => ({
-        label: p.name,
-        value: p.id,
-      }))
-      // 默认选中第一个
-      if (!quickPresetId.value && profiles.length > 0) {
-        quickPresetId.value = profiles[0].id
-      }
+      quickPresetOptions.value = profiles.map((p) => ({ label: p.name, value: p.id }))
+      if (!quickPresetId.value && profiles.length > 0) quickPresetId.value = profiles[0].id
     } catch { /* ignore */ }
   }
 
   async function handleQuickPreset(presetId: string) {
+    const { t } = useI18n()
+    const message = useMessage()
     if (!presetId) return
     try {
-      const label =
-        quickPresetOptions.value.find((p) => p.value === presetId)?.label ?? presetId
+      const label = quickPresetOptions.value.find((p) => p.value === presetId)?.label ?? presetId
       const result = await invoke<ApplyProfileResult>("apply_profile", { id: presetId })
       quickPresetId.value = presetId
       activePresetName.value = label
       activePresetId.value = presetId
-      // 快照预设声明的 mod ID（用于脏检测）—— 从 apply_profile 结果直接获取，避免重读 profiles.json
       presetSnapshot.value = new Set(result.profile.modIds)
       message.success(t("library.success.presetApplied", { name: label }))
       presetAppliedTick.value++
@@ -147,22 +131,11 @@ export function useSidebarActions() {
   }
 
   return {
-    launchingGame,
-    showLaunchMismatchDialog,
-    launchMismatchStatus,
-    handleLaunchGame,
-    handleGoToSaves,
-    handleLaunchAnyway,
-    vanillaLaunch,
-    handleToggleVanillaLaunch,
-    quickPresetId,
-    quickPresetOptions,
-    loadQuickPresets,
-    handleQuickPreset,
-    activePresetName,
-    activePresetId,
-    presetSnapshot,
-    presetAppliedTick,
+    launchingGame, showLaunchMismatchDialog, launchMismatchStatus,
+    vanillaLaunch, quickPresetId, quickPresetOptions,
+    activePresetName, activePresetId, presetSnapshot, presetAppliedTick,
     sidebarCollapsed,
+    handleLaunchGame, handleGoToSaves, handleLaunchAnyway,
+    handleToggleVanillaLaunch, loadQuickPresets, handleQuickPreset,
   }
-}
+})

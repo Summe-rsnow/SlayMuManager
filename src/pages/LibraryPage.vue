@@ -1,54 +1,54 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue"
+import { storeToRefs } from "pinia"
 import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
-import { currentLocale } from "@/i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
 import {
-  NSpace, NCard, NTag, NButton, NInput, NIcon,
+  NSpace, NButton, NInput, NIcon,
   NCheckbox, NSwitch, useMessage, useDialog,
 } from "naive-ui"
-import { useSettingsHighlight } from "@/composables/useSettingsHighlight"
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
-  AlertTriangle, Filter, X, PackageOpen, Check, ArrowUp, HardDrive,
+  AlertTriangle, Filter, X, PackageOpen, ArrowUp, HardDrive,
 } from "@lucide/vue"
+import { currentLocale } from "@/i18n"
+import { useHighlightStore } from "@/stores/useHighlightStore"
+import { useModCacheStore } from "@/stores/useModCacheStore"
+import { useUpdateStore } from "@/stores/useUpdateStore"
+import { useTagStore, PRESET_TAGS } from "@/stores/useTagStore"
+import { useSidebarStore } from "@/stores/useSidebarStore"
 import DragOverlay from "@/components/DragOverlay.vue"
 import TipIcon from "@/components/TipIcon.vue"
 import ModCard from "@/components/ModCard.vue"
 import AppDialog from "@/components/AppDialog.vue"
-import { useModCache } from "@/composables/useModCache"
-import { useModUpdates } from "@/composables/useModUpdates"
-import { useModTags, PRESET_TAGS } from "@/composables/useModTags"
+import EmptyState from "@/components/EmptyState.vue"
+import PageHeader from "@/components/PageHeader.vue"
+import ListSection from "@/components/ListSection.vue"
 import type { InstalledMod, ModProfile, AppBootstrap, BatchImportPreview, BatchInstallResult } from "../types"
 import { useIsActive } from "@/composables/useIsActive"
-import { useSidebarActions } from "@/composables/useSidebarActions"
 import { useModOperations } from "@/composables/useModOperations"
+
 
 const { t } = useI18n()
 const message = useMessage()
 const dialog = useDialog()
 const router = useRouter()
-const { highlight } = useSettingsHighlight()
-const { enabledMods, disabledMods, loading, fetchMods } = useModCache()
-const { getTags, usedTags, getTagLabel } = useModTags()
+const highlightStore = useHighlightStore()
+const modCacheStore = useModCacheStore()
+const { enabledMods, disabledMods, loading } = storeToRefs(modCacheStore)
+const { fetchMods } = modCacheStore
+const tagStore = useTagStore()
 
 // --- 组件生命周期守卫（防止切换页面时异步回调卡死）---
 const { isActive } = useIsActive()
 
 // --- 从共享 composable 获取侧边栏 & 游戏启动/预设状态 ---
-const {
-  quickPresetId,
-  loadQuickPresets,
-  activePresetName,
-  activePresetId,
-  presetSnapshot,
-  presetAppliedTick,
-  vanillaLaunch,
-  handleToggleVanillaLaunch,
-} = useSidebarActions()
+const sidebarStore = useSidebarStore()
+const { quickPresetId, activePresetName, activePresetId, presetSnapshot, presetAppliedTick, vanillaLaunch } = storeToRefs(sidebarStore)
+const { loadQuickPresets, handleToggleVanillaLaunch } = sidebarStore
 
 const {
   busyId, batchBusy, showSaveGuardDialog, saveGuardInfo,
@@ -72,7 +72,7 @@ function showSettingsPrompt(type: "game-path" | "nexus") {
     positiveText: t("settings.prompt.goToSettings"),
     negativeText: t("common.cancel"),
     onPositiveClick: () => {
-      highlight(type)
+      highlightStore.highlight(type)
       router.push("/settings")
     },
     maskClosable: true,
@@ -170,15 +170,10 @@ function dedupe(arr: string[]): string[] {
   return [...new Set(arr)]
 }
 
-// --- 更新检测（托管于 useModUpdates composable）---
-const {
-  checkingUpdates,
-  loadCachedUpdates,
-  checkUpdates: unsafeCheckUpdates,
-  hasUpdate,
-  getUpdateInfo,
-  openUpdateUrl,
-} = useModUpdates()
+// --- 更新检测（托管于 useUpdateStore Pinia store）---
+const updateStore = useUpdateStore()
+const { checkingUpdates } = storeToRefs(updateStore)
+const { loadCachedUpdates, checkUpdates: unsafeCheckUpdates, hasUpdate, getUpdateInfo, openUpdateUrl } = updateStore
 
 /** 带游戏路径 + API Key 守卫的更新检查 */
 async function checkUpdates() {
@@ -295,7 +290,7 @@ function toggleFilterTag(tagId: string) {
 
 // 已在使用的预设标签（用于侧边栏展示）
 const usedPresetTags = computed(() =>
-  PRESET_TAGS.filter((t) => usedTags.value.has(t.id))
+  PRESET_TAGS.filter((t) => tagStore.usedTags.has(t.id))
 )
 
 // --- 搜索（实时 debounce 200ms + 回车立即搜索）---
@@ -338,7 +333,7 @@ const filteredEnabled = computed(() => {
   }
   if (filterTagIds.value.size > 0) {
     list = list.filter((m) => {
-      const tags = getTags(m.id)
+      const tags = tagStore.getTags(m.id)
       return tags.some((t) => filterTagIds.value.has(t))
     })
   }
@@ -361,7 +356,7 @@ const filteredDisabled = computed(() => {
   }
   if (filterTagIds.value.size > 0) {
     list = list.filter((m) => {
-      const tags = getTags(m.id)
+      const tags = tagStore.getTags(m.id)
       return tags.some((t) => filterTagIds.value.has(t))
     })
   }
@@ -449,54 +444,49 @@ watch(presetAppliedTick, () => {
 <template>
   <div>
     <!-- 头部 -->
-    <div class="flex items-center justify-between mb-6">
-      <h1 class="text-2xl font-bold text-c-primary">{{ t("library.title") }}</h1>
-      <div class="flex items-center gap-4 text-sm text-c-secondary">
-        <span class="flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-green-500 inline-block" />
-          {{ t("library.enabledCountLabel") }} {{ enabledMods.length }}
-        </span>
-        <span class="flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full inline-block bg-c-muted" />
-          {{ t("library.disabledCountLabel") }} {{ disabledMods.length }}
-        </span>
-        <span v-if="activePresetName" class="flex items-center gap-1 text-c-muted">
-          <NIcon :size="14"><Bookmark /></NIcon>
-          <span>{{ activePresetName }}</span>
-        </span>
-        <span v-if="loading" class="text-xs text-c-muted animate-pulse">{{ t("library.refreshing") }}</span>
-        <div class="flex items-center gap-3 ml-4">
-          <div class="flex items-center gap-1">
-            <span class="text-xs text-c-muted whitespace-nowrap">{{ t("library.vanillaLaunch") }}</span>
-            <TipIcon :text="t('library.vanillaLaunchHint')" />
-          </div>
-          <NSwitch :value="vanillaLaunch" size="small" @update:value="handleToggleVanillaLaunch" />
-        </div>
-        <div class="flex gap-2 ml-2">
-          <NButton size="small" secondary @click="handleOpenModsDir">
-            <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
-            {{ t("library.openModsDir") }}
-          </NButton>
-          <NButton size="small" secondary @click="openNewPreset">
-            <template #icon><NIcon :size="14"><Bookmark /></NIcon></template>
-            {{ t("library.newPreset") }}
-          </NButton>
-          <NButton size="small" secondary :loading="checkingUpdates" @click="checkUpdates">
-            <template #icon><NIcon :size="14"><ArrowUp /></NIcon></template>
-            {{ t("library.updateCheck.check") }}
-            <TipIcon :text="t('library.updateCheck.supportHint')" :width="240" />
-          </NButton>
-          <NButton size="small" secondary :loading="loading" @click="fetchMods">
-            <template #icon><NIcon :size="14"><RefreshCw /></NIcon></template>
-            {{ t("common.refresh") }}
-          </NButton>
-          <NButton size="small" type="primary" @click="handleImport">
-            <template #icon><NIcon :size="14"><Download /></NIcon></template>
-            {{ t("library.importMod") }}
-          </NButton>
-        </div>
+    <PageHeader :title="t('library.title')">
+      <span class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-green-500 inline-block" />
+        {{ t("library.enabledCountLabel") }} {{ enabledMods.length }}
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full inline-block bg-c-muted" />
+        {{ t("library.disabledCountLabel") }} {{ disabledMods.length }}
+      </span>
+      <span v-if="activePresetName" class="flex items-center gap-1 text-c-muted">
+        <NIcon :size="14"><Bookmark /></NIcon>
+        <span>{{ activePresetName }}</span>
+      </span>
+      <span v-if="loading" class="text-xs text-c-muted animate-pulse">{{ t("library.refreshing") }}</span>
+      <div class="flex items-center gap-1">
+        <span class="text-xs text-c-muted whitespace-nowrap">{{ t("library.vanillaLaunch") }}</span>
+        <TipIcon :text="t('library.vanillaLaunchHint')" />
       </div>
-    </div>
+      <NSwitch :value="vanillaLaunch" size="small" @update:value="handleToggleVanillaLaunch" />
+      <div class="flex gap-2">
+        <NButton size="small" secondary @click="handleOpenModsDir">
+          <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
+          {{ t("library.openModsDir") }}
+        </NButton>
+        <NButton size="small" secondary @click="openNewPreset">
+          <template #icon><NIcon :size="14"><Bookmark /></NIcon></template>
+          {{ t("library.newPreset") }}
+        </NButton>
+        <NButton size="small" secondary :loading="checkingUpdates" @click="checkUpdates">
+          <template #icon><NIcon :size="14"><ArrowUp /></NIcon></template>
+          {{ t("library.updateCheck.check") }}
+          <TipIcon :text="t('library.updateCheck.supportHint')" :width="240" />
+        </NButton>
+        <NButton size="small" secondary :loading="loading" @click="fetchMods">
+          <template #icon><NIcon :size="14"><RefreshCw /></NIcon></template>
+          {{ t("common.refresh") }}
+        </NButton>
+        <NButton size="small" type="primary" @click="handleImport">
+          <template #icon><NIcon :size="14"><Download /></NIcon></template>
+          {{ t("library.importMod") }}
+        </NButton>
+      </div>
+    </PageHeader>
 
     <!-- 搜索栏 + 筛选 -->
     <div class="relative mb-4">
@@ -569,7 +559,7 @@ watch(presetAppliedTick, () => {
                   size="small"
                   @update:checked="() => toggleFilterTag(tag.id)"
                 >
-                  <span class="text-xs">{{ getTagLabel(tag.id, currentLocale) }}</span>
+                  <span class="text-xs">{{ tagStore.getTagLabel(tag.id, currentLocale) }}</span>
                 </NCheckbox>
               </div>
             </div>
@@ -589,64 +579,25 @@ watch(presetAppliedTick, () => {
 
     <Transition name="preset-fade" mode="out-in">
       <div :key="presetAppliedTick">
-        <!-- 三层空状态 -->
-        <div v-if="emptyReason" class="text-center py-16 text-c-muted">
-          <template v-if="emptyReason === 'noGamePath'">
-            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><HardDrive /></NIcon>
-            <p class="text-lg">{{ t("library.empty.noGamePath") }}</p>
-            <p class="text-sm mt-1">{{ t("library.empty.noGamePathHint") }}</p>
-          </template>
-          <template v-else-if="emptyReason === 'noMods'">
-            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><PackageOpen /></NIcon>
-            <p class="text-lg">{{ t("library.empty.noMods") }}</p>
-            <p class="text-sm mt-1">{{ t("library.empty.noModsHint") }}</p>
-          </template>
-          <template v-else-if="emptyReason === 'filtered'">
-            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Filter /></NIcon>
-            <p>{{ t("library.empty.filterNoResults") }}</p>
-            <p class="text-sm mt-1">
-              <NButton text size="tiny" @click="clearFilters">{{ t("library.empty.clearAllFilters") }}</NButton>
-            </p>
-          </template>
-          <template v-else-if="emptyReason === 'search'">
-            <NIcon :size="48" class="mb-3" :color="'var(--color-text-muted)'"><Search /></NIcon>
-            <p>{{ t("library.empty.searchNoMatch", { q: searchQuery }) }}</p>
-            <p class="text-sm mt-1">
-              <NButton text size="tiny" @click="clearSearch">{{ t("library.empty.clearSearch") }}</NButton>
-            </p>
-          </template>
+        <div v-if="emptyReason === 'noGamePath'" class="py-16">
+          <EmptyState :icon="HardDrive" :title="t('library.empty.noGamePath')" :description="t('library.empty.noGamePathHint')" />
+        </div>
+        <div v-else-if="emptyReason === 'noMods'" class="py-16">
+          <EmptyState :icon="PackageOpen" :title="t('library.empty.noMods')" :description="t('library.empty.noModsHint')" />
+        </div>
+        <div v-else-if="emptyReason === 'filtered'" class="py-16">
+          <EmptyState :icon="Filter" :title="t('library.empty.filterNoResults')" actionText="清除筛选" @action="clearFilters" />
+        </div>
+        <div v-else-if="emptyReason === 'search'" class="py-16">
+          <EmptyState :icon="Search" :title="t('library.empty.searchNoMatch', { q: searchQuery })" actionText="清除搜索" @action="clearSearch" />
         </div>
 
         <template v-else>
-          <!-- 已启用 Mod -->
-          <NCard v-if="filterShowEnabled" size="small" class="mb-4">
-            <template #header>
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span>{{ t("library.section.enabled") }}</span>
-                  <NTag :type="filteredEnabled.length > 0 ? 'success' : 'default'" size="small" round>
-                    {{ t("library.section.count", { n: filteredEnabled.length }) }}
-                  </NTag>
-                </div>
-                <NButton
-                  v-if="filteredEnabled.length > 0"
-                  size="small"
-                  secondary
-                  :disabled="batchBusy"
-                  :loading="batchBusy"
-                  @click="disableAllMods"
-                >
-                  <template #icon><NIcon :size="12"><X /></NIcon></template>
-                  {{ t("library.disableAll") }}
-                </NButton>
-              </div>
-            </template>
-
+          <ListSection v-if="filterShowEnabled" :title="t('library.section.enabled')" :count="filteredEnabled.length" count-type="success" :action-label="filteredEnabled.length > 0 ? t('library.disableAll') : undefined" :action-busy="batchBusy" @action="disableAllMods">
             <div v-if="filteredEnabled.length === 0" class="text-center py-8 text-c-muted">
               <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
               <p v-else>{{ t("library.empty.noEnabledMods") }}</p>
             </div>
-
             <NSpace v-if="filteredEnabled.length > 0" vertical :size="8">
               <ModCard
                 v-for="mod in filteredEnabled"
@@ -664,37 +615,13 @@ watch(presetAppliedTick, () => {
                 @unsubscribe="handleUnsubscribe"
               />
             </NSpace>
-          </NCard>
+          </ListSection>
 
-          <!-- 已禁用 Mod -->
-          <NCard v-if="filterShowDisabled" size="small">
-            <template #header>
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span>{{ t("library.section.disabled") }}</span>
-                  <NTag type="default" size="small" round>
-                    {{ t("library.section.count", { n: filteredDisabled.length }) }}
-                  </NTag>
-                </div>
-                <NButton
-                  v-if="filteredDisabled.length > 0"
-                  size="small"
-                  secondary
-                  :disabled="batchBusy"
-                  :loading="batchBusy"
-                  @click="enableAllMods"
-                >
-                  <template #icon><NIcon :size="12"><Check /></NIcon></template>
-                  {{ t("library.enableAll") }}
-                </NButton>
-              </div>
-            </template>
-
+          <ListSection v-if="filterShowDisabled" :title="t('library.section.disabled')" :count="filteredDisabled.length" :action-label="filteredDisabled.length > 0 ? t('library.enableAll') : undefined" :action-busy="batchBusy" @action="enableAllMods">
             <div v-if="filteredDisabled.length === 0" class="text-center py-8 text-c-muted">
               <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
               <p v-else>{{ t("library.empty.noDisabledMods") }}</p>
             </div>
-
             <NSpace v-else vertical :size="8">
               <ModCard
                 v-for="mod in filteredDisabled"
@@ -712,7 +639,7 @@ watch(presetAppliedTick, () => {
                 @unsubscribe="handleUnsubscribe"
               />
             </NSpace>
-          </NCard>
+          </ListSection>
         </template>
       </div>
     </Transition>

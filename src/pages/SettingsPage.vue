@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { watch, nextTick } from "vue"
+import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
-import { useSettingsHighlight } from "@/composables/useSettingsHighlight"
+import { useHighlightStore } from "@/stores/useHighlightStore"
 import SettingsGamePath from "@/components/SettingsGamePath.vue"
 import SettingsLaunch from "@/components/SettingsLaunch.vue"
 import SettingsNexus from "@/components/SettingsNexus.vue"
@@ -11,9 +12,12 @@ import SettingsDiscover from "@/components/SettingsDiscover.vue"
 import SettingsBackup from "@/components/SettingsBackup.vue"
 import SettingsAbout from "@/components/SettingsAbout.vue"
 import SettingsLaunchGame from "@/components/SettingsLaunchGame.vue"
+import PageHeader from "@/components/PageHeader.vue"
 
 const { t } = useI18n()
-const { highlightedSetting, clearHighlight } = useSettingsHighlight()
+const highlightStore = useHighlightStore()
+const { highlightedSetting } = storeToRefs(highlightStore)
+const { clearHighlight } = highlightStore
 
 // 监听到高亮信号时滚动到目标元素，3 秒后自动清除
 watch(highlightedSetting, (val) => {
@@ -30,9 +34,7 @@ watch(highlightedSetting, (val) => {
 
 <template>
   <div>
-    <div class="mb-6">
-      <h1 class="text-2xl font-bold text-c-primary">{{ t("settings.title") }}</h1>
-    </div>
+    <PageHeader :title="t('settings.title')" />
 
     <div class="max-w-2xl mx-auto flex flex-col gap-4">
       <SettingsGamePath />
@@ -47,14 +49,3 @@ watch(highlightedSetting, (val) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.setting-highlight {
-  animation: highlight-flash 2.5s ease-in-out;
-}
-@keyframes highlight-flash {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 50%, transparent); }
-  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 30%, transparent); }
-  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 0%, transparent); }
-}
-</style>

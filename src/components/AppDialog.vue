@@ -1,24 +1,36 @@
 <script setup lang="ts">
-import { NCard, NModal } from "naive-ui"
+import { NCard, NModal, NButton, NSpace } from "naive-ui"
+import { useI18n } from "vue-i18n"
+
+const { t } = useI18n()
 
 const props = withDefaults(defineProps<{
   show: boolean
-  /** 标题（提供 header slot 时忽略） */
   title?: string
-  /** 对话框宽度, 默认 520px */
   width?: string | number
-  /** 是否允许点击遮罩关闭, 默认 true */
   maskClosable?: boolean
+  confirmText?: string
+  cancelText?: string
+  confirmLoading?: boolean
+  confirmType?: string
+  showFooter?: boolean
 }>(), {
   maskClosable: true,
 })
 
 const emit = defineEmits<{
   (e: "update:show", v: boolean): void
+  (e: "confirm"): void
+  (e: "cancel"): void
 }>()
 
 function onUpdateShow(v: boolean) {
   if (!v) emit("update:show", false)
+}
+
+function onCancel() {
+  emit("cancel")
+  emit("update:show", false)
 }
 </script>
 
@@ -44,6 +56,12 @@ function onUpdateShow(v: boolean) {
       <slot />
       <template v-if="$slots.footer" #footer>
         <slot name="footer" />
+      </template>
+      <template v-else-if="showFooter" #footer>
+        <NSpace justify="end">
+          <NButton @click="onCancel">{{ cancelText || t("common.cancel") }}</NButton>
+          <NButton :type="(confirmType as any) ?? 'primary'" :loading="confirmLoading" @click="emit('confirm')">{{ confirmText }}</NButton>
+        </NSpace>
       </template>
     </NCard>
   </NModal>

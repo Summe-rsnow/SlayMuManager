@@ -1,24 +1,24 @@
 import { ref } from "vue"
+import { storeToRefs } from "pinia"
 import { invoke } from "@tauri-apps/api/core"
 import { useMessage } from "naive-ui"
 import { useI18n } from "vue-i18n"
 import type { InstalledMod, ModToggleResult } from "../types"
-import { useSidebarActions } from "./useSidebarActions"
+import { useSidebarStore } from "@/stores/useSidebarStore"
+import { useModCacheStore } from "@/stores/useModCacheStore"
 import { useIsActive } from "./useIsActive"
-import { useModCache } from "./useModCache"
 
 /**
  * 模组操作：启用/禁用/卸载/打开文件夹/批量操作
- * 依赖模块级 ref（useSidebarActions / useModCache），可在页面和组件间共享状态
  */
 export function useModOperations() {
   const message = useMessage()
   const { t } = useI18n()
-  const { enabledMods, disabledMods, fetchMods } = useModCache()
-  const {
-    activePresetId,
-    presetSnapshot,
-  } = useSidebarActions()
+  const modCacheStore = useModCacheStore()
+  const { enabledMods, disabledMods } = storeToRefs(modCacheStore)
+  const { fetchMods } = modCacheStore
+  const sidebarStore = useSidebarStore()
+  const { activePresetId, presetSnapshot } = storeToRefs(sidebarStore)
   const { isActive } = useIsActive()
 
   const busyId = ref<string | null>(null)

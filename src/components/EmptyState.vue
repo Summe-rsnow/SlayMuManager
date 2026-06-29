@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import type { Component } from "vue"
-import { NCard, NIcon } from "naive-ui"
+import { NCard, NIcon, NButton } from "naive-ui"
 
 defineProps<{
-  /** Lucide 图标组件 */
   icon: Component
-  /** 主标题 */
   title: string
-  /** 副标题（可选） */
   description?: string
-  /** 是否包含 NCard 边框 */
   bordered?: boolean
-  /** 间距大小：sm=py-8, md=py-12(默认), lg=py-16 */
   size?: "sm" | "md" | "lg"
+  actionText?: string
+  actionType?: string
+}>()
+
+const emit = defineEmits<{
+  (e: "action"): void
 }>()
 </script>
 
@@ -24,6 +25,7 @@ defineProps<{
       </NIcon>
       <p class="text-c-muted">{{ title }}</p>
       <p v-if="description" class="text-sm mt-1 text-c-muted">{{ description }}</p>
+      <NButton v-if="actionText" size="tiny" :type="(actionType as any) ?? 'primary'" class="mt-3" @click="emit('action')">{{ actionText }}</NButton>
     </div>
   </NCard>
   <div v-else class="text-center" :class="size === 'sm' ? 'py-8' : size === 'lg' ? 'py-16' : 'py-12'">
@@ -32,5 +34,6 @@ defineProps<{
     </NIcon>
     <p class="text-c-muted">{{ title }}</p>
     <p v-if="description" class="text-sm mt-1 text-c-muted">{{ description }}</p>
+    <NButton v-if="actionText" size="tiny" :type="(actionType as any) ?? 'primary'" class="mt-3" @click="emit('action')">{{ actionText }}</NButton>
   </div>
 </template>

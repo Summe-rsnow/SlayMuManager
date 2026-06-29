@@ -2,9 +2,11 @@
 import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NCard, NSwitch, NInputNumber, NPopover, NIcon } from "naive-ui"
-import { HelpCircle } from "@lucide/vue"
+import { NSwitch, NInputNumber } from "naive-ui"
 import type { AppBootstrap } from "../types"
+import SettingsSection from "./SettingsSection.vue"
+import SettingsRow from "./SettingsRow.vue"
+import TipIcon from "./TipIcon.vue"
 
 const { t } = useI18n()
 
@@ -30,23 +32,16 @@ async function toggleBackupOnPathSwitch(val: boolean) {
 </script>
 
 <template>
-  <NCard :title="t('settings.backup.title')" size="small">
-    <div class="flex items-center justify-between">
-      <span class="text-sm">{{ t("settings.backup.autoKeepCount") }}</span>
+  <SettingsSection :title="t('settings.backup.title')">
+    <SettingsRow :label="t('settings.backup.autoKeepCount')">
       <NInputNumber :value="backupCount" :min="1" :max="20" size="small" style="width: 120px" @update:value="updateBackupCount" />
-    </div>
+    </SettingsRow>
     <div class="border-t border-c-default my-3"></div>
-    <div class="flex items-center justify-between">
-      <NPopover trigger="hover" placement="right" :width="240">
-        <template #trigger>
-          <span class="flex items-center gap-1 cursor-help text-sm text-c-primary" :style="{ lineHeight: '1' }">
-            <span>{{ t("settings.backup.onPathSwitch") }}</span>
-            <NIcon :size="14" class="text-c-muted"><HelpCircle /></NIcon>
-          </span>
-        </template>
-        <span class="text-xs">{{ t("settings.backup.onPathSwitchDesc") }}</span>
-      </NPopover>
+    <SettingsRow>
+      <template #label>
+        <TipIcon :label="t('settings.backup.onPathSwitch')" :text="t('settings.backup.onPathSwitchDesc')" placement="right" :width="240" />
+      </template>
       <NSwitch :value="backupOnPathSwitch" @update:value="toggleBackupOnPathSwitch" />
-    </div>
-  </NCard>
+    </SettingsRow>
+  </SettingsSection>
 </template>

@@ -1,16 +1,19 @@
 <script setup lang="ts">
 import { ref } from "vue"
+import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
 import { NIcon, NPopover } from "naive-ui"
 import { Languages } from "@lucide/vue"
-import { translateText, showTranslateQuotaTip } from "@/composables/useTranslation"
+import { translateText } from "@/utils/translate"
 import { currentLocale } from "@/i18n"
+import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
 
 const props = defineProps<{
   text: string | null | undefined
 }>()
 
 const { t } = useI18n()
+const { showTranslateQuotaTip } = storeToRefs(useDiscoverPrefStore())
 
 const translatedText = ref("")
 const translating = ref(false)

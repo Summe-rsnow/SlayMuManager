@@ -3,9 +3,11 @@ import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NCard, NSwitch, NSelect } from "naive-ui"
+import { NSwitch, NSelect } from "naive-ui"
 import { useStorage } from "@/composables/useStorage"
 import type { AppBootstrap } from "../types"
+import SettingsSection from "./SettingsSection.vue"
+import SettingsRow from "./SettingsRow.vue"
 
 const { t, te } = useI18n()
 const router = useRouter()
@@ -40,9 +42,8 @@ const pageOptions = computed(() => {
 </script>
 
 <template>
-  <NCard :title="t('settings.launch.title')" size="small">
-    <div class="flex items-center justify-between">
-      <span class="text-sm">{{ t("settings.launch.defaultPageLabel") }}</span>
+  <SettingsSection :title="t('settings.launch.title')">
+    <SettingsRow :label="t('settings.launch.defaultPageLabel')">
       <NSelect
         :value="defaultPage"
         :options="pageOptions"
@@ -50,11 +51,10 @@ const pageOptions = computed(() => {
         style="width: 200px"
         @update:value="(v: string) => { defaultPage = v }"
       />
-    </div>
+    </SettingsRow>
     <div class="border-t border-c-default my-3"></div>
-    <div class="flex items-center justify-between">
-      <span class="text-sm">{{ t("settings.launch.autoCheck") }}</span>
+    <SettingsRow :label="t('settings.launch.autoCheck')">
       <NSwitch :value="autoCheckUpdate" size="small" @update:value="toggleAutoCheck" />
-    </div>
-  </NCard>
+    </SettingsRow>
+  </SettingsSection>
 </template>

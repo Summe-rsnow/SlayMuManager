@@ -1,24 +1,12 @@
 import type { RemoteMod } from "../types"
-import { useStorage } from "./useStorage"
 
-const STORAGE_KEY = "discover-prefetch"
-
-interface CacheEntry {
-  items: RemoteMod[]
-  totalCount: number
-}
+interface CacheEntry { items: RemoteMod[]; totalCount: number }
 
 function makeKey(query: string, sortBy: string, page: number, pageSize: number): string {
   return `${query}|${sortBy}|${page}|${pageSize}`
 }
 
 const cache = new Map<string, CacheEntry>()
-
-export const prefetchEnabled = useStorage(STORAGE_KEY, true)
-
-export function setPrefetchEnabled(v: boolean) {
-  prefetchEnabled.value = v
-}
 
 export function getPageCache(
   query: string, sortBy: string, page: number, pageSize: number
