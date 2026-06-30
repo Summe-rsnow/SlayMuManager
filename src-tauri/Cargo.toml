@@ -1,10 +1,10 @@
 [package]
 name = "slaymumanager"
-version = "1.7.2"
+version = "1.7.3"
 description = "Slay the Spire 2 Mod Manager"
 authors = []
 edition = "2024"
-rust-version = "1.94.1"
+rust-version = "1.96.0"
 
 [lib]
 name = "slaymumanager_lib"
