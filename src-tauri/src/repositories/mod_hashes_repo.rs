@@ -55,18 +55,4 @@ pub fn remove_mod_hashes(mod_id: &str) -> Result<(), AppError> {
     save_mod_hashes(&store)
 }
 
-/// 获取所有已安装 mod 的全部文件哈希映射（file_path → mod_id 列表）
-/// 用于冲突检测：给定新文件路径，查出哪些已安装 mod 也包含该文件
-#[allow(dead_code)]
-pub fn build_file_index() -> HashMap<String, Vec<String>> {
-    let store = load_mod_hashes();
-    let mut index: HashMap<String, Vec<String>> = HashMap::new();
-    for (mod_id, files) in &store.hashes {
-        for file_path in files.keys() {
-            index.entry(file_path.clone())
-                .or_default()
-                .push(mod_id.clone());
-        }
-    }
-    index
-}
+

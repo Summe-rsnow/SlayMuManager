@@ -23,12 +23,10 @@ uuid = { version = "1.23.1", features = ["serde", "v4"] }
 rfd = "0.17.2"
 zip = "8.6.0"
 sevenz-rust = "0.6.1"
-infer = "0.19.0"
 reqwest = { version = "0.13.3", features = ["blocking", "json", "socks"] }
 dirs-next = "2.0.0"
 winreg = "0.56.0"
 sha1 = "0.11.0"
-filetime = "0.2.29"
 notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
 lru = "0.18.0"
 rars = "0.1.0"
