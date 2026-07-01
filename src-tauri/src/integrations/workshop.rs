@@ -8,6 +8,14 @@ pub fn is_steam_running() -> bool {
     crate::integrations::steam::get_active_steam_account_id().is_some()
 }
 
+/// 确保 Steam 可连接，返回用户友好的错误提示
+fn ensure_steam_ready() -> Result<(), String> {
+    if !is_steam_running() {
+        return Err("请先启动 Steam 并登录账号".to_string());
+    }
+    Ok(())
+}
+
 pub fn init_client() -> Result<(), String> {
     let mut guard = STEAM_CLIENT.lock().unwrap();
     if guard.is_none() {
@@ -16,7 +24,12 @@ pub fn init_client() -> Result<(), String> {
                 *guard = Some(c);
             }
             Err(e) => {
-                return Err(format!("Steam 初始化失败: {:?}", e));
+                let msg = format!("{:?}", e);
+                // "ConnectToGlobalUser failed" 意味着 Steam 运行中但用户会话未就绪
+                if msg.contains("ConnectToGlobalUser") {
+                    return Err("请确保 Steam 已完全启动并登录账号，然后重试".to_string());
+                }
+                return Err(format!("Steam 初始化失败: {}", msg));
             }
         }
     }
@@ -59,6 +72,7 @@ fn ugc_query_type_from_sort(sort_by: &str) -> UGCQueryType {
 }
 
 pub fn search_workshop(query: &str, page: u32, page_size: u32, sort_by: &str) -> Result<WorkshopSearchResult, String> {
+    ensure_steam_ready()?;
     init_client()?;
     with_client(|client| {
         let ugc = client.ugc();
@@ -119,6 +133,7 @@ pub fn search_workshop(query: &str, page: u32, page_size: u32, sort_by: &str) ->
 }
 
 pub fn subscribe_mod(published_file_id: u64) -> Result<(), String> {
+    ensure_steam_ready()?;
     init_client()?;
     with_client(|client| {
         let ugc = client.ugc();
@@ -137,6 +152,7 @@ pub fn subscribe_mod(published_file_id: u64) -> Result<(), String> {
 }
 
 pub fn unsubscribe_mod(published_file_id: u64) -> Result<(), String> {
+    ensure_steam_ready()?;
     init_client()?;
     with_client(|client| {
         let ugc = client.ugc();

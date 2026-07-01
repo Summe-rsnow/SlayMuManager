@@ -3,15 +3,19 @@ import { h, computed, ref, onMounted } from "vue"
 import { storeToRefs } from "pinia"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
-import { NMenu, NIcon, NSelect, NButton, NSpace, type MenuOption } from "naive-ui"
+import { useMessage, useDialog, NMenu, NIcon, NSelect, NButton, NSpace, type MenuOption } from "naive-ui"
 import { Library, Compass, FolderHeart, Save, Settings, Play, LoaderCircle, AlertTriangle, Menu } from "@lucide/vue"
 import { useSidebarStore } from "@/stores/useSidebarStore"
+import { useHighlightStore } from "@/stores/useHighlightStore"
 import AppDialog from "@/components/AppDialog.vue"
 
 const { t } = useI18n()
+const message = useMessage()
+const dialog = useDialog()
 const route = useRoute()
 const router = useRouter()
 
+const store = useSidebarStore()
 const {
   launchingGame,
   showLaunchMismatchDialog,
@@ -19,14 +23,14 @@ const {
   quickPresetId,
   quickPresetOptions,
   sidebarCollapsed,
-} = storeToRefs(useSidebarStore())
+} = storeToRefs(store)
 const {
   handleLaunchGame,
   handleGoToSaves,
   handleLaunchAnyway,
   loadQuickPresets,
   handleQuickPreset,
-} = useSidebarStore()
+} = store
 
 const showPresetPanel = ref(false)
 const presetMenuOpen = ref(false)
@@ -42,17 +46,55 @@ function onPresetEnter() {
 }
 
 function onPresetLeave() {
-  if (presetMenuOpen.value) return // 下拉菜单打开时不移除面板
+  if (presetMenuOpen.value) return
   presetPanelTimer = setTimeout(() => {
     showPresetPanel.value = false
     presetPanelTimer = null
   }, PRESET_HOVER_DELAY)
 }
 
-function onPresetSelect(val: string) {
-  handleQuickPreset(val)
+async function onPresetSelect(val: string) {
   presetMenuOpen.value = false
   showPresetPanel.value = false
+  const result = await handleQuickPreset(val)
+  if (result.ok) {
+    message.success(t("library.success.presetApplied", { name: result.label }))
+  } else {
+    message.error(`${t("profiles.error.applyFailed")}: ${result.error}`)
+  }
+}
+
+/** 启动游戏：调用 store 逻辑，由组件处理全部 UI 反馈 */
+async function onLaunchGame() {
+  const result = await handleLaunchGame()
+  if (result.ok) {
+    message.success(t("library.success.gameLaunched"))
+  } else if (result.needsGamePath) {
+    dialog.warning({
+      title: t("settings.prompt.gamePathRequired"),
+      content: t("settings.prompt.gamePathRequiredDesc"),
+      positiveText: t("settings.prompt.goToSettings"),
+      negativeText: t("common.cancel"),
+      onPositiveClick: () => {
+        useHighlightStore().highlight("game-path")
+        router.push("/settings")
+      },
+      maskClosable: true,
+    })
+  } else if (result.alreadyRunning) {
+    message.warning(t("library.info.gameAlreadyRunning"))
+  } else if (result.error) {
+    message.error(t("library.error.launchFailed", { e: result.error }))
+  }
+}
+
+async function onLaunchAnyway() {
+  const result = await handleLaunchAnyway()
+  if (result.ok) {
+    message.success(t("library.success.gameLaunched"))
+  } else if (result.error) {
+    message.error(t("library.error.launchFailed", { e: result.error }))
+  }
 }
 
 const menuOptions = computed<MenuOption[]>(() => [
@@ -185,7 +227,7 @@ onMounted(() => {
           color: 'var(--color-text-primary)',
         }"
         :disabled="launchingGame"
-        @click="handleLaunchGame"
+        @click="onLaunchGame"
       >
         <!-- 闭合态 -->
         <div class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75">
@@ -235,7 +277,7 @@ onMounted(() => {
         <NButton secondary size="small" @click="handleGoToSaves">
           {{ t("library.launchMismatch.goToSaves") }}
         </NButton>
-        <NButton type="warning" size="small" @click="handleLaunchAnyway">
+        <NButton type="warning" size="small" @click="onLaunchAnyway">
           {{ t("library.launchMismatch.forceLaunch") }}
         </NButton>
       </div>

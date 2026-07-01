@@ -1,11 +1,8 @@
 import { defineStore } from "pinia"
 import { ref } from "vue"
 import { invoke } from "@tauri-apps/api/core"
-import { useMessage, useDialog } from "naive-ui"
-import { useI18n } from "vue-i18n"
 import { useRouter } from "vue-router"
 import type { CloudSaveStatus, ModProfile, AppBootstrap, ApplyProfileResult } from "../types"
-import { useHighlightStore } from "./useHighlightStore"
 
 export const useSidebarStore = defineStore("sidebar", () => {
   const launchingGame = ref(false)
@@ -20,46 +17,20 @@ export const useSidebarStore = defineStore("sidebar", () => {
   const presetAppliedTick = ref(0)
   const sidebarCollapsed = ref(true)
 
-  function showGamePathPrompt() {
-    const { t } = useI18n()
-    const dialog = useDialog()
-    const router = useRouter()
-    const { highlight } = useHighlightStore()
-    launchingGame.value = false
-    dialog.warning({
-      title: t("settings.prompt.gamePathRequired"),
-      content: t("settings.prompt.gamePathRequiredDesc"),
-      positiveText: t("settings.prompt.goToSettings"),
-      negativeText: t("common.cancel"),
-      onPositiveClick: () => {
-        highlight("game-path")
-        router.push("/settings")
-      },
-      maskClosable: true,
-    })
-  }
-
-  async function doLaunchGame() {
-    const { t } = useI18n()
-    const message = useMessage()
-    launchingGame.value = true
-    try {
-      await invoke("launch_game")
-      message.success(t("library.success.gameLaunched"))
-    } catch (e: unknown) {
-      message.error(t("library.error.launchFailed", { e }))
-    } finally {
-      launchingGame.value = false
-    }
-  }
-
-  async function handleLaunchGame() {
-    const { t } = useI18n()
-    const message = useMessage()
+  /** 尝试启动游戏。返回结构化结果，由组件层处理 UI 反馈 */
+  async function handleLaunchGame(): Promise<{
+    ok: boolean
+    error?: string
+    needsGamePath?: boolean
+    alreadyRunning?: boolean
+    mismatch?: CloudSaveStatus
+  }> {
     launchingGame.value = true
     try {
       const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
-      if (!bootstrap.gameDirectory) { showGamePathPrompt(); return }
+      if (!bootstrap.gameDirectory) {
+        return { ok: false, needsGamePath: true }
+      }
 
       if (bootstrap.launchCheckCloudSave) {
         try {
@@ -67,21 +38,30 @@ export const useSidebarStore = defineStore("sidebar", () => {
           if (cloudStatus.isAvailable && cloudStatus.hasMismatch) {
             launchMismatchStatus.value = cloudStatus
             showLaunchMismatchDialog.value = true
-            return
+            return { ok: false, mismatch: cloudStatus }
           }
         } catch { /* ignore */ }
       }
+
       const running = await invoke<boolean>("is_game_running")
       if (running) {
-        message.warning(t("library.info.gameAlreadyRunning"))
-        launchingGame.value = false
-        return
+        return { ok: false, alreadyRunning: true }
       }
-      await doLaunchGame()
-    } catch {
-      await doLaunchGame()
+
+      return await doLaunchGame()
+    } catch (e) {
+      return { ok: false, error: String(e) }
     } finally {
       if (!showLaunchMismatchDialog.value) launchingGame.value = false
+    }
+  }
+
+  async function doLaunchGame(): Promise<{ ok: boolean; error?: string }> {
+    try {
+      await invoke("launch_game")
+      return { ok: true }
+    } catch (e: unknown) {
+      return { ok: false, error: String(e) }
     }
   }
 
@@ -92,9 +72,9 @@ export const useSidebarStore = defineStore("sidebar", () => {
     router.push("/saves")
   }
 
-  async function handleLaunchAnyway() {
+  async function handleLaunchAnyway(): Promise<{ ok: boolean; error?: string }> {
     showLaunchMismatchDialog.value = false
-    await doLaunchGame()
+    return await doLaunchGame()
   }
 
   async function handleToggleVanillaLaunch(val: boolean) {
@@ -112,10 +92,9 @@ export const useSidebarStore = defineStore("sidebar", () => {
     } catch { /* ignore */ }
   }
 
-  async function handleQuickPreset(presetId: string) {
-    const { t } = useI18n()
-    const message = useMessage()
-    if (!presetId) return
+  /** 快速切换预设。返回结构化结果，由组件层处理 UI 反馈 */
+  async function handleQuickPreset(presetId: string): Promise<{ ok: boolean; error?: string; label?: string }> {
+    if (!presetId) return { ok: false, error: "No preset selected" }
     try {
       const label = quickPresetOptions.value.find((p) => p.value === presetId)?.label ?? presetId
       const result = await invoke<ApplyProfileResult>("apply_profile", { id: presetId })
@@ -123,10 +102,10 @@ export const useSidebarStore = defineStore("sidebar", () => {
       activePresetName.value = label
       activePresetId.value = presetId
       presetSnapshot.value = new Set(result.profile.modIds)
-      message.success(t("library.success.presetApplied", { name: label }))
       presetAppliedTick.value++
+      return { ok: true, label }
     } catch (e: unknown) {
-      message.error(`${t("profiles.error.applyFailed")}: ${String(e)}`)
+      return { ok: false, error: String(e) }
     }
   }
 

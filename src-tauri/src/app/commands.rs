@@ -241,23 +241,21 @@ pub fn launch_game(state: State<AppState>) -> Result<(), String> {
         return Ok(());
     }
 
-    // Steam 启动
-    if vanilla {
-        // 加 --nomods 参数 → 用 steam.exe -applaunch 传参
-        match find_steam_path() {
-            Some(steam_path) => {
-                std::process::Command::new(steam_path.join("steam.exe"))
-                    .args(["-applaunch", "2868840", "--nomods"])
-                    .spawn()
-                    .map_err(|e| format!("启动游戏失败: {}", e))?;
+    // Steam 启动：统一走 steam.exe -applaunch（更可靠，不依赖 steam:// 协议）
+    match find_steam_path() {
+        Some(steam_path) => {
+            let mut cmd = std::process::Command::new(steam_path.join("steam.exe"));
+            cmd.args(["-applaunch", "2868840"]);
+            if vanilla {
+                cmd.arg("--nomods");
             }
-            None => {
-                // 找不到 steam.exe 则回退到 steam:// 协议（此时无法传参）
-                launch_via_steam_url()?;
-            }
+            cmd.spawn()
+                .map_err(|e| format!("启动游戏失败: {}", e))?;
         }
-    } else {
-        launch_via_steam_url()?;
+        None => {
+            // 找不到 steam.exe 则回退到 steam:// 协议
+            launch_via_steam_url()?;
+        }
     }
 
     Ok(())

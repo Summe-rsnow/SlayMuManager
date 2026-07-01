@@ -99,7 +99,20 @@ function switchWorkshopTab() {
   tab.value = "workshop"
   router.replace({ query: { ...route.query, tab: "workshop" } })
   if (!workshopSearched.value) {
-    searchWorkshop()
+    invoke<boolean>("check_steam_status").then((running) => {
+      if (!running) {
+        dialog.warning({
+          title: t("discover.workshop.tab"),
+          content: t("discover.workshop.needSteam"),
+          positiveText: t("common.ok"),
+          maskClosable: true,
+        })
+        return
+      }
+      searchWorkshop()
+    }).catch(() => {
+      searchWorkshop()
+    })
   }
 }
 
