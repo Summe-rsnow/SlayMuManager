@@ -13,6 +13,7 @@ import {
 import {
   Search, Download, RefreshCw, FolderOpen, Bookmark,
   AlertTriangle, Filter, X, PackageOpen, ArrowUp, HardDrive,
+  CheckCircle, AlertCircle,
 } from "@lucide/vue"
 import { currentLocale } from "@/i18n"
 import { useHighlightStore } from "@/stores/useHighlightStore"
@@ -173,18 +174,75 @@ function dedupe(arr: string[]): string[] {
 
 // --- 更新检测（托管于 useUpdateStore Pinia store）---
 const updateStore = useUpdateStore()
-const { checkingUpdates } = storeToRefs(updateStore)
+const { lastCheckResult } = storeToRefs(updateStore)
 const { loadCachedUpdates, checkUpdates: unsafeCheckUpdates, hasUpdate, getUpdateInfo, openUpdateUrl } = updateStore
+
+/** 组件本地控制按钮 loading，不依赖 store 的响应式绑定 */
+const localChecking = ref(false)
+
+/** 同步 store 完成状态：store 切回 false 时同步本地状态 */
+watch(() => updateStore.checkingUpdates, (v) => { if (!v) localChecking.value = false })
 
 /** 带游戏路径 + API Key 守卫的更新检查 */
 async function checkUpdates() {
+  localChecking.value = true
   try {
     const b = await invoke<AppBootstrap>("get_app_bootstrap")
-    if (!b.gameDirectory) { showSettingsPrompt("game-path"); return }
-    if (!b.nexusApiKey) { showSettingsPrompt("nexus"); return }
+    if (!b.gameDirectory) { showSettingsPrompt("game-path"); localChecking.value = false; return }
+    if (!b.nexusApiKey) { showSettingsPrompt("nexus"); localChecking.value = false; return }
   } catch { /* ignore */ }
   unsafeCheckUpdates()
 }
+
+// --- 更新检查结果弹窗 ---
+const showResultDialog = ref(false)
+const acknowledgedReqId = ref(0)
+
+const updatableMods = computed(() =>
+  (lastCheckResult.value?.results ?? []).filter((r) => r.hasUpdate)
+)
+
+const resultDialogIcon = computed(() => {
+  if (!lastCheckResult.value) return CheckCircle
+  if (!lastCheckResult.value.success) return AlertCircle
+  if (lastCheckResult.value.summary.updatedMods === 0) return CheckCircle
+  return PackageOpen
+})
+
+const resultDialogIconColor = computed(() => {
+  if (!lastCheckResult.value) return '#22c55e'
+  if (!lastCheckResult.value.success) return '#f0a020'
+  if (lastCheckResult.value.summary.updatedMods === 0) return '#22c55e'
+  return 'var(--primary-color)'
+})
+
+const resultDialogTitle = computed(() => {
+  if (!lastCheckResult.value) return ''
+  if (!lastCheckResult.value.success) return t("library.updateCheck.titleFail")
+  if (lastCheckResult.value.summary.updatedMods === 0) return t("library.updateCheck.titleUpToDate")
+  return t("library.updateCheck.titleFound", { n: lastCheckResult.value.summary.updatedMods })
+})
+
+function dismissResultDialog() {
+  if (lastCheckResult.value) acknowledgedReqId.value = lastCheckResult.value.reqId
+  showResultDialog.value = false
+}
+
+watch(localChecking, (val) => {
+  if (!val && lastCheckResult.value && lastCheckResult.value.reqId !== acknowledgedReqId.value) {
+    showResultDialog.value = true
+  }
+})
+
+onMounted(() => {
+  if (
+    !localChecking.value &&
+    lastCheckResult.value &&
+    lastCheckResult.value.reqId !== acknowledgedReqId.value
+  ) {
+    showResultDialog.value = true
+  }
+})
 
 // --- 新增/保存预设 ---
 const showNewPresetDialog = ref(false)
@@ -448,7 +506,7 @@ watch(presetAppliedTick, () => {
     <PageHeader :title="t('library.title')" :subtitle="t('library.subtitle')">
       <CountBadge :label="t('library.enabledCountLabel')" :count="enabledMods.length" dot-color="bg-green-500" />
       <CountBadge :label="t('library.disabledCountLabel')" :count="disabledMods.length" />
-      <span v-if="activePresetName" class="flex items-center gap-1 text-c-muted">
+      <span v-if="activePresetName" class="flex items-center gap-1 text-c-muted flex-shrink-0 whitespace-nowrap">
         <NIcon :size="14"><Bookmark /></NIcon>
         <span>{{ activePresetName }}</span>
       </span>
@@ -467,9 +525,9 @@ watch(presetAppliedTick, () => {
           <template #icon><NIcon :size="14"><Bookmark /></NIcon></template>
           {{ t("library.newPreset") }}
         </NButton>
-        <NButton size="small" secondary :loading="checkingUpdates" @click="checkUpdates">
+        <NButton size="small" secondary :loading="localChecking" @click="checkUpdates">
           <template #icon><NIcon :size="14"><ArrowUp /></NIcon></template>
-          {{ t("library.updateCheck.check") }}
+          {{ localChecking ? t("library.updateCheck.checking") : t("library.updateCheck.check") }}
           <TipIcon :text="t('library.updateCheck.supportHint')" :width="240" />
         </NButton>
         <NButton size="small" secondary :loading="loading" @click="fetchMods">
@@ -737,6 +795,59 @@ watch(presetAppliedTick, () => {
           <NButton type="primary" size="small" @click="dismissSaveGuard">{{ t("library.saveGuard.gotIt") }}</NButton>
         </div>
       </NSpace>
+    </AppDialog>
+
+    <!-- 检查更新结果弹窗 -->
+    <AppDialog v-model:show="showResultDialog" width="480px" :mask-closable="false">
+      <template #header>
+        <div class="flex items-center gap-2">
+          <NIcon :size="18" :color="resultDialogIconColor"><component :is="resultDialogIcon" /></NIcon>
+          <span class="font-semibold">{{ resultDialogTitle }}</span>
+        </div>
+      </template>
+
+      <template v-if="lastCheckResult">
+        <!-- 成功且无更新 -->
+        <div v-if="lastCheckResult.success && lastCheckResult.summary.updatedMods === 0" class="text-sm text-c-secondary py-4 text-center">
+          {{ t("library.updateCheck.allUpToDate") }}
+        </div>
+
+        <!-- 成功且有更新 -->
+        <div v-else-if="lastCheckResult.success" class="max-h-64 overflow-y-auto space-y-2">
+          <p class="text-sm text-c-secondary mb-3">
+            {{ t("library.updateCheck.foundUpdates", { n: lastCheckResult.summary.updatedMods }) }}
+          </p>
+          <div
+            v-for="info in updatableMods"
+            :key="info.modId"
+            class="flex items-center justify-between px-3 py-2 rounded-lg text-sm"
+            :style="{ backgroundColor: 'color-mix(in srgb, var(--color-text-muted) 6%, transparent)' }"
+          >
+            <div class="min-w-0 flex-1">
+              <div class="font-medium truncate">{{ info.name }}</div>
+              <div class="text-xs text-c-muted mt-0.5">
+                {{ info.localVersion ?? '—' }}
+                <span class="mx-1">→</span>
+                <span class="font-semibold" style="color: var(--primary-color)">{{ info.remoteVersion }}</span>
+              </div>
+            </div>
+            <NButton text size="tiny" style="color: var(--primary-color)" @click="openUpdateUrl({ id: info.modId } as InstalledMod)">
+              {{ t("library.updateCheck.openNexus") }}
+            </NButton>
+          </div>
+        </div>
+
+        <!-- 失败 -->
+        <div v-else class="text-sm text-c-secondary py-4">
+          {{ lastCheckResult.error ?? t("library.updateCheck.error", { e: '' }) }}
+        </div>
+      </template>
+
+      <template #footer>
+        <NSpace justify="end">
+          <NButton size="small" @click="dismissResultDialog">{{ t("common.close") }}</NButton>
+        </NSpace>
+      </template>
     </AppDialog>
 
     <!-- 拖拽导入遮罩 -->

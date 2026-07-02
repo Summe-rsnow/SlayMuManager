@@ -161,13 +161,18 @@
     "updateCheck": {
       "check": "Check Updates",
       "checking": "Checking...",
+      "starting": "Checking for updates...",
       "allUpToDate": "All mods are up to date",
       "foundUpdates": "Found {n} mod(s) with updates",
       "error": "Update check failed: {e}",
+      "timeout": "Update check timed out. Please check your network and try again",
       "noApiKey": "Please configure Nexus API Key in Settings first",
       "noGamePath": "Please set the game path first",
       "openNexus": "Open on Nexus",
-      "supportHint": "Only mods with a version number on Nexus can be checked. Other mods cannot be auto-checked for updates."
+      "supportHint": "Only mods with a version number on Nexus can be checked. Other mods cannot be auto-checked for updates.",
+      "titleUpToDate": "Up to Date",
+      "titleFound": "{n} Update(s) Found",
+      "titleFail": "Update Check Failed"
     }
   },
 

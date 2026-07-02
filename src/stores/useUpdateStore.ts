@@ -12,11 +12,30 @@ interface ModUpdateCheckEvent {
   summary: { totalMods: number; updatedMods: number }
 }
 
+export interface CheckResultSummary {
+  reqId: number
+  success: boolean
+  error: string | null
+  summary: { totalMods: number; updatedMods: number }
+  results: ModUpdateInfo[]
+}
+
+const CHECK_TIMEOUT_MS = 30_000
+
 export const useUpdateStore = defineStore("updates", () => {
   const updateModsMap = ref<Map<string, ModUpdateInfo>>(new Map())
   const checkingUpdates = ref(false)
+  const lastCheckResult = ref<CheckResultSummary | null>(null)
   let searchReqId = 0
   let listenerReady = false
+  let checkTimeoutId: ReturnType<typeof setTimeout> | null = null
+
+  function clearCheckTimeout() {
+    if (checkTimeoutId !== null) {
+      clearTimeout(checkTimeoutId)
+      checkTimeoutId = null
+    }
+  }
 
   if (!listenerReady) {
     listenerReady = true
@@ -25,13 +44,19 @@ export const useUpdateStore = defineStore("updates", () => {
       const message = useMessage()
       const payload = event.payload
       if (payload.reqId !== searchReqId) return
+      clearCheckTimeout()
       checkingUpdates.value = false
+      lastCheckResult.value = {
+        reqId: payload.reqId,
+        success: payload.success,
+        error: payload.error,
+        summary: payload.summary,
+        results: payload.results,
+      }
       if (payload.success) {
         const map = new Map<string, ModUpdateInfo>()
         for (const info of payload.results) map.set(info.modId, info)
         updateModsMap.value = map
-        if (payload.summary.updatedMods === 0) message.success(t("library.updateCheck.allUpToDate"))
-        else message.success(t("library.updateCheck.foundUpdates", { n: payload.summary.updatedMods }))
       } else {
         const err = payload.error ?? ""
         if (err.includes("API Key")) message.warning(t("library.updateCheck.noApiKey"))
@@ -56,8 +81,16 @@ export const useUpdateStore = defineStore("updates", () => {
     checkingUpdates.value = true
     searchReqId++
     const currentReqId = searchReqId
+
+    clearCheckTimeout()
+    checkTimeoutId = setTimeout(() => {
+      checkingUpdates.value = false
+      message.error(t("library.updateCheck.timeout"))
+    }, CHECK_TIMEOUT_MS)
+
     invoke("start_mod_update_check", { reqId: currentReqId })
       .catch((e: unknown) => {
+        clearCheckTimeout()
         checkingUpdates.value = false
         message.error(t("library.updateCheck.error", { e: String(e) }))
       })
@@ -71,5 +104,8 @@ export const useUpdateStore = defineStore("updates", () => {
     if (url) invoke("open_url_in_browser", { url }).catch(() => {})
   }
 
-  return { updateModsMap, checkingUpdates, loadCachedUpdates, checkUpdates, hasUpdate, getUpdateInfo, openUpdateUrl }
+  return {
+    updateModsMap, checkingUpdates, lastCheckResult,
+    loadCachedUpdates, checkUpdates, hasUpdate, getUpdateInfo, openUpdateUrl,
+  }
 })

@@ -161,13 +161,18 @@
     "updateCheck": {
       "check": "检查更新",
       "checking": "检查中...",
+      "starting": "正在检查更新...",
       "allUpToDate": "所有模组已是最新版本",
       "foundUpdates": "发现 {n} 个模组有更新",
       "error": "检查更新失败: {e}",
+      "timeout": "检查更新超时，请检查网络或稍后重试",
       "noApiKey": "请先在设置中配置 Nexus API Key",
       "noGamePath": "请先设置游戏路径",
       "openNexus": "前往 Nexus",
-      "supportHint": "仅支持检查 Nexus 上标注了版本号的模组，其他模组不支持自动检查更新。"
+      "supportHint": "仅支持检查 Nexus 上标注了版本号的模组，其他模组不支持自动检查更新。",
+      "titleUpToDate": "已是最新",
+      "titleFound": "发现 {n} 个更新",
+      "titleFail": "检查更新失败"
     }
   },
 
