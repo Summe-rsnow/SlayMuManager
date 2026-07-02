@@ -37,7 +37,6 @@ async function handleLaunchCheckCloudSaveChange(val: boolean) {
         <NRadio value="direct">{{ t("settings.launchGame.direct") }}</NRadio>
       </NRadioGroup>
     </SettingsRow>
-    <div class="border-t border-c-default my-3"></div>
     <SettingsRow :label="t('settings.launchGame.checkCloudSave')">
       <NSwitch :value="launchCheckCloudSave" @update:value="handleLaunchCheckCloudSaveChange" />
     </SettingsRow>

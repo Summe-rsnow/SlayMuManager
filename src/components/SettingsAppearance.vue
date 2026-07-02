@@ -68,7 +68,6 @@ async function handleThemeColorChange(val: ThemeColorKey) {
         @update:value="updateLocale"
       />
     </SettingsRow>
-    <div class="border-t border-c-default"></div>
     <SettingsRow :label="t('settings.appearance.displayMode')">
       <NRadioGroup :value="displayMode" size="small" @update:value="handleDisplayModeChange">
         <NRadio v-for="opt in displayModeOptions" :key="opt.value" :value="opt.value">
@@ -76,7 +75,6 @@ async function handleThemeColorChange(val: ThemeColorKey) {
         </NRadio>
       </NRadioGroup>
     </SettingsRow>
-    <div class="border-t border-c-default"></div>
     <SettingsRow :label="t('settings.appearance.themeColor')">
       <div class="flex gap-1.5">
         <button

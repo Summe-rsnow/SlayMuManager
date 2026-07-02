@@ -9,7 +9,7 @@ defineProps<{
 </script>
 
 <template>
-  <NCard :id="id" :title="title" size="small" :class="{ 'setting-highlight': highlighted }">
+  <NCard :id="id" :title="title" size="small" :class="{ 'setting-highlight': highlighted }" :style="{ boxShadow: 'var(--shadow-card)' }">
     <NSpace vertical>
       <slot />
     </NSpace>

@@ -44,6 +44,7 @@ function onCancel() {
       :style="{
         width: typeof width === 'number' ? width + 'px' : width || '520px',
         maxHeight: '85vh',
+        boxShadow: 'var(--shadow-modal)',
       }"
       :bordered="false"
       role="dialog"

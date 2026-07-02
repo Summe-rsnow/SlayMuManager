@@ -470,9 +470,9 @@ onMounted(async () => {
       </div>
 
       <!-- 双列布局 -->
-      <div class="grid grid-cols-2 gap-4">
+      <div class="grid grid-cols-2 gap-6">
         <!-- 原版存档 -->
-        <NCard size="small">
+        <NCard size="small" class="save-card-glass">
           <template #header>
             <div class="flex items-center gap-2">
               <NTag type="info" size="small" :bordered="false">{{ t("saves.kind.vanilla") }}</NTag>
@@ -495,7 +495,7 @@ onMounted(async () => {
         </NCard>
 
         <!-- 模组版存档 -->
-        <NCard size="small">
+        <NCard size="small" class="save-card-glass">
           <template #header>
             <div class="flex items-center gap-2">
               <NTag type="warning" size="small" :bordered="false">{{ t("saves.kind.modded") }}</NTag>
@@ -908,3 +908,11 @@ onMounted(async () => {
     </AppDialog>
   </div>
 </template>
+
+<style scoped>
+.save-card-glass {
+  --n-border-color: color-mix(in srgb, var(--primary-color) 10%, var(--color-border)) !important;
+  background-color: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur));
+}
+</style>

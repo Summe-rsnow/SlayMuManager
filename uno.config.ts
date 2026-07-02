@@ -9,13 +9,11 @@ export default defineConfig({
   ],
   transformers: [transformerDirectives()],
   shortcuts: {
-    // 导航按钮 — Naive UI Menu 风格
-    "nav-item":
-      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer select-none",
-    "nav-item-active": "bg-primary/10 text-primary",
-    "nav-item-inactive": "text-gray-500 hover:text-gray-700 hover:bg-gray-100",
-    // 卡片
-    "card-base": "bg-white rounded-xl border border-gray-100 shadow-sm",
+    // 玻璃质感辅助
+    "glass-panel": "bg-[var(--glass-bg)] backdrop-blur-[var(--glass-blur)] border-[var(--glass-border)] rounded-[var(--glass-radius)]",
+    // 阴影快捷类
+    "shadow-card": "shadow-[var(--shadow-card)]",
+    "shadow-glow": "shadow-[var(--shadow-glow)]",
   },
   theme: {
     colors: {

@@ -29,7 +29,7 @@ function openPreview() {
       v-if="src && !loadFailed"
       :src="src"
       :alt="alt"
-      class="w-full h-full object-cover"
+      class="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
       referrerpolicy="no-referrer"
       @error="onError"
       @click="openPreview"

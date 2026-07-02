@@ -34,10 +34,13 @@ function jumpToPage() {
 </script>
 
 <template>
-  <div class="discover-pagination-bar flex items-center gap-3 px-5 py-2.5 rounded-full border shadow-lg backdrop-blur-xl"
+  <div class="discover-pagination-bar flex items-center gap-3 px-5 py-2.5 rounded-full"
     :style="{
-      backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 70%, transparent)',
-      borderColor: 'var(--color-border)',
+      backgroundColor: 'var(--glass-bg)',
+      backdropFilter: 'blur(var(--glass-blur))',
+      WebkitBackdropFilter: 'blur(var(--glass-blur))',
+      border: 'var(--glass-border)',
+      boxShadow: 'var(--shadow-glass)',
     }"
   >
     <template v-if="showPageSize && pageSizeOptions?.length">

@@ -18,22 +18,22 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <NCard v-if="bordered" size="small">
-    <div class="text-center" :class="size === 'sm' ? 'py-8' : size === 'lg' ? 'py-16' : 'py-12'">
-      <NIcon :size="size === 'sm' ? 32 : 48" class="mb-3" :color="'var(--color-text-muted)'">
+  <NCard v-if="bordered" size="small" :style="{ boxShadow: 'var(--shadow-card)' }">
+    <div class="text-center mx-auto max-w-sm" :class="size === 'sm' ? 'py-8' : size === 'lg' ? 'py-16' : 'py-12'">
+      <NIcon :size="size === 'sm' ? 32 : 48" class="mb-3" :color="'var(--primary-color)'" :style="{ opacity: 0.5 }">
         <component :is="icon" />
       </NIcon>
       <p class="text-c-muted">{{ title }}</p>
       <p v-if="description" class="text-sm mt-1 text-c-muted">{{ description }}</p>
-      <NButton v-if="actionText" size="tiny" :type="(actionType as any) ?? 'primary'" class="mt-3" @click="emit('action')">{{ actionText }}</NButton>
+      <NButton v-if="actionText" size="tiny" :type="(actionType as any) ?? 'primary'" class="mt-3 transition-all duration-200 hover:-translate-y-0.5" @click="emit('action')">{{ actionText }}</NButton>
     </div>
   </NCard>
-  <div v-else class="text-center" :class="size === 'sm' ? 'py-8' : size === 'lg' ? 'py-16' : 'py-12'">
-    <NIcon :size="size === 'sm' ? 32 : 48" class="mb-3" :color="'var(--color-text-muted)'">
+  <div v-else class="text-center mx-auto max-w-sm" :class="size === 'sm' ? 'py-8' : size === 'lg' ? 'py-16' : 'py-12'">
+    <NIcon :size="size === 'sm' ? 32 : 48" class="mb-3" :color="'var(--primary-color)'" :style="{ opacity: 0.5 }">
       <component :is="icon" />
     </NIcon>
     <p class="text-c-muted">{{ title }}</p>
     <p v-if="description" class="text-sm mt-1 text-c-muted">{{ description }}</p>
-    <NButton v-if="actionText" size="tiny" :type="(actionType as any) ?? 'primary'" class="mt-3" @click="emit('action')">{{ actionText }}</NButton>
+    <NButton v-if="actionText" size="tiny" :type="(actionType as any) ?? 'primary'" class="mt-3 transition-all duration-200 hover:-translate-y-0.5" @click="emit('action')">{{ actionText }}</NButton>
   </div>
 </template>

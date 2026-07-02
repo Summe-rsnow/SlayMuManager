@@ -68,38 +68,78 @@ export const naiveThemeOverrides: Ref<GlobalThemeOverrides> = computed(() => {
       itemTextColor: isDark.value ? "#d1d5db" : "#4b5563",
       itemTextColorHover: p.DEFAULT,
       itemTextColorActive: p.DEFAULT,
-      itemColorActive: isDark.value ? "rgba(99,102,241,0.1)" : "#eef2ff",
-      itemColorActiveHover: isDark.value ? "rgba(99,102,241,0.15)" : "#e0e7ff",
+      itemColorActive: isDark.value ? `color-mix(in srgb, ${p.DEFAULT} 10%, transparent)` : "#eef2ff",
+      itemColorActiveHover: isDark.value ? `color-mix(in srgb, ${p.DEFAULT} 15%, transparent)` : "#e0e7ff",
       itemIconColor: isDark.value ? "#9ca3af" : "#9ca3af",
       itemIconColorHover: p.DEFAULT,
       itemIconColorActive: p.DEFAULT,
       borderRadius: "8px",
     },
     Button: {
-      borderRadiusSmall: "6px",
-      borderRadiusMedium: "8px",
-      borderRadiusLarge: "10px",
+      borderRadiusSmall: "8px",
+      borderRadiusMedium: "10px",
+      borderRadiusLarge: "12px",
     },
     Card: {
-      borderRadius: "12px",
+      borderRadius: "16px",
       paddingMedium: "20px",
       titleFontSizeMedium: "16px",
     },
     Tag: {
-      borderRadius: "4px",
+      borderRadius: "6px",
+      padding: "0 8px",
+      fontSizeSmall: "11px",
+      heightSmall: "22px",
+    },
+    Switch: {
+      railColor: isDark.value ? "#2a2a35" : "#d1d5db",
+      railColorActive: p.DEFAULT,
+    },
+    InternalSelection: {
+      borderRadius: "10px",
+      borderFocus: `1px solid ${p.DEFAULT}`,
+      boxShadowFocus: `0 0 0 2px color-mix(in srgb, ${p.DEFAULT} 15%, transparent)`,
     },
     Input: {
+      borderRadius: "10px",
+      borderFocus: `1px solid ${p.DEFAULT}`,
+      boxShadowFocus: `0 0 0 2px color-mix(in srgb, ${p.DEFAULT} 15%, transparent)`,
+    },
+    InternalSelectMenu: {
+      borderRadius: "12px",
+    },
+    Popover: {
+      borderRadius: "12px",
+      padding: "8px 12px",
+    },
+    Tooltip: {
       borderRadius: "8px",
     },
-    Select: {
-      peers: {
-        InternalSelection: {
-          borderRadius: "8px",
-        },
-      },
+    Tabs: {
+      tabGap: "24px",
+      tabFontSizeMedium: "14px",
+      tabFontWeightActive: "600",
+      barColor: p.DEFAULT,
+    },
+    Pagination: {
+      itemBorderRadius: "9999px",
+      itemColorActive: p.DEFAULT,
+      itemTextColorActive: "#fff",
+    },
+    Checkbox: {
+      borderRadius: "4px",
+      boxShadowFocus: `0 0 0 2px color-mix(in srgb, ${p.DEFAULT} 15%, transparent)`,
+    },
+    Message: {
+      borderRadius: "10px",
+      padding: "10px 16px",
+    },
+    Notification: {
+      borderRadius: "16px",
+      padding: "16px 20px",
     },
     Modal: {
-      borderRadius: "16px",
+      borderRadius: "20px",
     },
   }
 })

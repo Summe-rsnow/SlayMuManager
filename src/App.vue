@@ -102,6 +102,8 @@ const close = closeWindow
       <NMessageProvider>
         <NDialogProvider>
           <!-- 根容器使用 CSS 变量实现动态主题 -->
+          <!-- 环境光动画背景（独立元素，避免影响点击） -->
+          <div class="ambient-bg" />
           <div
             class="h-screen overflow-hidden relative"
             :style="{
@@ -113,16 +115,22 @@ const close = closeWindow
             <div class="flex h-full pt-12 box-border">
               <SideNav />
               <main
-                class="flex-1 overflow-auto px-16 pt-0 pb-6"
+                class="flex-1 overflow-hidden px-16 pt-0 pb-6"
+                :class="'page-' + ((route.name as string) ?? 'library')"
                 :style="{
                   backgroundColor: 'var(--color-main-bg)',
                 }"
               >
-                <router-view v-slot="{ Component, route }">
-                  <KeepAlive :include="['DiscoverPage']">
-                    <component :is="Component" :key="route.name" />
-                  </KeepAlive>
-                </router-view>
+                <!-- 内部滚动容器，原生滚动条通过负 margin 溢出被父 overflow:hidden 裁剪 -->
+                <div class="h-full overflow-y-auto scrollbar-hide">
+                  <router-view v-slot="{ Component, route }">
+                    <KeepAlive :include="['DiscoverPage']">
+                      <transition name="page-fade" mode="out-in">
+                        <component :is="Component" :key="route.name" />
+                      </transition>
+                    </KeepAlive>
+                  </router-view>
+                </div>
               </main>
             </div>
 

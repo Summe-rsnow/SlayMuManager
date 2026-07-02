@@ -36,7 +36,7 @@ watch(highlightedSetting, (val) => {
   <div>
     <PageHeader :title="t('settings.title')" :subtitle="t('settings.subtitle')" />
 
-    <div class="max-w-2xl mx-auto flex flex-col gap-4">
+    <div class="max-w-2xl mx-auto flex flex-col gap-6">
       <SettingsGamePath />
       <SettingsNexus />
       <SettingsLaunch />

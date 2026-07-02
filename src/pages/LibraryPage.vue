@@ -29,6 +29,7 @@ import EmptyState from "@/components/EmptyState.vue"
 import PageHeader from "@/components/PageHeader.vue"
 import CountBadge from "@/components/CountBadge.vue"
 import ListSection from "@/components/ListSection.vue"
+import SkeletonCard from "@/components/SkeletonCard.vue"
 import type { InstalledMod, ModProfile, AppBootstrap, BatchImportPreview, BatchInstallResult } from "../types"
 import { useIsActive } from "@/composables/useIsActive"
 import { useModOperations } from "@/composables/useModOperations"
@@ -542,7 +543,7 @@ watch(presetAppliedTick, () => {
     </PageHeader>
 
     <!-- 搜索栏 + 筛选 -->
-    <div class="relative mb-4">
+    <div class="relative mb-6">
       <NInput
         v-model:value="searchInput"
         :placeholder="t('library.searchPlaceholder')"
@@ -646,51 +647,61 @@ watch(presetAppliedTick, () => {
         </div>
 
         <template v-else>
-          <ListSection v-if="filterShowEnabled" :title="t('library.section.enabled')" :action-label="filteredEnabled.length > 0 ? t('library.disableAll') : undefined" :action-busy="batchBusy" @action="disableAllMods">
-            <div v-if="filteredEnabled.length === 0" class="text-center py-8 text-c-muted">
+          <ListSection v-if="filterShowEnabled" :title="t('library.section.enabled')" :action-label="filteredEnabled.length > 0 && !loading ? t('library.disableAll') : undefined" :action-busy="batchBusy" @action="disableAllMods">
+            <div v-if="loading" class="flex flex-col gap-2">
+              <SkeletonCard v-for="i in 3" :key="'skel-e-'+i" />
+            </div>
+            <div v-else-if="filteredEnabled.length === 0" class="text-center py-8 text-c-muted">
               <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
               <p v-else>{{ t("library.empty.noEnabledMods") }}</p>
             </div>
             <NSpace v-if="filteredEnabled.length > 0" vertical :size="8">
-              <ModCard
-                v-for="mod in filteredEnabled"
-                :key="mod.id"
-                :mod="mod"
-                :enabled="true"
-                :busy="busyId === mod.id"
-                :toggle-disabled="false"
-                :has-update="hasUpdate(mod.id)"
-                :update-info="getUpdateInfo(mod.id) ?? null"
-                @toggle="handleToggle"
-                @open-folder="handleOpenFolder"
-                @uninstall="handleUninstall"
-                @open-update-url="openUpdateUrl"
-                @unsubscribe="handleUnsubscribe"
-              />
+              <TransitionGroup name="stagger" tag="div" class="flex flex-col gap-2">
+                <ModCard
+                  v-for="mod in filteredEnabled"
+                  :key="mod.id"
+                  :mod="mod"
+                  :enabled="true"
+                  :busy="busyId === mod.id"
+                  :toggle-disabled="false"
+                  :has-update="hasUpdate(mod.id)"
+                  :update-info="getUpdateInfo(mod.id) ?? null"
+                  @toggle="handleToggle"
+                  @open-folder="handleOpenFolder"
+                  @uninstall="handleUninstall"
+                  @open-update-url="openUpdateUrl"
+                  @unsubscribe="handleUnsubscribe"
+                />
+              </TransitionGroup>
             </NSpace>
           </ListSection>
 
-          <ListSection v-if="filterShowDisabled" :title="t('library.section.disabled')" :action-label="filteredDisabled.length > 0 ? t('library.enableAll') : undefined" :action-busy="batchBusy" @action="enableAllMods">
-            <div v-if="filteredDisabled.length === 0" class="text-center py-8 text-c-muted">
+          <ListSection v-if="filterShowDisabled" :title="t('library.section.disabled')" :action-label="filteredDisabled.length > 0 && !loading ? t('library.enableAll') : undefined" :action-busy="batchBusy" @action="enableAllMods">
+            <div v-if="loading" class="flex flex-col gap-2">
+              <SkeletonCard v-for="i in 2" :key="'skel-d-'+i" />
+            </div>
+            <div v-else-if="filteredDisabled.length === 0" class="text-center py-8 text-c-muted">
               <p v-if="hasSearch || filterAffectsGameplay">{{ t("library.empty.filterNoResults") }}</p>
               <p v-else>{{ t("library.empty.noDisabledMods") }}</p>
             </div>
             <NSpace v-else vertical :size="8">
-              <ModCard
-                v-for="mod in filteredDisabled"
-                :key="mod.id"
-                :mod="mod"
-                :enabled="false"
-                :busy="busyId === mod.id"
-                :toggle-disabled="false"
-                :has-update="hasUpdate(mod.id)"
-                :update-info="getUpdateInfo(mod.id) ?? null"
-                @toggle="handleToggle"
-                @open-folder="handleOpenFolder"
-                @uninstall="handleUninstall"
-                @open-update-url="openUpdateUrl"
-                @unsubscribe="handleUnsubscribe"
-              />
+              <TransitionGroup name="stagger" tag="div" class="flex flex-col gap-2">
+                <ModCard
+                  v-for="mod in filteredDisabled"
+                  :key="mod.id"
+                  :mod="mod"
+                  :enabled="false"
+                  :busy="busyId === mod.id"
+                  :toggle-disabled="false"
+                  :has-update="hasUpdate(mod.id)"
+                  :update-info="getUpdateInfo(mod.id) ?? null"
+                  @toggle="handleToggle"
+                  @open-folder="handleOpenFolder"
+                  @uninstall="handleUninstall"
+                  @open-update-url="openUpdateUrl"
+                  @unsubscribe="handleUnsubscribe"
+                />
+              </TransitionGroup>
             </NSpace>
           </ListSection>
         </template>

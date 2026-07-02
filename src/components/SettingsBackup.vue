@@ -36,7 +36,6 @@ async function toggleBackupOnPathSwitch(val: boolean) {
     <SettingsRow :label="t('settings.backup.autoKeepCount')">
       <NInputNumber :value="backupCount" :min="1" :max="20" size="small" style="width: 120px" @update:value="updateBackupCount" />
     </SettingsRow>
-    <div class="border-t border-c-default my-3"></div>
     <SettingsRow>
       <template #label>
         <TipIcon :label="t('settings.backup.onPathSwitch')" :text="t('settings.backup.onPathSwitchDesc')" placement="right" :width="240" />

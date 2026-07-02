@@ -13,7 +13,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <NCard size="small" class="mb-4">
+  <NCard size="small" class="mb-4" :style="{ boxShadow: 'var(--shadow-card)' }">
     <template #header>
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">

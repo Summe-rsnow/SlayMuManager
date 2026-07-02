@@ -16,7 +16,7 @@ defineProps<{
 </script>
 
 <template>
-  <NCard class="discover-card break-inside-avoid mb-4 hover:shadow-md transition-shadow" :style="{ minHeight: '150px' }">
+  <NCard class="discover-card break-inside-avoid mb-4 transition-all duration-200 hover:-translate-y-0.5" :style="{ minHeight: '150px' }">
     <div class="flex gap-4 h-full">
       <ModPreviewImage :src="imageUrl" :alt="name" />
       <div class="flex-1 flex flex-col min-w-0">
@@ -46,5 +46,9 @@ defineProps<{
 <style scoped>
 .discover-card {
   --n-border-color: color-mix(in srgb, var(--color-border), var(--color-text-muted) 50%);
+}
+.discover-card:hover {
+  box-shadow: var(--shadow-glow) !important;
+  border-color: color-mix(in srgb, var(--primary-color) 25%, var(--color-border)) !important;
 }
 </style>

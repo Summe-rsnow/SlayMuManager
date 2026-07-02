@@ -60,7 +60,6 @@ async function checkForUpdate() {
         {{ t("settings.about.open") }}
       </NButton>
     </SettingsRow>
-    <div class="border-t border-c-default"></div>
     <SettingsRow>
       <template #label>
         <span class="text-sm flex items-center gap-2 text-c-primary">
@@ -75,7 +74,6 @@ async function checkForUpdate() {
         {{ t("settings.about.open") }}
       </NButton>
     </SettingsRow>
-    <div class="border-t border-c-default"></div>
     <SettingsRow :label="t('settings.about.checkUpdate')">
       <NButton v-if="updateStatus === 'idle'" text size="tiny" class="text-primary-theme" @click="checkForUpdate">
         {{ t("settings.about.checkUpdate") }}

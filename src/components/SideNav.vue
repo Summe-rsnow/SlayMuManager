@@ -149,12 +149,11 @@ onMounted(() => {
     <Transition name="menu">
       <div
         v-if="!sidebarCollapsed"
-        class="absolute left-0 z-20 flex flex-col w-52 rounded-2xl border shadow-lg backdrop-blur-xl overflow-hidden"
+        class="absolute left-0 z-20 flex flex-col w-52 glass-panel overflow-hidden"
         :style="{
-          backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 60%, transparent)',
-          borderColor: 'var(--color-border)',
           bottom: 'calc(100% + 8px)',
           maxHeight: 'calc(100vh - 140px)',
+          boxShadow: 'var(--shadow-glass)',
         }"
       >
         <div class="flex-1 overflow-y-auto p-3 pb-0">
@@ -171,10 +170,13 @@ onMounted(() => {
 
     <!-- 「菜单」按钮（主色调 + 高斯模糊） -->
     <button
-      class="group relative w-12 hover:w-36 h-12 rounded-xl shadow-lg backdrop-blur-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out hover:shadow-xl active:scale-95"
+      class="group relative w-12 hover:w-36 h-12 rounded-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out active:scale-95"
       :style="{
         backgroundColor: 'color-mix(in srgb, var(--primary-color) 50%, transparent)',
+        backdropFilter: 'blur(var(--glass-blur))',
+        WebkitBackdropFilter: 'blur(var(--glass-blur))',
         color: '#fff',
+        boxShadow: 'var(--shadow-glass)',
       }"
       @click="sidebarCollapsed = !sidebarCollapsed"
     >
@@ -199,11 +201,10 @@ onMounted(() => {
       <Transition name="preset">
         <div
           v-if="showPresetPanel"
-          class="absolute left-0 z-20 w-52 rounded-2xl border shadow-lg backdrop-blur-xl overflow-hidden"
+          class="absolute left-0 z-20 w-52 glass-panel overflow-hidden"
           :style="{
-            backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 60%, transparent)',
-            borderColor: 'var(--color-border)',
             bottom: 'calc(100% + 8px)',
+            boxShadow: 'var(--shadow-glass)',
           }"
         >
           <div class="p-3">
@@ -221,10 +222,13 @@ onMounted(() => {
       </Transition>
 
       <button
-        class="group relative w-12 hover:w-42 h-12 rounded-xl shadow-lg backdrop-blur-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out hover:shadow-xl active:scale-95"
+        class="group relative w-12 hover:w-42 h-12 rounded-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out active:scale-95"
         :style="{
           backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 65%, transparent)',
+          backdropFilter: 'blur(var(--glass-blur))',
+          WebkitBackdropFilter: 'blur(var(--glass-blur))',
           color: 'var(--color-text-primary)',
+          boxShadow: 'var(--shadow-glass)',
         }"
         :disabled="launchingGame"
         @click="onLaunchGame"
@@ -315,18 +319,18 @@ onMounted(() => {
 
 /* 菜单面板展开/收起过渡动画 */
 .menu-enter-active {
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .menu-leave-active {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .menu-enter-from {
   opacity: 0;
-  transform: translateY(16px);
+  transform: translateY(12px);
 }
 .menu-leave-to {
   opacity: 0;
-  transform: translateY(16px);
+  transform: translateY(8px);
 }
 
 /* 预设面板展开/收起过渡动画（从按钮向上弹出效果） */

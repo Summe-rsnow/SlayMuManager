@@ -17,6 +17,7 @@ import { useModCacheStore } from "@/stores/useModCacheStore"
 import EmptyState from "@/components/EmptyState.vue"
 import DiscoverPagination from "@/components/DiscoverPagination.vue"
 import DiscoverCard from "@/components/DiscoverCard.vue"
+import SkeletonDiscoverCard from "@/components/SkeletonDiscoverCard.vue"
 
 defineOptions({ name: "DiscoverPage" })
 
@@ -387,10 +388,10 @@ function handleUserRefresh() {
 
 <template>
   <div class="flex flex-col h-full">
-    <div class="mb-6">
+    <div class="pb-4 mb-6 border-b" :style="{ borderColor: 'var(--color-border)' }">
       <h1 class="text-2xl font-bold text-c-primary">{{ t("discover.title") }}</h1>
       <p class="text-sm mt-1 text-c-secondary">{{ t("discover.subtitle") }}</p>
-      <div class="flex gap-1 mt-3">
+      <div class="inline-flex gap-1 mt-3 p-1 rounded-lg" :style="{ backgroundColor: 'var(--glass-bg)', backdropFilter: 'blur(var(--glass-blur))' }">
         <NButton size="small" :type="tab === 'nexus' ? 'primary' : 'default'" @click="switchNexusTab">Nexus</NButton>
         <NButton size="small" :type="tab === 'workshop' ? 'primary' : 'default'" @click="switchWorkshopTab">
           {{ t("discover.workshop.tab") }}
@@ -474,7 +475,10 @@ function handleUserRefresh() {
         <span />
       </div>
 
-      <div :class="gridColsClass">
+      <div v-if="nexusLoading && nexusResults.length === 0" :class="gridColsClass">
+        <SkeletonDiscoverCard v-for="i in 6" :key="'skel-nx-'+i" />
+      </div>
+      <div v-else :class="gridColsClass">
         <DiscoverCard
           v-for="mod in nexusResults"
           :key="mod.remoteId"

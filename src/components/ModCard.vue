@@ -46,6 +46,7 @@ const cardStyle = computed(() => ({
   backgroundColor: "var(--color-bg-secondary)",
   borderColor: "var(--color-border)",
   borderLeftColor: props.enabled ? "var(--primary-color)" : "var(--color-text-muted)",
+  boxShadow: "var(--shadow-card)",
 }))
 
 const copied = ref(false)
@@ -62,7 +63,7 @@ async function copyModId() {
 
 <template>
   <div
-    class="group flex items-center justify-between p-3 rounded-lg border border-l-3 transition-shadow hover:shadow-sm"
+    class="group mod-card flex items-center justify-between p-3 rounded-lg border border-l-3 transition-all duration-200 hover:-translate-y-0.5"
     :style="cardStyle"
     :class="[{ 'pointer-events-none opacity-60': busy }]"
   >
@@ -193,3 +194,10 @@ async function copyModId() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.mod-card:hover {
+  box-shadow: var(--shadow-glow) !important;
+  border-color: color-mix(in srgb, var(--primary-color) 30%, var(--color-border)) !important;
+}
+</style>

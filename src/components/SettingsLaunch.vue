@@ -52,7 +52,6 @@ const pageOptions = computed(() => {
         @update:value="(v: string) => { defaultPage = v }"
       />
     </SettingsRow>
-    <div class="border-t border-c-default my-3"></div>
     <SettingsRow :label="t('settings.launch.autoCheck')">
       <NSwitch :value="autoCheckUpdate" size="small" @update:value="toggleAutoCheck" />
     </SettingsRow>

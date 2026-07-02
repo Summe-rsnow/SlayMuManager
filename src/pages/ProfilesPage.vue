@@ -350,12 +350,12 @@ watch(presetAppliedTick, () => {
     <!-- 预设列表 -->
     <Transition name="preset-fade" mode="out-in">
       <div :key="presetAppliedTick">
-        <div v-if="profiles.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3 auto-rows-fr">
+        <div v-if="profiles.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-fr">
           <NCard
             v-for="p in profiles"
             :key="p.id"
             size="small"
-            class="hover:shadow-md transition-shadow"
+            class="profile-card cursor-pointer"
           >
             <div class="flex items-start">
               <div class="flex-1 min-w-0">
@@ -585,3 +585,10 @@ watch(presetAppliedTick, () => {
     />
   </div>
 </template>
+
+<style scoped>
+.profile-card:hover {
+  box-shadow: var(--shadow-glow) !important;
+  border-color: color-mix(in srgb, var(--primary-color) 25%, var(--color-border)) !important;
+}
+</style>

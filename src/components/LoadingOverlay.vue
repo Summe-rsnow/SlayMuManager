@@ -11,7 +11,7 @@ defineProps<{
 <template>
   <Teleport to="body">
     <Transition name="fade">
-      <div v-if="loading" class="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+      <div v-if="loading" class="fixed inset-0 z-50 flex items-center justify-center" :style="{ backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)', backdropFilter: 'blur(8px)' }">
         <div class="flex flex-col items-center gap-3">
           <NIcon :size="32" class="animate-spin text-primary"><Loader2 /></NIcon>
           <p v-if="text" class="text-sm text-c-primary">{{ text }}</p>
