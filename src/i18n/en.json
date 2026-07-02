@@ -448,6 +448,9 @@
     "backups": {
       "title": "Save Backups",
       "empty": "No backups",
+      "manualCount": "Manual {n}",
+      "autoCount": "Auto {n}",
+      "autoLimit": "Limit {n}",
       "restore": "Restore",
       "restoreTo": "Restore to...",
       "restoreToTitle": "Restore Backup to Slot",
@@ -457,7 +460,15 @@
       "restoreConfirmHint": "Existing saves in the target slot will be overwritten (auto-backed up first)",
       "confirmRestore": "Confirm Restore",
       "confirmDelete": "Delete this backup?",
-      "manualReason": "Manual backup"
+      "manualReason": "Manual backup",
+      "autoBackup": "Auto backup",
+      "backupSource": "Source",
+      "legacyBackup": "Legacy",
+      "legacyBackupHint": "This backup was created by an older version. Its type (manual/auto) cannot be determined. Click \"Upgrade\" to assign a type — it will then either be subject to auto-trimming or kept permanently.",
+      "upgrade": "Upgrade",
+      "upgradeTitle": "Upgrade Legacy Backup",
+      "upgradeDesc": "Choose the type for this backup:",
+      "upgradeConfirm": "Upgrade"
     },
     "success": {
       "slotBackedUp": "Slot {i} backed up",
@@ -488,7 +499,9 @@
       "copyFailed": "Copy failed: {e}",
       "ascendFailed": "Upload failed: {e}",
       "descendFailed": "Download failed: {e}",
-      "cleanupFailed": "Cleanup failed: {e}"
+      "cleanupFailed": "Cleanup failed: {e}",
+      "backupUpgraded": "Backup upgraded",
+      "backupUpgradeFailed": "Upgrade failed: {e}"
     }
   },
 

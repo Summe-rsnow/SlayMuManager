@@ -134,11 +134,12 @@ pub fn apply_profile(
         }
     }
 
-    // 禁用不在预设中的已启用 Mod
-    for mod_id in &enabled_ids {
-        if !profile.mod_ids.contains(mod_id) {
-            mod_service::disable_mod(game_root, mod_id, sync_pairs, backup_on_switch)?;
-            disabled_list.push(mod_id.clone());
+    // 禁用不在预设中的已启用 Mod（跳过创意工坊 Mod）
+    for m in &enabled {
+        if m.source == "workshop" { continue; }
+        if !profile.mod_ids.contains(&m.id) {
+            mod_service::disable_mod(game_root, &m.id, sync_pairs, backup_on_switch)?;
+            disabled_list.push(m.id.clone());
         }
     }
 

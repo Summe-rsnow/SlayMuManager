@@ -60,6 +60,7 @@ pub fn check_mod_updates(game_root: &Path) -> Result<Vec<ModUpdateInfo>, AppErro
         .iter()
         .chain(disabled.iter())
         .filter(|m| !m.name.is_empty() && !m.name.starts_with("unknown:"))
+        .filter(|m| m.source != "workshop")
         .collect();
 
     if all_mods.is_empty() {

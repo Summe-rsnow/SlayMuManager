@@ -42,6 +42,7 @@ export interface SaveBackupEntry {
   backupPath: string
   createdAt: string
   reason: string
+  manual: boolean | null
 }
 
 export interface SaveSyncPair {

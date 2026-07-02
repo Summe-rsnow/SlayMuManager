@@ -20,6 +20,7 @@ import { useStorage } from "@/composables/useStorage"
 import { kindLabel } from "@/utils/kindLabel"
 import EmptyState from "@/components/EmptyState.vue"
 import AppDialog from "@/components/AppDialog.vue"
+import TipIcon from "@/components/TipIcon.vue"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -42,6 +43,34 @@ const restoreToSlotTarget = ref<{ kind: string; slotIndex: number }>({ kind: "va
 const cloudStatus = ref<CloudSaveStatus | null>(null)
 const cloudDiffs = ref<CloudSaveDiffEntry[]>([])
 const showCloudDialog = ref(false)
+
+// 备份计数
+const slotBackupCounts = ref<Record<string, { manual: number; auto: number; keepCount: number }>>({})
+const autoBackupKeepCount = ref(5)
+
+function slotKey(slot: SaveSlot) {
+  return `${slot.steamUserId}:${slot.kind}:${slot.slotIndex}`
+}
+
+async function loadBackupCounts() {
+  try {
+    const [allBackups, bootstrap] = await Promise.all([
+      invoke<SaveBackupEntry[]>("list_save_backups", {}),
+      invoke<AppBootstrap>("get_app_bootstrap"),
+    ])
+    autoBackupKeepCount.value = bootstrap.autoBackupKeepCount ?? 5
+    const counts: Record<string, { manual: number; auto: number; keepCount: number }> = {}
+    for (const b of allBackups) {
+      const key = `${b.steamUserId}:${b.kind}:${b.slotIndex}`
+      if (!counts[key]) counts[key] = { manual: 0, auto: 0, keepCount: autoBackupKeepCount.value }
+      if (b.manual) counts[key].manual++
+      else counts[key].auto++
+    }
+    slotBackupCounts.value = counts
+  } catch {
+    // 静默失败，不影响主流程
+  }
+}
 
 // --- 根据 steamUserId 分组 ---
 const userGroups = computed(() => {
@@ -94,6 +123,7 @@ async function loadSlots() {
     if (slots.value.length > 0 && !activeUserId.value) {
       activeUserId.value = slots.value[0].steamUserId
     }
+    await loadBackupCounts()
   } catch {
     slots.value = []
   } finally {
@@ -194,6 +224,36 @@ async function deleteBackup(backup: SaveBackupEntry) {
     backups.value = backups.value.filter((b) => b.id !== backup.id)
   } catch (e: unknown) {
     message.error(t("saves.error.backupDeleteFailed") + ": " + String(e))
+  }
+}
+
+// --- 旧版备份升级 ---
+const showUpgradeDialog = ref(false)
+const upgradingBackupId = ref<string | null>(null)
+const upgradeDialogManual = ref(true)
+
+function openUpgradeDialog(backupId: string) {
+  upgradingBackupId.value = backupId
+  upgradeDialogManual.value = true
+  showUpgradeDialog.value = true
+}
+
+async function confirmUpgrade() {
+  const bid = upgradingBackupId.value
+  if (!bid) return
+  try {
+    await invoke("upgrade_backup_manual_flag", {
+      backupId: bid,
+      manual: upgradeDialogManual.value,
+    })
+    message.success(t("saves.success.backupUpgraded"))
+    // 更新本地缓存
+    const b = backups.value.find((x) => x.id === bid)
+    if (b) b.manual = upgradeDialogManual.value
+    showUpgradeDialog.value = false
+    upgradingBackupId.value = null
+  } catch (e: unknown) {
+    message.error(t("saves.error.backupUpgradeFailed") + ": " + String(e))
   }
 }
 
@@ -339,6 +399,7 @@ onMounted(async () => {
     syncPairs.value = bootstrap.saveSyncPairs ?? []
     autoSync.value = bootstrap.saveAutoSync ?? false
   } catch { /* ignore */ }
+  await loadBackupCounts()
 })
 </script>
 
@@ -407,6 +468,7 @@ onMounted(async () => {
               v-for="slot in vanillaSlots"
               :key="`v-${slot.steamUserId}-${slot.slotIndex}`"
               :slot="slot"
+              :backup-counts="slotBackupCounts[slotKey(slot)]"
               @backup="createBackup"
               @migrate="migrateSlot"
               @delete="deleteSaveSlot"
@@ -430,6 +492,7 @@ onMounted(async () => {
               v-for="slot in moddedSlots"
               :key="`m-${slot.steamUserId}-${slot.slotIndex}`"
               :slot="slot"
+              :backup-counts="slotBackupCounts[slotKey(slot)]"
               @backup="createBackup"
               @migrate="migrateSlot"
               @delete="deleteSaveSlot"
@@ -557,31 +620,73 @@ onMounted(async () => {
     </template>
 
     <!-- 备份列表对话框 -->
-    <AppDialog v-model:show="showBackupsDialog" width="560px">
+    <AppDialog v-model:show="showBackupsDialog" width="680px">
       <template #header>
         <span class="text-lg font-semibold">{{ t("saves.allHistoryBackups") }}</span>
       </template>
 
       <EmptyState v-if="backups.length === 0" :icon="Database" :title="t('saves.backups.empty')" size="sm" />
 
-      <div v-else class="max-h-96 overflow-auto">
+      <div v-else class="max-h-[500px] overflow-auto space-y-3 pr-1">
         <div
           v-for="b in backups"
           :key="b.id"
-          class="flex items-center justify-between p-3 border-b border-c-default last:border-b-0"
+          class="flex items-start justify-between p-4 rounded-lg border border-c-default bg-c-secondary"
         >
-          <div class="flex-1 min-w-0">
-            <div class="text-sm font-medium text-c-primary">
-              {{ new Date(b.createdAt).toLocaleString(currentLocale) }}
+          <div class="flex-1 min-w-0 space-y-2">
+            <!-- 第一行：日期 + 类型标签 -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-sm font-semibold text-c-primary whitespace-nowrap">
+                {{ new Date(b.createdAt).toLocaleString(currentLocale) }}
+              </span>
+              <NTag
+                v-if="b.manual === true"
+                type="success"
+                size="tiny"
+                :bordered="false"
+              >
+                {{ t("saves.backups.manualReason") }}
+              </NTag>
+              <NTag
+                v-else-if="b.manual === false"
+                type="default"
+                size="tiny"
+                :bordered="false"
+              >
+                {{ t("saves.backups.autoBackup") }}
+              </NTag>
+              <template v-else>
+                <NTag type="warning" size="tiny" :bordered="false">
+                  {{ t("saves.backups.legacyBackup") }}
+                </NTag>
+                <TipIcon :text="t('saves.backups.legacyBackupHint')" :width="280" />
+              </template>
             </div>
+
+            <!-- 第二行：Steam 用户 + 槽位 -->
+            <div class="flex items-center gap-4 text-xs text-c-muted">
+              <div class="flex items-center gap-1">
+                <NIcon :size="12"><User /></NIcon>
+                <span>{{ t("saves.steamUser") }}: {{ b.steamUserId }}</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <NIcon :size="12"><Database /></NIcon>
+                <span>{{ kindLabel(t, b.kind) }} {{ t("saves.slotIndex", { i: b.slotIndex }) }}</span>
+              </div>
+            </div>
+
+            <!-- 第三行：备份原因 -->
             <div class="text-xs text-c-muted">
-              {{ b.reason }} · {{ kindLabel(t,b.kind) }} {{ t("saves.slotIndex", { i: b.slotIndex }) }}
-            </div>
-            <div class="text-[10px] text-c-muted">
-              {{ t("saves.steamUser") }}: {{ shortUserId(b.steamUserId) }}
+              <span class="text-c-muted">{{ t("saves.backups.backupSource") }}:</span>
+              <span class="ml-1">{{ b.reason }}</span>
             </div>
           </div>
-          <NSpace :size="4">
+
+          <!-- 操作按钮 -->
+          <div class="flex items-center gap-2 ml-4 flex-shrink-0">
+            <NButton v-if="b.manual === null" size="tiny" secondary @click="openUpgradeDialog(b.id)">
+              {{ t("saves.backups.upgrade") }}
+            </NButton>
             <NButton size="tiny" secondary @click="openRestoreToSlot(b)">
               <template #icon><NIcon :size="12"><RotateCcw /></NIcon></template>
               {{ t("saves.backups.restoreTo") }}
@@ -594,7 +699,7 @@ onMounted(async () => {
               </template>
               {{ t("saves.backups.confirmDelete") }}
             </NPopconfirm>
-          </NSpace>
+          </div>
         </div>
       </div>
     </AppDialog>
@@ -655,6 +760,30 @@ onMounted(async () => {
           <NButton type="primary" @click="doRestoreToSlot">
             {{ t("saves.backups.confirmRestore") }}
           </NButton>
+        </NSpace>
+      </template>
+    </AppDialog>
+
+    <!-- 旧版备份升级对话框 -->
+    <AppDialog v-model:show="showUpgradeDialog" width="400px">
+      <template #header>
+        <span class="text-lg font-semibold">{{ t("saves.backups.upgradeTitle") }}</span>
+      </template>
+
+      <div class="text-sm text-c-secondary space-y-3">
+        <p>{{ t("saves.backups.upgradeDesc") }}</p>
+        <NRadioGroup v-model:value="upgradeDialogManual">
+          <NSpace vertical>
+            <NRadio :value="true">{{ t("saves.backups.manualReason") }}</NRadio>
+            <NRadio :value="false">{{ t("saves.backups.autoBackup") }}</NRadio>
+          </NSpace>
+        </NRadioGroup>
+      </div>
+
+      <template #footer>
+        <NSpace justify="end">
+          <NButton @click="upgradingBackupId = null">{{ t("common.cancel") }}</NButton>
+          <NButton type="primary" @click="confirmUpgrade">{{ t("saves.backups.upgradeConfirm") }}</NButton>
         </NSpace>
       </template>
     </AppDialog>

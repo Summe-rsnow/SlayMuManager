@@ -116,7 +116,7 @@ export function useModOperations() {
 
   /** 全部启用 → 禁用 */
   async function disableAllMods() {
-    const targets = enabledMods.value
+    const targets = enabledMods.value.filter(m => m.source !== "workshop")
     if (targets.length === 0) {
       message.info(t("library.info.allAlreadyDisabled"))
       return

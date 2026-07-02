@@ -49,6 +49,8 @@ pub struct SaveBackupEntry {
     pub backup_path: String,
     pub created_at: String,
     pub reason: String,
+    #[serde(default)]
+    pub manual: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

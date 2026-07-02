@@ -1158,6 +1158,22 @@ pub fn delete_save_backup(
 }
 
 #[tauri::command]
+pub fn upgrade_backup_manual_flag(
+    backup_id: String,
+    manual: bool,
+    state: State<AppState>,
+) -> Result<(), String> {
+    let settings = state.settings.read().unwrap();
+    let game_root = settings
+        .game_root_dir
+        .as_ref()
+        .ok_or("游戏目录未设置")?;
+
+    save_service::upgrade_backup_manual_flag(Path::new(game_root), &backup_id, manual)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn restore_save_backup_to_slot(
     backup_id: String,
     target_steam_user_id: String,

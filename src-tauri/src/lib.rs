@@ -84,6 +84,7 @@ pub fn run() {
             app::commands::restore_save_backup,
             app::commands::restore_save_backup_to_slot,
             app::commands::delete_save_backup,
+            app::commands::upgrade_backup_manual_flag,
             app::commands::delete_save_slot,
             app::commands::toggle_save_auto_sync,
             app::commands::update_save_sync_pairs,

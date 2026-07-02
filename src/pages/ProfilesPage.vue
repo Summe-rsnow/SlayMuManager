@@ -89,12 +89,16 @@ function toggleModSelection(modId: string, checked: boolean) {
   }
 }
 
+/** 全选（含工坊 mod 保持不变） */
 function selectAllMods() {
   selectedModIds.value = filteredModsForPicker.value.map(m => m.id)
 }
 
+/** 取消全选（工坊 mod 始终选中，不可取消） */
 function deselectAllMods() {
-  selectedModIds.value = []
+  selectedModIds.value = filteredModsForPicker.value
+    .filter(m => m.source === "workshop")
+    .map(m => m.id)
 }
 
 const exportStore = useExportStore()
@@ -449,7 +453,8 @@ watch(presetAppliedTick, () => {
               <NCheckbox
                 v-for="mod in filteredModsForPicker"
                 :key="mod.id"
-                :checked="selectedModIds.includes(mod.id)"
+                :checked="mod.source === 'workshop' || selectedModIds.includes(mod.id)"
+                :disabled="mod.source === 'workshop'"
                 size="small"
                 class="w-full"
                 @update:checked="(v: boolean) => toggleModSelection(mod.id, v)"
@@ -457,6 +462,9 @@ watch(presetAppliedTick, () => {
                 <span class="text-xs">
                   {{ mod.name }}
                   <span v-if="mod.version" class="text-c-muted font-mono ml-1">{{ mod.version }}</span>
+                  <NTag v-if="mod.source === 'workshop'" type="info" size="tiny" :bordered="false" class="ml-1">
+                    {{ t("library.mod.workshop") }}
+                  </NTag>
                 </span>
               </NCheckbox>
               <div v-if="filteredModsForPicker.length === 0 && !loadingMods" class="text-center py-4 text-xs text-c-muted">

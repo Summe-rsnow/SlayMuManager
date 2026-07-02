@@ -234,6 +234,7 @@ pub fn transfer_save(
             &target.kind,
             target.slot_index,
             "存档传输前自动备份",
+            false,
         )?);
     }
 
@@ -258,6 +259,7 @@ pub fn transfer_save(
         backup_path: String::new(),
         created_at: chrono::Utc::now().to_rfc3339(),
         reason: "直接传输（无备份）".to_string(),
+        manual: Some(false),
     }))
 }
 
@@ -276,7 +278,7 @@ pub fn create_save_backup(
     if !slot_dir.exists() {
         return Err(AppError::Other("槽位无数据，无需备份".to_string()));
     }
-    create_backup_internal(game_root, steam_user_id, kind, slot_index, reason)
+    create_backup_internal(game_root, steam_user_id, kind, slot_index, reason, true)
 }
 
 fn create_backup_internal(
@@ -285,6 +287,7 @@ fn create_backup_internal(
     kind: &SaveKind,
     slot_index: u32,
     reason: &str,
+    manual: bool,
 ) -> Result<SaveBackupEntry, AppError> {
     let backups_dir = backups_root(game_root);
     std::fs::create_dir_all(&backups_dir).map_err(AppError::Io)?;
@@ -315,6 +318,7 @@ fn create_backup_internal(
         backup_path: backup_dir.to_string_lossy().to_string(),
         created_at: chrono::Utc::now().to_rfc3339(),
         reason: reason.to_string(),
+        manual: Some(manual),
     };
 
     // 追加备份元数据
@@ -383,6 +387,7 @@ pub fn restore_save_backup(game_root: &Path, backup_id: &str) -> Result<(), AppE
             &entry.kind,
             entry.slot_index,
             "恢复前自动备份",
+            false,
         );
         std::fs::remove_dir_all(&slot_dir).map_err(AppError::Io)?;
     }
@@ -440,6 +445,7 @@ pub fn restore_save_backup_to_slot(
             target_kind,
             target_slot_index,
             "恢复备份前自动备份",
+            false,
         );
         std::fs::remove_dir_all(&target_slot_dir).map_err(AppError::Io)?;
     }
@@ -471,9 +477,11 @@ pub fn delete_save_slot(
         kind,
         slot_index,
         "手动删除前自动备份",
+        false,
     );
 
-    // 清空 saves 目录下所有内容
+    // 清空 saves 目录
+
     for entry in std::fs::read_dir(&slot_dir).map_err(AppError::Io)? {
         let entry = entry.map_err(AppError::Io)?;
         let path = entry.path();
@@ -545,6 +553,7 @@ fn sync_pair(
                 let _ = create_backup_internal(
                     game_root, steam_user_id, &SaveKind::Modded, pair.modded_slot,
                     "同步前自动备份",
+                    false,
                 );
             }
             incremental_sync_dir(&vanilla_path, &modded_path)?;
@@ -559,6 +568,7 @@ fn sync_pair(
                 let _ = create_backup_internal(
                     game_root, steam_user_id, &SaveKind::Vanilla, pair.vanilla_slot,
                     "同步前自动备份",
+                    false,
                 );
             }
             incremental_sync_dir(&modded_path, &vanilla_path)?;
@@ -730,6 +740,33 @@ fn remove_backup_meta(game_root: &Path, backup_id: &str) -> Result<(), AppError>
     Ok(())
 }
 
+/// 升级旧版备份：为 manual 字段为 null 的条目设置明确的标记
+pub fn upgrade_backup_manual_flag(
+    game_root: &Path,
+    backup_id: &str,
+    manual: bool,
+) -> Result<(), AppError> {
+    let path = backups_meta_path(game_root);
+    if !path.exists() {
+        return Err(AppError::Other("备份元数据不存在".to_string()));
+    }
+
+    let content = std::fs::read_to_string(&path).unwrap_or_else(|_| "[]".to_string());
+    let mut entries: Vec<SaveBackupEntry> = serde_json::from_str(&content).unwrap_or_default();
+    let entry = entries
+        .iter_mut()
+        .find(|e| e.id == backup_id)
+        .ok_or_else(|| AppError::Other(format!("备份不存在: {}", backup_id)))?;
+
+    entry.manual = Some(manual);
+
+    let json = serde_json::to_string_pretty(&entries)
+        .map_err(|e| AppError::Other(format!("备份元数据序列化失败: {}", e)))?;
+    std::fs::write(&path, json).map_err(AppError::Io)?;
+
+    Ok(())
+}
+
 fn trim_old_backups(
     game_root: &Path,
     steam_user_id: &str,
@@ -749,7 +786,9 @@ fn trim_old_backups(
         .iter()
         .enumerate()
         .filter(|(_, e)| {
-            e.steam_user_id == steam_user_id && e.slot_index == slot_index
+            e.manual == Some(false)
+                && e.steam_user_id == steam_user_id
+                && e.slot_index == slot_index
                 && std::mem::discriminant(&e.kind) == std::mem::discriminant(kind)
         })
         .map(|(i, _)| i)

@@ -448,6 +448,9 @@
     "backups": {
       "title": "存档备份",
       "empty": "暂无备份",
+      "manualCount": "手动 {n}",
+      "autoCount": "自动 {n}",
+      "autoLimit": "上限 {n}",
       "restore": "恢复",
       "restoreTo": "恢复到...",
       "restoreToTitle": "恢复备份到指定槽位",
@@ -457,7 +460,15 @@
       "restoreConfirmHint": "目标槽位的现有存档将被覆盖，覆盖前会自动备份",
       "confirmRestore": "确认恢复",
       "confirmDelete": "确定要删除此备份？",
-      "manualReason": "手动备份"
+      "manualReason": "手动备份",
+      "autoBackup": "自动备份",
+      "backupSource": "来源",
+      "legacyBackup": "旧版备份",
+      "legacyBackupHint": "此备份来自旧版本，无法区分是手动还是自动。点击「升级」按钮为其指定类型，之后会自动参与数量限制或永久保留。",
+      "upgrade": "升级",
+      "upgradeTitle": "升级旧版备份",
+      "upgradeDesc": "请选择此备份的类型：",
+      "upgradeConfirm": "确定升级"
     },
     "success": {
       "slotBackedUp": "槽位 {i} 已备份",
@@ -488,7 +499,9 @@
       "copyFailed": "复制失败: {e}",
       "ascendFailed": "上传失败: {e}",
       "descendFailed": "下载失败: {e}",
-      "cleanupFailed": "清理失败: {e}"
+      "cleanupFailed": "清理失败: {e}",
+      "backupUpgraded": "备份已升级",
+      "backupUpgradeFailed": "升级失败: {e}"
     }
   },
 
