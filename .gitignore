@@ -1,8 +1,6 @@
 # Dependencies
 node_modules/
 package-lock.json
-pnpm-lock.yaml
-Cargo.lock
 
 # Build output
 dist/
@@ -25,3 +23,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Agent tools
+.mimocode/
