@@ -448,9 +448,9 @@
     "backups": {
       "title": "Save Backups",
       "empty": "No backups",
-      "manualCount": "Manual {n}",
-      "autoCount": "Auto {n}",
-      "autoLimit": "Limit {n}",
+      "manualCountLabel": "Manual:",
+      "autoCountLabel": "Auto:",
+      "limitLabel": "limit {n}",
       "restore": "Restore",
       "restoreTo": "Restore to...",
       "restoreToTitle": "Restore Backup to Slot",

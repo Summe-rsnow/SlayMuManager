@@ -26,7 +26,7 @@ pub fn init_client() -> Result<(), String> {
             Err(e) => {
                 let msg = format!("{:?}", e);
                 // "ConnectToGlobalUser failed" 意味着 Steam 运行中但用户会话未就绪
-                if msg.contains("ConnectToGlobalUser") {
+                if msg.contains("ConnectToGlobalUser") || msg.contains("NoSteamClient") {
                     return Err("请确保 Steam 已完全启动并登录账号，然后重试".to_string());
                 }
                 return Err(format!("Steam 初始化失败: {}", msg));

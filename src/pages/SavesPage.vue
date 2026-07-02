@@ -8,6 +8,7 @@ import {
   NSelect, NRadioGroup, NRadio, useMessage,
 } from "naive-ui"
 import SlotCard from "@/components/SlotCard.vue"
+import CountBadge from "@/components/CountBadge.vue"
 import {
   HardDrive, ArrowRightLeft, RefreshCw, Database,
   History, RotateCcw, Trash2, Upload, Download, Cloud, AlertTriangle, User,
@@ -48,9 +49,15 @@ const showCloudDialog = ref(false)
 const slotBackupCounts = ref<Record<string, { manual: number; auto: number; keepCount: number }>>({})
 const autoBackupKeepCount = ref(5)
 
-function slotKey(slot: SaveSlot) {
-  return `${slot.steamUserId}:${slot.kind}:${slot.slotIndex}`
-}
+/** 所有槽位的备份汇总 */
+const totalBackupStats = computed(() => {
+  let manual = 0, auto = 0
+  for (const c of Object.values(slotBackupCounts.value)) {
+    manual += c.manual
+    auto += c.auto
+  }
+  return { manual, auto, limit: autoBackupKeepCount.value }
+})
 
 async function loadBackupCounts() {
   try {
@@ -102,12 +109,21 @@ const moddedSlots = computed(() =>
   currentUserSlots.value.filter((s) => s.kind === "modded").sort((a, b) => a.slotIndex - b.slotIndex),
 )
 
-const pairOptions = computed<any[]>(() => [
-  { label: t("saves.pairSync.noPair"), value: null },
-  { label: t("saves.pairSync.slotWithNumber", { n: 1 }), value: 1 },
-  { label: t("saves.pairSync.slotWithNumber", { n: 2 }), value: 2 },
-  { label: t("saves.pairSync.slotWithNumber", { n: 3 }), value: 3 },
-])
+const pairOptions = computed(() => {
+  const slots = [1, 2, 3]
+  return slots.map((m) => ({ label: t("saves.pairSync.slotWithNumber", { n: m }), value: m }))
+})
+
+function pairOptionsForSlot(vanillaSlot: number): any[] {
+  // 已被其他原版槽位占用的模组版槽位
+  const taken = syncPairs.value
+    .filter((p) => p.vanillaSlot !== vanillaSlot)
+    .map((p) => p.moddedSlot)
+  return [
+    { label: t("saves.pairSync.noPair"), value: null as number | null },
+    ...pairOptions.value.filter((o) => !taken.includes(o.value)),
+  ]
+}
 
 // 截断用户 ID 显示
 function shortUserId(id: string): string {
@@ -168,6 +184,7 @@ async function createBackup(slot: SaveSlot): Promise<SaveBackupEntry | null> {
       reason: t("saves.backups.manualReason"),
     })
     message.success(t("saves.success.slotBackedUp", { i: slot.slotIndex }))
+    await loadBackupCounts()
     return entry
   } catch (e: unknown) {
     message.error(t("saves.error.backupFailed") + ": " + String(e))
@@ -222,6 +239,7 @@ async function deleteBackup(backup: SaveBackupEntry) {
     await invoke("delete_save_backup", { backupId: backup.id })
     message.success(t("saves.success.backupDeleted"))
     backups.value = backups.value.filter((b) => b.id !== backup.id)
+    await loadBackupCounts()
   } catch (e: unknown) {
     message.error(t("saves.error.backupDeleteFailed") + ": " + String(e))
   }
@@ -250,6 +268,7 @@ async function confirmUpgrade() {
     // 更新本地缓存
     const b = backups.value.find((x) => x.id === bid)
     if (b) b.manual = upgradeDialogManual.value
+    await loadBackupCounts()
     showUpgradeDialog.value = false
     upgradingBackupId.value = null
   } catch (e: unknown) {
@@ -468,7 +487,6 @@ onMounted(async () => {
               v-for="slot in vanillaSlots"
               :key="`v-${slot.steamUserId}-${slot.slotIndex}`"
               :slot="slot"
-              :backup-counts="slotBackupCounts[slotKey(slot)]"
               @backup="createBackup"
               @migrate="migrateSlot"
               @delete="deleteSaveSlot"
@@ -492,7 +510,6 @@ onMounted(async () => {
               v-for="slot in moddedSlots"
               :key="`m-${slot.steamUserId}-${slot.slotIndex}`"
               :slot="slot"
-              :backup-counts="slotBackupCounts[slotKey(slot)]"
               @backup="createBackup"
               @migrate="migrateSlot"
               @delete="deleteSaveSlot"
@@ -564,11 +581,11 @@ onMounted(async () => {
                     :class="getPairedModdedSlot(i) !== null ? 'text-primary-theme' : 'text-c-muted'"
                   >{{ getPairedModdedSlot(i) !== null ? `M${getPairedModdedSlot(i)}` : '?' }}</span>
                 </div>
-                <div class="flex flex-col items-end">
+                <div class="flex flex-col items-end gap-1">
                   <span class="text-xs text-c-muted">{{ t("saves.pairSync.moddedSlot") }}</span>
                   <NSelect
                     :value="getPairedModdedSlot(i)"
-                    :options="pairOptions"
+                    :options="pairOptionsForSlot(i)"
                     size="small"
                     style="width: 110px"
                     :placeholder="t('saves.pairSync.chooseSlot')"
@@ -624,6 +641,11 @@ onMounted(async () => {
       <template #header>
         <span class="text-lg font-semibold">{{ t("saves.allHistoryBackups") }}</span>
       </template>
+      <div class="flex items-center gap-3 text-xs text-c-muted mb-4 px-1">
+        <CountBadge :label="t('saves.backups.manualCountLabel')" :count="totalBackupStats.manual" dot-color="bg-blue-500" />
+        <CountBadge :label="t('saves.backups.autoCountLabel')" :count="totalBackupStats.auto" />
+        <span>· {{ t("saves.backups.limitLabel", { n: totalBackupStats.limit }) }}</span>
+      </div>
 
       <EmptyState v-if="backups.length === 0" :icon="Database" :title="t('saves.backups.empty')" size="sm" />
 

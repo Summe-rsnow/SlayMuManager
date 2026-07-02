@@ -8,7 +8,6 @@ import { kindLabel } from "@/utils/kindLabel"
 
 const props = defineProps<{
   slot: SaveSlot
-  backupCounts?: { manual: number; auto: number; keepCount: number }
 }>()
 
 const emit = defineEmits<{
@@ -45,20 +44,9 @@ const { t } = useI18n()
       </NSpace>
     </div>
 
-    <div v-if="slot.hasData" class="text-xs text-c-muted mb-2">
+    <div v-if="slot.hasData" class="flex items-center gap-1 text-xs text-c-muted mb-2">
       <NIcon :size="12"><Clock /></NIcon>
       {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString(currentLocale) : t("common.unknown") }}
-    </div>
-
-    <!-- 备份计数 -->
-    <div v-if="slot.hasData && backupCounts" class="text-xs text-c-muted mb-2 space-x-2">
-      <NTag size="tiny" :bordered="false" type="info">
-        {{ t("saves.backups.manualCount", { n: backupCounts.manual }) }}
-      </NTag>
-      <NTag size="tiny" :bordered="false" type="default">
-        {{ t("saves.backups.autoCount", { n: backupCounts.auto }) }}
-      </NTag>
-      <span class="text-c-muted">{{ t("saves.backups.autoLimit", { n: backupCounts.keepCount }) }}</span>
     </div>
 
     <!-- 操作按钮行 -->

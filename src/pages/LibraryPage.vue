@@ -26,6 +26,7 @@ import ModCard from "@/components/ModCard.vue"
 import AppDialog from "@/components/AppDialog.vue"
 import EmptyState from "@/components/EmptyState.vue"
 import PageHeader from "@/components/PageHeader.vue"
+import CountBadge from "@/components/CountBadge.vue"
 import ListSection from "@/components/ListSection.vue"
 import type { InstalledMod, ModProfile, AppBootstrap, BatchImportPreview, BatchInstallResult } from "../types"
 import { useIsActive } from "@/composables/useIsActive"
@@ -445,14 +446,8 @@ watch(presetAppliedTick, () => {
   <div>
     <!-- 头部 -->
     <PageHeader :title="t('library.title')" :subtitle="t('library.subtitle')">
-      <span class="flex items-center gap-1.5 whitespace-nowrap">
-        <span class="w-2 h-2 rounded-full bg-green-500 inline-block" />
-        {{ t("library.enabledCountLabel") }} {{ enabledMods.length }}
-      </span>
-      <span class="flex items-center gap-1.5 whitespace-nowrap">
-        <span class="w-2 h-2 rounded-full inline-block bg-c-muted" />
-        {{ t("library.disabledCountLabel") }} {{ disabledMods.length }}
-      </span>
+      <CountBadge :label="t('library.enabledCountLabel')" :count="enabledMods.length" dot-color="bg-green-500" />
+      <CountBadge :label="t('library.disabledCountLabel')" :count="disabledMods.length" />
       <span v-if="activePresetName" class="flex items-center gap-1 text-c-muted">
         <NIcon :size="14"><Bookmark /></NIcon>
         <span>{{ activePresetName }}</span>

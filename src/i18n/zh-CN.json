@@ -448,9 +448,9 @@
     "backups": {
       "title": "存档备份",
       "empty": "暂无备份",
-      "manualCount": "手动 {n}",
-      "autoCount": "自动 {n}",
-      "autoLimit": "上限 {n}",
+      "manualCountLabel": "手动:",
+      "autoCountLabel": "自动:",
+      "limitLabel": "上限 {n}",
       "restore": "恢复",
       "restoreTo": "恢复到...",
       "restoreToTitle": "恢复备份到指定槽位",
