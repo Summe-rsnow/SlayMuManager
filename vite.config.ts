@@ -17,13 +17,15 @@ export default defineConfig(async () => ({
   clearScreen: false,
 
   build: {
-    rollupOptions: {
+    chunkSizeWarningLimit: 1024,
+    rolldownOptions: {
       output: {
-	        chunkSizeWarningLimit: 1024,
-        manualChunks(id: string) {
-          if (id.includes("naive-ui")) return "naive"
-          if (id.includes("lucide-vue-next")) return "icons"
-          if (id.includes("node_modules/vue/") || id.includes("vue-router") || id.includes("vue-i18n")) return "vendor"
+        codeSplitting: {
+          groups: [
+            { name: "naive", test: /naive-ui/, priority: 20 },
+            { name: "icons", test: /lucide-vue-next/, priority: 15 },
+            { name: "vendor", test: /node_modules[\\/](vue|vue-router|vue-i18n)/, priority: 10 },
+          ],
         },
       },
     },
