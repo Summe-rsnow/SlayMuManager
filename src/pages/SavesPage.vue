@@ -18,13 +18,16 @@ import type {
   CloudSaveStatus, CloudSaveDiffEntry, AppBootstrap,
 } from "../types"
 import { useStorage } from "@/composables/useStorage"
+import { useIsActive } from "@/composables/useIsActive"
 import { kindLabel } from "@/utils/kindLabel"
 import EmptyState from "@/components/EmptyState.vue"
 import AppDialog from "@/components/AppDialog.vue"
 import TipIcon from "@/components/TipIcon.vue"
+import PageHeader from "@/components/PageHeader.vue"
 
 const { t } = useI18n()
 const message = useMessage()
+const { isActive } = useIsActive()
 
 // --- 状态 ---
 const slots = ref<SaveSlot[]>([])
@@ -65,6 +68,7 @@ async function loadBackupCounts() {
       invoke<SaveBackupEntry[]>("list_save_backups", {}),
       invoke<AppBootstrap>("get_app_bootstrap"),
     ])
+    if (!isActive.value) return
     autoBackupKeepCount.value = bootstrap.autoBackupKeepCount ?? 5
     const counts: Record<string, { manual: number; auto: number; keepCount: number }> = {}
     for (const b of allBackups) {
@@ -135,7 +139,9 @@ function shortUserId(id: string): string {
 async function loadSlots() {
   loading.value = true
   try {
-    slots.value = await invoke<SaveSlot[]>("list_save_slots")
+    const data = await invoke<SaveSlot[]>("list_save_slots")
+    if (!isActive.value) return
+    slots.value = data
     if (slots.value.length > 0 && !activeUserId.value) {
       activeUserId.value = slots.value[0].steamUserId
     }
@@ -155,9 +161,11 @@ async function deleteSaveSlot(slot: SaveSlot) {
       kind: slot.kind,
       slotIndex: slot.slotIndex,
     })
+    if (!isActive.value) return
     message.success(t("saves.success.slotDeleted", { i: slot.slotIndex }))
     await loadSlots()
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.deleteSlotFailed") + ": " + String(e))
   }
 }
@@ -166,9 +174,12 @@ async function deleteSaveSlot(slot: SaveSlot) {
 async function openAllBackups() {
   loading.value = true
   try {
-    backups.value = await invoke<SaveBackupEntry[]>("list_save_backups", {})
+    const data = await invoke<SaveBackupEntry[]>("list_save_backups", {})
+    if (!isActive.value) return
+    backups.value = data
     showBackupsDialog.value = true
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.loadBackupsFailed") + ": " + String(e))
   } finally {
     loading.value = false
@@ -183,10 +194,12 @@ async function createBackup(slot: SaveSlot): Promise<SaveBackupEntry | null> {
       slotIndex: slot.slotIndex,
       reason: t("saves.backups.manualReason"),
     })
+    if (!isActive.value) return null
     message.success(t("saves.success.slotBackedUp", { i: slot.slotIndex }))
     await loadBackupCounts()
     return entry
   } catch (e: unknown) {
+    if (!isActive.value) return null
     message.error(t("saves.error.backupFailed") + ": " + String(e))
     return null
   }
@@ -225,11 +238,13 @@ async function doRestoreToSlot() {
       targetKind: target.kind,
       targetSlotIndex: target.slotIndex,
     })
+    if (!isActive.value) return
     message.success(t("saves.success.backupRestoredToSlot", { kind: kindLabel(t,target.kind), i: target.slotIndex }))
     showRestoreToSlotDialog.value = false
     showBackupsDialog.value = false
     await loadSlots()
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.restoreFailed") + ": " + String(e))
   }
 }
@@ -237,10 +252,12 @@ async function doRestoreToSlot() {
 async function deleteBackup(backup: SaveBackupEntry) {
   try {
     await invoke("delete_save_backup", { backupId: backup.id })
+    if (!isActive.value) return
     message.success(t("saves.success.backupDeleted"))
     backups.value = backups.value.filter((b) => b.id !== backup.id)
     await loadBackupCounts()
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.backupDeleteFailed") + ": " + String(e))
   }
 }
@@ -264,6 +281,7 @@ async function confirmUpgrade() {
       backupId: bid,
       manual: upgradeDialogManual.value,
     })
+    if (!isActive.value) return
     message.success(t("saves.success.backupUpgraded"))
     // 更新本地缓存
     const b = backups.value.find((x) => x.id === bid)
@@ -281,6 +299,7 @@ async function handleSync() {
   loading.value = true
   try {
     const result = await invoke<SaveSyncResult>("sync_saves")
+    if (!isActive.value) return
     if (result.syncedCount > 0) {
       message.success(t("saves.success.syncPairsDone", { n: result.syncedCount }))
     } else {
@@ -288,6 +307,7 @@ async function handleSync() {
     }
     await loadSlots()
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.syncFailed") + ": " + String(e))
   } finally {
     loading.value = false
@@ -297,8 +317,10 @@ async function handleSync() {
 async function toggleAutoSync(val: boolean) {
   try {
     await invoke("toggle_save_auto_sync", { enabled: val })
+    if (!isActive.value) return
     autoSync.value = val
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.toggleFailed") + ": " + String(e))
   }
 }
@@ -320,8 +342,10 @@ function updatePair(vanillaSlot: number, moddedSlot: number | null) {
 async function saveSyncPairs() {
   try {
     await invoke("update_save_sync_pairs", { pairs: syncPairs.value })
+    if (!isActive.value) return
     message.success(t("saves.success.syncPairsSaved"))
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.pairSaveFailed") + ": " + String(e))
   }
 }
@@ -331,9 +355,12 @@ async function openCloudDialog() {
   loading.value = true
   try {
     cloudStatus.value = await invoke<CloudSaveStatus>("get_cloud_save_status")
+    if (!isActive.value) return
     cloudDiffs.value = await invoke<CloudSaveDiffEntry[]>("list_cloud_save_diff_entries")
+    if (!isActive.value) return
     showCloudDialog.value = true
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.cloudUnavailable") + ": " + String(e))
   } finally {
     loading.value = false
@@ -343,9 +370,11 @@ async function openCloudDialog() {
 async function copyCloudSide(relPath: string, side: string) {
   try {
     await invoke("copy_cloud_save_diff_side", { relativePath: relPath, side })
+    if (!isActive.value) return
     message.success(t("saves.success.copied"))
     await openCloudDialog()
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.copyFailed") + ": " + String(e))
   }
 }
@@ -354,9 +383,11 @@ async function ascendFull() {
   loading.value = true
   try {
     await invoke("ascend_to_cloud_full")
+    if (!isActive.value) return
     message.success(t("saves.success.ascended"))
     await openCloudDialog()
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.ascendFailed") + ": " + String(e))
   } finally {
     loading.value = false
@@ -367,9 +398,11 @@ async function descendFull() {
   loading.value = true
   try {
     await invoke("descend_from_cloud_full")
+    if (!isActive.value) return
     message.success(t("saves.success.descended"))
     await openCloudDialog()
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.descendFailed") + ": " + String(e))
   } finally {
     loading.value = false
@@ -379,8 +412,10 @@ async function descendFull() {
 async function cleanupArtifacts() {
   try {
     await invoke("cleanup_backup_artifacts")
+    if (!isActive.value) return
     message.success(t("saves.success.artifactsCleaned"))
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("saves.error.cleanupFailed") + ": " + String(e))
   }
 }
@@ -413,8 +448,10 @@ function mismatchLabel(s: CloudSaveStatus): string {
 
 onMounted(async () => {
   await loadSlots()
+  if (!isActive.value) return
   try {
     const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
+    if (!isActive.value) return
     syncPairs.value = bootstrap.saveSyncPairs ?? []
     autoSync.value = bootstrap.saveAutoSync ?? false
   } catch { /* ignore */ }
@@ -425,26 +462,20 @@ onMounted(async () => {
 <template>
   <div>
     <!-- 头部 -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-2xl font-bold text-c-primary">{{ t("saves.title") }}</h1>
-        <p class="text-sm mt-1 text-c-secondary">{{ t("saves.subtitle") }}</p>
-      </div>
-      <NSpace>
-        <NButton secondary :loading="loading" @click="loadSlots">
-          <template #icon><NIcon :size="16"><RefreshCw /></NIcon></template>
-          {{ t("common.refresh") }}
-        </NButton>
-        <NButton secondary @click="handleSync">
-          <template #icon><NIcon :size="16"><ArrowRightLeft /></NIcon></template>
-          {{ t("saves.sync") }}
-        </NButton>
-        <NButton secondary @click="openAllBackups">
-          <template #icon><NIcon :size="16"><History /></NIcon></template>
-          {{ t("saves.allHistoryBackups") }}
-        </NButton>
-      </NSpace>
-    </div>
+    <PageHeader :title="t('saves.title')" :subtitle="t('saves.subtitle')">
+      <NButton secondary :loading="loading" @click="loadSlots">
+        <template #icon><NIcon :size="16"><RefreshCw /></NIcon></template>
+        {{ t("common.refresh") }}
+      </NButton>
+      <NButton secondary @click="handleSync">
+        <template #icon><NIcon :size="16"><ArrowRightLeft /></NIcon></template>
+        {{ t("saves.sync") }}
+      </NButton>
+      <NButton secondary @click="openAllBackups">
+        <template #icon><NIcon :size="16"><History /></NIcon></template>
+        {{ t("saves.allHistoryBackups") }}
+      </NButton>
+    </PageHeader>
 
     <!-- 空状态 -->
     <EmptyState v-if="slots.length === 0 && !loading" :icon="HardDrive" :title="t('saves.empty.setGamePath')" bordered />

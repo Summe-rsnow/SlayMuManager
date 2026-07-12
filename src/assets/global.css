@@ -92,8 +92,8 @@ html, body {
   --color-warning-border: #fde68a;
 
   /* 弹窗背景毛玻璃 */
-  --blur-backdrop: 10px;
-  --blur-saturate: 1.3;
+  --blur-backdrop: 12px;
+  --blur-saturate: 1.4;
 
   /* 弹窗遮罩的点发光（径向渐变 = 主题色中心发光，不加暗色基底） */
   --blur-backdrop-bg: radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 70%);
@@ -103,29 +103,29 @@ html, body {
   --glass-bg-hover: rgba(0,0,0,0.06);
   --glass-border: 1px solid rgba(0,0,0,0.06);
   --glass-border-hover: 1px solid rgba(0,0,0,0.10);
-  --glass-blur: 15px;
-  --glass-radius: 12px;
+  --glass-blur: 16px;
+  --glass-radius: 14px;
 
   /* 阴影体系 */
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-card-hover: 0 10px 25px rgba(0,0,0,0.08), 0 4px 10px rgba(0,0,0,0.04);
-  --shadow-glass: 0 4px 16px rgba(0,0,0,0.08);
-  --shadow-modal: 0 24px 64px rgba(0,0,0,0.15);
-  --shadow-glow: 0 0 20px color-mix(in srgb, var(--primary-color) 10%, transparent), 0 8px 24px rgba(0,0,0,0.06);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+  --shadow-card-hover: 0 12px 32px rgba(0,0,0,0.1), 0 6px 14px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-glass: 0 8px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-modal: 0 32px 80px rgba(0,0,0,0.18), 0 8px 32px rgba(0,0,0,0.1);
+  --shadow-glow: 0 0 24px color-mix(in srgb, var(--primary-color) 8%, transparent), 0 8px 24px rgba(0,0,0,0.04);
 }
 
 .dark {
-  --color-bg-primary: #0A0A0F;
-  --color-bg-secondary: #0F0F17;
-  --color-bg-card: #12121A;
+  --color-bg-primary: #07070D;
+  --color-bg-secondary: #0A0A12;
+  --color-bg-card: #0D0D17;
   --color-text-primary: #EDEDEF;
   --color-text-secondary: #A0A0A8;
-  --color-text-muted: #6B6B78;
+  --color-text-muted: #5C5C68;
   --color-border: rgba(255,255,255,0.06);
-  --color-bg-sidebar: #0D0D14;
-  --color-titlebar-bg: #0D0D14;
+  --color-bg-sidebar: #07070D;
+  --color-titlebar-bg: #07070D;
   --color-titlebar-border: rgba(255,255,255,0.06);
-  --color-main-bg: #0A0A0F;
+  --color-main-bg: #07070D;
   --color-warning-bg: #271000;
   --color-warning-text: #fbbf24;
   --color-warning-border: #78350f;
@@ -135,18 +135,18 @@ html, body {
   --glass-bg-hover: rgba(255,255,255,0.08);
   --glass-border: 1px solid rgba(255,255,255,0.06);
   --glass-border-hover: 1px solid rgba(255,255,255,0.12);
-  --glass-blur: 15px;
-  --glass-radius: 12px;
+  --glass-blur: 16px;
+  --glass-radius: 14px;
 
   /* 阴影（暗色模式更突出） */
-  --shadow-card: 0 2px 8px rgba(0,0,0,0.3);
-  --shadow-card-hover: 0 8px 24px rgba(0,0,0,0.4);
-  --shadow-glass: 0 4px 16px rgba(0,0,0,0.25);
-  --shadow-modal: 0 24px 64px rgba(0,0,0,0.6);
-  --shadow-glow: 0 0 20px color-mix(in srgb, var(--primary-color) 15%, transparent), 0 8px 24px rgba(0,0,0,0.4);
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2), 0 1px 4px rgba(0,0,0,0.4);
+  --shadow-card-hover: 0 12px 32px rgba(0,0,0,0.45), 0 6px 16px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.5);
+  --shadow-glass: 0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2);
+  --shadow-modal: 0 32px 80px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.3);
+  --shadow-glow: 0 0 24px color-mix(in srgb, var(--primary-color) 15%, transparent), 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
 
-  --blur-backdrop: 10px;
-  --blur-saturate: 1.3;
+  --blur-backdrop: 12px;
+  --blur-saturate: 1.4;
 
   /* 弹窗遮罩的点发光 */
   --blur-backdrop-bg: radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 15%, transparent) 0%, transparent 70%);
@@ -177,7 +177,7 @@ html, body {
   top: 10%;
   left: 10%;
   background: radial-gradient(ellipse at 30% 40%, color-mix(in srgb, var(--primary-color) 5%, transparent) 0%, transparent 60%);
-  animation: ambient-shift 20s ease-in-out infinite;
+  animation: ambient-shift 18s ease-in-out infinite;
 }
 .ambient-bg::after {
   content: '';
@@ -187,10 +187,21 @@ html, body {
   bottom: 0;
   right: 0;
   background: radial-gradient(ellipse at 70% 60%, color-mix(in srgb, var(--primary-color) 3%, transparent) 0%, transparent 50%);
-  animation: ambient-shift 25s ease-in-out infinite reverse;
+  animation: ambient-shift 22s ease-in-out infinite reverse;
+}
+.ambient-bg span {
+  position: absolute;
+  width: 40%;
+  height: 40%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at 50% 50%, color-mix(in srgb, var(--primary-color) 4%, transparent) 0%, transparent 55%);
+  animation: ambient-shift 15s ease-in-out infinite;
+  animation-delay: -5s;
 }
 @media (prefers-reduced-motion: reduce) {
-  .ambient-bg::before, .ambient-bg::after { animation: none; }
+  .ambient-bg::before, .ambient-bg::after, .ambient-bg span { animation: none; }
 }
 
 /* ============================================================
@@ -199,8 +210,8 @@ html, body {
 
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--blur-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--blur-saturate));
   border: var(--glass-border);
   border-radius: var(--glass-radius);
 }
@@ -252,7 +263,7 @@ html, body {
    ============================================================ */
 
 .page-fade-enter-active,
-.page-fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.page-fade-leave-active { transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .page-fade-enter-from { opacity: 0; transform: translateY(8px); }
 .page-fade-leave-to { opacity: 0; transform: translateY(-4px); }
 
@@ -260,22 +271,22 @@ html, body {
    列表交错入场动画
    ============================================================ */
 
-.stagger-enter-active { transition: all 0.3s ease-out; }
+.stagger-enter-active { transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
 .stagger-leave-active { transition: all 0.2s ease-in; }
-.stagger-enter-from { opacity: 0; transform: translateY(12px); }
+.stagger-enter-from { opacity: 0; transform: translateY(16px); }
 .stagger-leave-to { opacity: 0; transform: translateX(-20px); }
 
 .stagger-enter-active:nth-child(1) { transition-delay: 0ms; }
-.stagger-enter-active:nth-child(2) { transition-delay: 30ms; }
-.stagger-enter-active:nth-child(3) { transition-delay: 60ms; }
-.stagger-enter-active:nth-child(4) { transition-delay: 90ms; }
-.stagger-enter-active:nth-child(5) { transition-delay: 120ms; }
-.stagger-enter-active:nth-child(6) { transition-delay: 150ms; }
-.stagger-enter-active:nth-child(7) { transition-delay: 180ms; }
-.stagger-enter-active:nth-child(8) { transition-delay: 210ms; }
-.stagger-enter-active:nth-child(9) { transition-delay: 240ms; }
-.stagger-enter-active:nth-child(10) { transition-delay: 270ms; }
-.stagger-enter-active:nth-child(n+11) { transition-delay: 300ms; }
+.stagger-enter-active:nth-child(2) { transition-delay: 25ms; }
+.stagger-enter-active:nth-child(3) { transition-delay: 50ms; }
+.stagger-enter-active:nth-child(4) { transition-delay: 75ms; }
+.stagger-enter-active:nth-child(5) { transition-delay: 100ms; }
+.stagger-enter-active:nth-child(6) { transition-delay: 125ms; }
+.stagger-enter-active:nth-child(7) { transition-delay: 150ms; }
+.stagger-enter-active:nth-child(8) { transition-delay: 175ms; }
+.stagger-enter-active:nth-child(9) { transition-delay: 200ms; }
+.stagger-enter-active:nth-child(10) { transition-delay: 225ms; }
+.stagger-enter-active:nth-child(n+11) { transition-delay: 250ms; }
 
 /* ============================================================
    骨架屏 shimmer 动画
@@ -288,10 +299,10 @@ html, body {
 .skeleton-shimmer {
   background: linear-gradient(90deg,
     var(--color-bg-secondary) 25%,
-    var(--color-bg-card) 50%,
+    color-mix(in srgb, var(--primary-color) 5%, var(--color-bg-card)) 50%,
     var(--color-bg-secondary) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s ease-in-out infinite;
-  border-radius: 4px;
+  border-radius: 6px;
 }

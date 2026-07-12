@@ -103,6 +103,7 @@ async function doImportFlow(paths: string[]) {
       paths,
       enableNow: false,
     })
+    if (!isActive.value) return
     const conflicts = preview.discoveredMods.filter(m => m.status === "conflict")
     if (conflicts.length > 0) {
       importPaths.value = paths
@@ -116,6 +117,7 @@ async function doImportFlow(paths: string[]) {
         .filter(m => m.status !== "error" && m.status !== "unsupported_format")
         .map(m => m.modId)
       if (allIds.length === 0) {
+        if (!isActive.value) return
         message.warning(t("common.noData"))
         return
       }
@@ -126,14 +128,16 @@ async function doImportFlow(paths: string[]) {
         selectedIds: allIds,
         resolutions: [] as Array<[string, string]>,
       })
+      if (!isActive.value) return
       fetchMods()
       loadCachedUpdates()
       message.success(t("import.success.installedCount", { count: allIds.length }))
     }
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("import.error.installFailed", { e: String(e) }))
   } finally {
-    importBusy.value = false
+    if (isActive.value) importBusy.value = false
   }
 }
 
@@ -154,14 +158,16 @@ async function confirmImportWithConflicts() {
       selectedIds: allIds,
       resolutions,
     })
+    if (!isActive.value) return
     showImportConflictDialog.value = false
     fetchMods()
     loadCachedUpdates()
     message.success(t("import.success.installedCount", { count: allIds.length }))
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("import.error.installFailed", { e: String(e) }))
   } finally {
-    importBusy.value = false
+    if (isActive.value) importBusy.value = false
   }
 }
 
@@ -189,6 +195,7 @@ async function checkUpdates() {
   localChecking.value = true
   try {
     const b = await invoke<AppBootstrap>("get_app_bootstrap")
+    if (!isActive.value) { localChecking.value = false; return }
     if (!b.gameDirectory) { showSettingsPrompt("game-path"); localChecking.value = false; return }
     if (!b.nexusApiKey) { showSettingsPrompt("nexus"); localChecking.value = false; return }
   } catch { /* ignore */ }
@@ -307,14 +314,18 @@ async function handleUnsubscribe(workshopId: string) {
   unsubscribing.value = new Set(unsubscribing.value).add(workshopId)
   try {
     await invoke("unsubscribe_workshop_mod", { publishedFileId: Number(workshopId) })
+    if (!isActive.value) return
     message.success(t("library.mod.unsubscribed"))
     await fetchMods()
   } catch (e: unknown) {
+    if (!isActive.value) return
     message.error(t("library.error.operationFailed", { e }))
   } finally {
-    const next = new Set(unsubscribing.value)
-    next.delete(workshopId)
-    unsubscribing.value = next
+    if (isActive.value) {
+      const next = new Set(unsubscribing.value)
+      next.delete(workshopId)
+      unsubscribing.value = next
+    }
   }
 }
 
@@ -361,8 +372,14 @@ let searchDebounce: ReturnType<typeof setTimeout> | null = null
 watch(searchInput, (val) => {
   if (searchDebounce) clearTimeout(searchDebounce)
   searchDebounce = setTimeout(() => {
+    searchDebounce = null
     searchQuery.value = val
   }, 200)
+})
+
+onUnmounted(() => {
+  if (searchDebounce) clearTimeout(searchDebounce)
+  searchDebounce = null
 })
 
 function applySearch() {
@@ -647,7 +664,7 @@ watch(presetAppliedTick, () => {
         </div>
 
         <template v-else>
-          <ListSection v-if="filterShowEnabled" :title="t('library.section.enabled')" :action-label="filteredEnabled.length > 0 && !loading ? t('library.disableAll') : undefined" :action-busy="batchBusy" @action="disableAllMods">
+          <ListSection v-if="filterShowEnabled" :title="t('library.section.enabled')" :count="filteredEnabled.length" :action-label="filteredEnabled.length > 0 && !loading ? t('library.disableAll') : undefined" :action-busy="batchBusy" @action="disableAllMods">
             <div v-if="loading" class="flex flex-col gap-2">
               <SkeletonCard v-for="i in 3" :key="'skel-e-'+i" />
             </div>
@@ -676,7 +693,7 @@ watch(presetAppliedTick, () => {
             </NSpace>
           </ListSection>
 
-          <ListSection v-if="filterShowDisabled" :title="t('library.section.disabled')" :action-label="filteredDisabled.length > 0 && !loading ? t('library.enableAll') : undefined" :action-busy="batchBusy" @action="enableAllMods">
+          <ListSection v-if="filterShowDisabled" :title="t('library.section.disabled')" :count="filteredDisabled.length" :action-label="filteredDisabled.length > 0 && !loading ? t('library.enableAll') : undefined" :action-busy="batchBusy" @action="enableAllMods">
             <div v-if="loading" class="flex flex-col gap-2">
               <SkeletonCard v-for="i in 2" :key="'skel-d-'+i" />
             </div>

@@ -63,7 +63,7 @@ async function copyModId() {
 
 <template>
   <div
-    class="group mod-card flex items-center justify-between p-3 rounded-lg border border-l-3 transition-all duration-200 hover:-translate-y-0.5"
+    class="group mod-card flex items-center justify-between p-3.5 rounded-xl border border-l-[4px] transition-all duration-200 hover:-translate-y-1"
     :style="cardStyle"
     :class="[{ 'pointer-events-none opacity-60': busy }]"
   >
@@ -72,16 +72,16 @@ async function copyModId() {
       <div class="flex items-center gap-1.5 flex-wrap">
         <NTooltip trigger="hover" placement="top">
           <template #trigger>
-            <span class="font-medium truncate max-w-[320px] text-c-primary">
+            <span class="font-semibold text-[15px] truncate max-w-[320px] text-c-primary">
               {{ mod.name }}
             </span>
           </template>
           {{ mod.name }}
         </NTooltip>
-        <span class="text-xs text-c-muted font-mono truncate">{{ mod.version ?? "—" }}</span>
+        <span class="bg-c-secondary/50 px-1.5 py-0.5 rounded-md text-xs text-c-muted font-mono truncate">{{ mod.version ?? "—" }}</span>
         <span
           v-if="hasUpdate && updateInfo?.remoteVersion"
-          class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-bold leading-none cursor-pointer transition-transform hover:scale-105 active:scale-95"
+          class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-bold leading-none cursor-pointer transition-transform hover:scale-105 active:scale-95 animate-pulse"
           :style="{
             backgroundColor: 'color-mix(in srgb, var(--primary-color) 18%, transparent)',
             color: 'var(--primary-color)',
@@ -124,7 +124,7 @@ async function copyModId() {
     </div>
 
     <!-- 操作按钮 -->
-    <div class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4">
+    <div class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
       <IconBtn :icon="Plus" :tip="t('library.mod.selectTag')">
         <template #trigger="{ disabled: d }">
           <NPopover trigger="click" placement="bottom-end">

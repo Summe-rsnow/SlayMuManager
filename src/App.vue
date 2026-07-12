@@ -103,7 +103,7 @@ const close = closeWindow
         <NDialogProvider>
           <!-- 根容器使用 CSS 变量实现动态主题 -->
           <!-- 环境光动画背景（独立元素，避免影响点击） -->
-          <div class="ambient-bg" />
+          <div class="ambient-bg"><span></span></div>
           <div
             class="h-screen overflow-hidden relative"
             :style="{
@@ -118,7 +118,7 @@ const close = closeWindow
                 class="flex-1 overflow-hidden px-16 pt-0 pb-6"
                 :class="'page-' + ((route.name as string) ?? 'library')"
                 :style="{
-                  backgroundColor: 'var(--color-main-bg)',
+                  transition: 'padding 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                 }"
               >
                 <!-- 内部滚动容器，原生滚动条通过负 margin 溢出被父 overflow:hidden 裁剪 -->
@@ -134,13 +134,14 @@ const close = closeWindow
               </main>
             </div>
 
-            <!-- 沉浸标题栏（绝对定位叠加，毛玻璃效果） -->
+            <!-- 沉浸标题栏（绝对定位叠加，完全透明毛玻璃） -->
             <div
               data-tauri-drag-region
               class="absolute top-0 left-0 right-0 h-12 z-30 flex items-center justify-between px-4 select-none"
               :style="{
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
+                backdropFilter: 'blur(20px) saturate(1.5)',
+                WebkitBackdropFilter: 'blur(20px) saturate(1.5)',
+                backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)',
               }"
             >
               <div class="flex items-center gap-2.5">
@@ -252,5 +253,32 @@ const close = closeWindow
   max-height: 300px;
   overflow-y: auto;
   word-break: break-word;
+  line-height: 1.5;
+
+  /* 毛玻璃 — 使用 NaiveUI 注入的 CSS 变量，随主题自动切换 */
+  backdrop-filter: blur(12px) saturate(1.3);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+
+  /* 完全隐藏滚动条（功能保留，视觉不显示） */
+  scrollbar-width: none;
+}
+.n-tooltip::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.n-tooltip::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 隐藏底部三角形箭头 */
+.n-tooltip .n-popover-arrow-wrapper,
+.n-tooltip .n-popover-arrow {
+  display: none;
+}
+
+.n-tooltip .n-popover__content {
+  font-size: 12px;
+  white-space: pre-wrap;
 }
 </style>

@@ -18,6 +18,7 @@ import EmptyState from "@/components/EmptyState.vue"
 import DiscoverPagination from "@/components/DiscoverPagination.vue"
 import DiscoverCard from "@/components/DiscoverCard.vue"
 import SkeletonDiscoverCard from "@/components/SkeletonDiscoverCard.vue"
+import PageHeader from "@/components/PageHeader.vue"
 
 defineOptions({ name: "DiscoverPage" })
 
@@ -101,6 +102,7 @@ function switchWorkshopTab() {
   router.replace({ query: { ...route.query, tab: "workshop" } })
   if (!workshopSearched.value) {
     invoke<boolean>("check_steam_status").then((running) => {
+      if (!isActive.value) return
       if (!running) {
         dialog.warning({
           title: t("discover.workshop.tab"),
@@ -112,7 +114,7 @@ function switchWorkshopTab() {
       }
       searchWorkshop()
     }).catch(() => {
-      searchWorkshop()
+      if (isActive.value) searchWorkshop()
     })
   }
 }
@@ -134,18 +136,22 @@ async function subscribeToWorkshop(id: number) {
   subscribingWorkshop.value = new Set(subscribingWorkshop.value).add(id)
   try {
     await invoke("subscribe_workshop_mod", { publishedFileId: id })
+    if (!isActive.value) return
     const mod = workshopResults.value.find(m => m.id === id)
     if (mod) {
       mod.subscribed = true
       mod.subscribers++
     }
   } catch (e: unknown) {
+    if (!isActive.value) return
     console.error("Workshop subscribe error:", e)
     message.error(String(e))
   } finally {
-    const next = new Set(subscribingWorkshop.value)
-    next.delete(id)
-    subscribingWorkshop.value = next
+    if (isActive.value) {
+      const next = new Set(subscribingWorkshop.value)
+      next.delete(id)
+      subscribingWorkshop.value = next
+    }
   }
 }
 
@@ -153,6 +159,7 @@ async function unsubscribeFromWorkshop(id: number) {
   unsubscribingWorkshop.value = new Set(unsubscribingWorkshop.value).add(id)
   try {
     await invoke("unsubscribe_workshop_mod", { publishedFileId: id })
+    if (!isActive.value) return
     const mod = workshopResults.value.find(m => m.id === id)
     if (mod) {
       mod.subscribed = false
@@ -161,12 +168,15 @@ async function unsubscribeFromWorkshop(id: number) {
     message.success(t("library.mod.unsubscribed"))
     await fetchMods()
   } catch (e: unknown) {
+    if (!isActive.value) return
     console.error("Workshop unsubscribe error:", e)
     message.error(String(e))
   } finally {
-    const next = new Set(unsubscribingWorkshop.value)
-    next.delete(id)
-    unsubscribingWorkshop.value = next
+    if (isActive.value) {
+      const next = new Set(unsubscribingWorkshop.value)
+      next.delete(id)
+      unsubscribingWorkshop.value = next
+    }
   }
 }
 
@@ -213,6 +223,7 @@ async function searchNexus(pg?: number, ignoreCache?: boolean) {
       pageSize: ps,
       sortBy: sb,
     })
+    if (!isActive.value) return
     nexusResults.value = result.items
     nexusTotalCount.value = result.totalCount
     nexusPage.value = pageNum
@@ -223,12 +234,13 @@ async function searchNexus(pg?: number, ignoreCache?: boolean) {
       nexusPrefetchAdjacent(q, sb, pageNum, ps)
     }
   } catch (e: unknown) {
+    if (!isActive.value) return
     console.error("Nexus search error:", e)
     message.error(String(e))
     nexusResults.value = []
     nexusInitialLoading.value = false
   } finally {
-    nexusLoading.value = false
+    if (isActive.value) nexusLoading.value = false
   }
 }
 
@@ -388,16 +400,14 @@ function handleUserRefresh() {
 
 <template>
   <div class="flex flex-col h-full">
-    <div class="pb-4 mb-6 border-b" :style="{ borderColor: 'var(--color-border)' }">
-      <h1 class="text-2xl font-bold text-c-primary">{{ t("discover.title") }}</h1>
-      <p class="text-sm mt-1 text-c-secondary">{{ t("discover.subtitle") }}</p>
-      <div class="inline-flex gap-1 mt-3 p-1 rounded-lg" :style="{ backgroundColor: 'var(--glass-bg)', backdropFilter: 'blur(var(--glass-blur))' }">
+    <PageHeader :title="t('discover.title')" :subtitle="t('discover.subtitle')">
+      <div class="inline-flex gap-1 p-1 rounded-lg" :style="{ backgroundColor: 'var(--glass-bg)', backdropFilter: 'blur(var(--glass-blur))' }">
         <NButton size="small" :type="tab === 'nexus' ? 'primary' : 'default'" @click="switchNexusTab">Nexus</NButton>
         <NButton size="small" :type="tab === 'workshop' ? 'primary' : 'default'" @click="switchWorkshopTab">
           {{ t("discover.workshop.tab") }}
         </NButton>
       </div>
-    </div>
+    </PageHeader>
 
     <!-- Nexus 搜索 -->
     <template v-if="isNexus">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, computed, ref, onMounted } from "vue"
+import { h, computed, ref, onMounted, onUnmounted } from "vue"
 import { storeToRefs } from "pinia"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
@@ -64,7 +64,6 @@ async function onPresetSelect(val: string) {
   }
 }
 
-/** 启动游戏：调用 store 逻辑，由组件处理全部 UI 反馈 */
 async function onLaunchGame() {
   const result = await handleLaunchGame()
   if (result.ok) {
@@ -139,6 +138,13 @@ function handleUpdateValue(key: string) {
 
 onMounted(() => {
   loadQuickPresets()
+})
+
+onUnmounted(() => {
+  if (presetPanelTimer) {
+    clearTimeout(presetPanelTimer)
+    presetPanelTimer = null
+  }
 })
 </script>
 

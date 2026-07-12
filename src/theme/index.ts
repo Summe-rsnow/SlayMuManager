@@ -81,9 +81,9 @@ export const naiveThemeOverrides: Ref<GlobalThemeOverrides> = computed(() => {
       borderRadiusLarge: "12px",
     },
     Card: {
-      borderRadius: "16px",
+      borderRadius: "14px",
       paddingMedium: "20px",
-      titleFontSizeMedium: "16px",
+      titleFontSizeMedium: "15px",
     },
     Tag: {
       borderRadius: "6px",
@@ -106,14 +106,21 @@ export const naiveThemeOverrides: Ref<GlobalThemeOverrides> = computed(() => {
       boxShadowFocus: `0 0 0 2px color-mix(in srgb, ${p.DEFAULT} 15%, transparent)`,
     },
     InternalSelectMenu: {
-      borderRadius: "12px",
+      borderRadius: "14px",
     },
     Popover: {
-      borderRadius: "12px",
+      borderRadius: "14px",
       padding: "8px 12px",
     },
     Tooltip: {
-      borderRadius: "8px",
+      borderRadius: "10px",
+      padding: "6px 10px",
+      fontSize: "12px",
+      color: isDark.value ? "rgba(25, 25, 35, 0.9)" : "rgba(50, 50, 60, 0.9)",
+      textColor: isDark.value ? "#e5e7eb" : "#f3f4f6",
+      boxShadow: isDark.value
+        ? "0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.2)"
+        : "0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
     },
     Tabs: {
       tabGap: "24px",
@@ -135,11 +142,11 @@ export const naiveThemeOverrides: Ref<GlobalThemeOverrides> = computed(() => {
       padding: "10px 16px",
     },
     Notification: {
-      borderRadius: "16px",
+      borderRadius: "14px",
       padding: "16px 20px",
     },
     Modal: {
-      borderRadius: "20px",
+      borderRadius: "16px",
     },
   }
 })

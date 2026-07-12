@@ -54,7 +54,10 @@ function onCancel() {
           <span class="text-lg font-semibold">{{ title }}</span>
         </slot>
       </template>
-      <slot />
+      <div class="dialog-content">
+        <div class="dialog-glow" />
+        <slot />
+      </div>
       <template v-if="$slots.footer" #footer>
         <slot name="footer" />
       </template>
@@ -77,5 +80,36 @@ function onCancel() {
 
 .n-modal-mask.fade-in-transition-leave-active {
   backdrop-filter: blur(0px) saturate(var(--blur-saturate));
+}
+</style>
+
+<style scoped>
+.dialog-content {
+  position: relative;
+}
+.dialog-content :deep(.n-card__content) {
+  position: relative;
+  z-index: 1;
+}
+.dialog-glow {
+  display: none;
+}
+:root.dark .dialog-glow {
+  display: block;
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160px;
+  height: 80px;
+  background: radial-gradient(ellipse at center, var(--primary-color) 0%, transparent 70%);
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+:root.dark .dialog-content {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: inherit;
 }
 </style>
