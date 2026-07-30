@@ -18,8 +18,6 @@ const emit = defineEmits<{
   "update:pageSize": [value: number]
 }>()
 
-const { t } = useI18n()
-
 const totalPages = computed(() => Math.ceil(props.totalCount / props.pageSize))
 
 function onPageInput(val: number | null) {
