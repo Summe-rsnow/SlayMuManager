@@ -148,8 +148,9 @@ const close = closeWindow
                 <svg viewBox="0 0 128 128" class="w-6 h-6 flex-shrink-0">
                   <defs>
                     <linearGradient id="titlelogo" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="var(--primary-color)"/>
-                      <stop offset="100%" style="stop-color: var(--primary-600)"/>
+                      <stop offset="0%" stop-color="var(--primary-300)"/>
+                      <stop offset="50%" stop-color="var(--primary-color)"/>
+                      <stop offset="100%" stop-color="var(--primary-900)"/>
                     </linearGradient>
                   </defs>
                   <rect width="128" height="128" rx="28" fill="url(#titlelogo)"/>

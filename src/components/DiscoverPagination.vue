@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed } from "vue"
+import { computed } from "vue"
 import { useI18n } from "vue-i18n"
-import { NIcon, NSelect, NPagination, NInputNumber, NButton } from "naive-ui"
+import { NIcon, NSelect, NPagination, NInputNumber } from "naive-ui"
 import { List } from "@lucide/vue"
 
 const props = withDefaults(defineProps<{
@@ -23,13 +23,12 @@ const { t } = useI18n()
 
 const totalPages = computed(() => Math.ceil(props.totalCount / props.pageSize))
 
-const jumpPage = ref<number | null>(null)
-
-function jumpToPage() {
-  const p = jumpPage.value
-  if (p == null || p < 1 || p > totalPages.value) return
-  emit("update:page", p)
-  jumpPage.value = null
+function onPageInput(val: number | null) {
+  if (val == null) return
+  const clamped = Math.max(1, Math.min(Math.round(val), totalPages.value))
+  if (clamped !== props.page) {
+    emit("update:page", clamped)
+  }
 }
 </script>
 
@@ -64,17 +63,14 @@ function jumpToPage() {
         size="small"
       />
     </div>
-    <span class="text-xs text-c-muted">{{ t("discover.jumpTo") }}</span>
     <NInputNumber
-      v-model:value="jumpPage"
+      :value="page"
       size="tiny"
       :min="1"
       :max="totalPages"
-      :placeholder="String(page)"
       style="width: 70px"
-      @keyup.enter="jumpToPage"
+      @update:value="onPageInput"
     />
-    <NButton size="tiny" secondary @click="jumpToPage">{{ t("discover.jumpToBtn") }}</NButton>
   </div>
 </template>
 
