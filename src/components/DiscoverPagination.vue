@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from "vue"
-import { useI18n } from "vue-i18n"
 import { NIcon, NSelect, NPagination, NInputNumber } from "naive-ui"
 import { List } from "@lucide/vue"
 
