@@ -2,7 +2,7 @@
 import type { Component } from "vue"
 import { NCard, NIcon } from "naive-ui"
 import ModPreviewImage from "./ModPreviewImage.vue"
-import TruncatedText from "./TruncatedText.vue"
+import FloatingTip from "./FloatingTip.vue"
 import ModTranslateBlock from "./ModTranslateBlock.vue"
 
 defineProps<{
@@ -28,7 +28,7 @@ defineProps<{
           <slot name="actions" />
         </div>
         <div class="min-h-0 mt-2">
-          <TruncatedText :text="description" />
+          <FloatingTip :text="description ?? ''" truncated />
           <ModTranslateBlock :text="description" />
         </div>
         <div class="flex items-center gap-3 text-xs pt-2 mt-auto text-c-muted">

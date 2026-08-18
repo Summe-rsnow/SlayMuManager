@@ -256,11 +256,14 @@ const close = closeWindow
   word-break: break-word;
   line-height: 1.5;
 
-  /* 毛玻璃 — 使用 NaiveUI 注入的 CSS 变量，随主题自动切换 */
-  backdrop-filter: blur(12px) saturate(1.3);
-  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  /* 玻璃质感 — 与菜单栏同款 */
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--blur-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--blur-saturate));
+  border: var(--glass-border) !important;
+  border-radius: var(--glass-radius) !important;
 
-  /* 完全隐藏滚动条（功能保留，视觉不显示） */
+  /* 完全隐藏滚动条 */
   scrollbar-width: none;
 }
 .n-tooltip::-webkit-scrollbar {
@@ -281,5 +284,6 @@ const close = closeWindow
 .n-tooltip .n-popover__content {
   font-size: 12px;
   white-space: pre-wrap;
+  color: var(--color-text-primary);
 }
 </style>

@@ -22,7 +22,7 @@ import { useIsActive } from "@/composables/useIsActive"
 import { kindLabel } from "@/utils/kindLabel"
 import EmptyState from "@/components/EmptyState.vue"
 import AppDialog from "@/components/AppDialog.vue"
-import TipIcon from "@/components/TipIcon.vue"
+import FloatingTip from "@/components/FloatingTip.vue"
 import PageHeader from "@/components/PageHeader.vue"
 
 const { t } = useI18n()
@@ -712,7 +712,7 @@ onMounted(async () => {
                 <NTag type="warning" size="tiny" :bordered="false">
                   {{ t("saves.backups.legacyBackup") }}
                 </NTag>
-                <TipIcon :text="t('saves.backups.legacyBackupHint')" :width="280" />
+                <FloatingTip :text="t('saves.backups.legacyBackupHint')" :width="280" />
               </template>
             </div>
 

@@ -6,7 +6,7 @@ import { invoke } from "@tauri-apps/api/core"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
 import {
   NCard, NButton, NTag, NIcon, NSpace, NInput,
-  NCheckbox, NPopover, useMessage,
+  NCheckbox, useMessage,
 } from "naive-ui"
 import {
   Plus, FolderHeart, Edit3, Trash2, Play, Download, Search,
@@ -21,6 +21,7 @@ import AppDialog from "@/components/AppDialog.vue"
 import PageHeader from "@/components/PageHeader.vue"
 import ConfirmBtn from "@/components/ConfirmBtn.vue"
 import LoadingOverlay from "@/components/LoadingOverlay.vue"
+import FloatingTip from "@/components/FloatingTip.vue"
 
 const { t } = useI18n()
 const message = useMessage()
@@ -373,12 +374,7 @@ watch(presetAppliedTick, () => {
 
                 <!-- 描述区域（固定高度，无描述时显示占位文字） -->
                 <div style="height: 2.25rem" class="mt-1 mb-0.5">
-                  <NPopover v-if="p.description" trigger="hover" placement="top" :width="320">
-                    <template #trigger>
-                      <p class="text-xs text-c-muted line-clamp-2 cursor-help">{{ p.description }}</p>
-                    </template>
-                    <div class="text-xs leading-relaxed">{{ p.description }}</div>
-                  </NPopover>
+                  <FloatingTip v-if="p.description" :text="p.description" truncated :max-lines="2" />
                   <p v-else class="text-xs text-c-muted leading-5">{{ t("profiles.noDescription") }}</p>
                 </div>
 

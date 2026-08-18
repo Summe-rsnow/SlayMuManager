@@ -6,7 +6,7 @@ import { NSwitch, NInputNumber } from "naive-ui"
 import type { AppBootstrap } from "../types"
 import SettingsSection from "./SettingsSection.vue"
 import SettingsRow from "./SettingsRow.vue"
-import TipIcon from "./TipIcon.vue"
+import FloatingTip from "./FloatingTip.vue"
 
 const { t } = useI18n()
 
@@ -38,7 +38,7 @@ async function toggleBackupOnPathSwitch(val: boolean) {
     </SettingsRow>
     <SettingsRow>
       <template #label>
-        <TipIcon :label="t('settings.backup.onPathSwitch')" :text="t('settings.backup.onPathSwitchDesc')" placement="right" :width="240" />
+        <FloatingTip :label="t('settings.backup.onPathSwitch')" :text="t('settings.backup.onPathSwitchDesc')" placement="right" :width="240" />
       </template>
       <NSwitch :value="backupOnPathSwitch" @update:value="toggleBackupOnPathSwitch" />
     </SettingsRow>

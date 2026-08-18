@@ -22,7 +22,7 @@ import { useUpdateStore } from "@/stores/useUpdateStore"
 import { useTagStore, PRESET_TAGS } from "@/stores/useTagStore"
 import { useSidebarStore } from "@/stores/useSidebarStore"
 import DragOverlay from "@/components/DragOverlay.vue"
-import TipIcon from "@/components/TipIcon.vue"
+import FloatingTip from "@/components/FloatingTip.vue"
 import ModCard from "@/components/ModCard.vue"
 import AppDialog from "@/components/AppDialog.vue"
 import EmptyState from "@/components/EmptyState.vue"
@@ -529,10 +529,7 @@ watch(presetAppliedTick, () => {
         <span>{{ activePresetName }}</span>
       </span>
       <span v-if="loading" class="text-xs text-c-muted animate-pulse">{{ t("library.refreshing") }}</span>
-      <div class="flex items-center gap-1">
-        <span class="text-xs text-c-muted whitespace-nowrap">{{ t("library.vanillaLaunch") }}</span>
-        <TipIcon :text="t('library.vanillaLaunchHint')" />
-      </div>
+      <FloatingTip :label="t('library.vanillaLaunch')" :text="t('library.vanillaLaunchHint')" />
       <NSwitch :value="vanillaLaunch" size="small" @update:value="handleToggleVanillaLaunch" />
       <div class="flex gap-2">
         <NButton size="small" secondary @click="handleOpenModsDir">
@@ -546,7 +543,7 @@ watch(presetAppliedTick, () => {
         <NButton size="small" secondary :loading="localChecking" @click="checkUpdates">
           <template #icon><NIcon :size="14"><ArrowUp /></NIcon></template>
           {{ localChecking ? t("library.updateCheck.checking") : t("library.updateCheck.check") }}
-          <TipIcon :text="t('library.updateCheck.supportHint')" :width="240" />
+          <FloatingTip :text="t('library.updateCheck.supportHint')" :width="240" />
         </NButton>
         <NButton size="small" secondary :loading="loading" @click="fetchMods">
           <template #icon><NIcon :size="14"><RefreshCw /></NIcon></template>

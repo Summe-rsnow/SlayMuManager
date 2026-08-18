@@ -8,6 +8,7 @@ import {
 import { FolderOpen, Trash2, Plus, StickyNote, Copy, Check } from "@lucide/vue"
 import IconBtn from "./IconBtn.vue"
 import ConfirmBtn from "./ConfirmBtn.vue"
+import FloatingTip from "./FloatingTip.vue"
 import { useTagStore, PRESET_TAGS } from "@/stores/useTagStore"
 import { useNoteStore } from "@/stores/useNoteStore"
 import type { InstalledMod, ModUpdateInfo } from "../types"
@@ -174,17 +175,11 @@ async function copyModId() {
       <ConfirmBtn v-if="mod.source === 'workshop' && mod.workshopId" :icon="Trash2" :tip="t('library.mod.unsubscribe')" :confirmText="t('library.mod.confirmUnsubscribe', { name: mod.name })" @confirm="emit('unsubscribe', mod.workshopId!)" />
       <IconBtn :icon="copied ? Check : Copy" :tip="copied ? t('library.mod.copied') : t('library.mod.copyId')"
         @click="copyModId" />
-      <NPopover v-if="mod.source === 'workshop'" trigger="hover" placement="left" :width="200">
-        <template #trigger>
-          <span>
-            <NSwitch
-              :value="enabled"
-              :disabled="true"
-            />
-          </span>
+      <FloatingTip v-if="mod.source === 'workshop'" :text="t('library.mod.workshopHint')" placement="left" :width="200">
+        <template #default>
+          <NSwitch :value="enabled" :disabled="true" />
         </template>
-        <span class="text-xs">{{ t("library.mod.workshopHint") }}</span>
-      </NPopover>
+      </FloatingTip>
       <NSwitch
         v-else
         :value="enabled"

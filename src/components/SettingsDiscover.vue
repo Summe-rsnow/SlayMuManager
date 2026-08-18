@@ -5,7 +5,7 @@ import { NSwitch, NRadioGroup, NRadio } from "naive-ui"
 import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
 import SettingsSection from "./SettingsSection.vue"
 import SettingsRow from "./SettingsRow.vue"
-import TipIcon from "./TipIcon.vue"
+import FloatingTip from "./FloatingTip.vue"
 
 const { t } = useI18n()
 const discoverPrefStore = useDiscoverPrefStore()
@@ -25,7 +25,7 @@ const { setDiscoverColumns, setPrefetchEnabled, setShowTranslateQuotaTip } = dis
     </SettingsRow>
     <SettingsRow>
       <template #label>
-        <TipIcon :label="t('settings.discover.prefetch')" :text="t('settings.discover.prefetchDesc')" placement="right" :width="240" />
+        <FloatingTip :label="t('settings.discover.prefetch')" :text="t('settings.discover.prefetchDesc')" placement="right" :width="240" />
       </template>
       <NSwitch :value="prefetchEnabled" @update:value="setPrefetchEnabled" />
     </SettingsRow>
