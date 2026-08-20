@@ -102,8 +102,6 @@ const close = closeWindow
       <NMessageProvider>
         <NDialogProvider>
           <!-- 根容器使用 CSS 变量实现动态主题 -->
-          <!-- 环境光动画背景（独立元素，避免影响点击） -->
-          <div class="ambient-bg"><span></span></div>
           <div
             class="h-screen overflow-hidden relative"
             :style="{
@@ -111,6 +109,8 @@ const close = closeWindow
               color: 'var(--color-text-primary)',
             }"
           >
+            <!-- 环境光动画背景（置于根容器内底层，为全屏毛玻璃提供持续折射光） -->
+            <div class="ambient-bg"><span></span></div>
             <!-- 内容层（全高，标题栏叠加在上方） -->
             <div class="flex h-full pt-12 box-border">
               <SideNav />

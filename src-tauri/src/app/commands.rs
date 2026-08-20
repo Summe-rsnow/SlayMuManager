@@ -1294,51 +1294,75 @@ pub fn sync_saves(state: State<AppState>) -> Result<SaveSyncResult, String> {
 // =========================================================================
 
 #[tauri::command]
-pub fn get_cloud_save_status(state: State<AppState>) -> Result<CloudSaveStatus, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    backup_service::get_cloud_save_status(Path::new(game_root)).map_err(|e| e.to_string())
+pub async fn get_cloud_save_status(state: State<'_, AppState>) -> Result<CloudSaveStatus, String> {
+    let game_root = {
+        let settings = state.settings.read().unwrap();
+        settings
+            .game_root_dir
+            .clone()
+            .ok_or_else(|| "游戏目录未设置".to_string())?
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        backup_service::get_cloud_save_status(Path::new(&game_root)).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-pub fn list_cloud_save_diff_entries(
-    state: State<AppState>,
+pub async fn list_cloud_save_diff_entries(
+    state: State<'_, AppState>,
 ) -> Result<Vec<CloudSaveDiffEntry>, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    backup_service::list_cloud_save_diff_entries(Path::new(game_root))
-        .map_err(|e| e.to_string())
+    let game_root = {
+        let settings = state.settings.read().unwrap();
+        settings
+            .game_root_dir
+            .clone()
+            .ok_or_else(|| "游戏目录未设置".to_string())?
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        backup_service::list_cloud_save_diff_entries(Path::new(&game_root))
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-pub fn copy_cloud_save_diff_side(
+pub async fn copy_cloud_save_diff_side(
     relative_path: String,
     side: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    backup_service::copy_cloud_save_diff_side(Path::new(game_root), &relative_path, &side)
-        .map_err(|e| e.to_string())
+    let game_root = {
+        let settings = state.settings.read().unwrap();
+        settings
+            .game_root_dir
+            .clone()
+            .ok_or_else(|| "游戏目录未设置".to_string())?
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        backup_service::copy_cloud_save_diff_side(Path::new(&game_root), &relative_path, &side)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]
-pub fn ascend_to_cloud_full(state: State<AppState>) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    backup_service::ascend_to_cloud_full(Path::new(game_root))?;
+pub async fn ascend_to_cloud_full(state: State<'_, AppState>) -> Result<(), String> {
+    let game_root = {
+        let settings = state.settings.read().unwrap();
+        settings
+            .game_root_dir
+            .clone()
+            .ok_or_else(|| "游戏目录未设置".to_string())?
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        backup_service::ascend_to_cloud_full(Path::new(&game_root))
+    })
+    .await
+    .map_err(|e| e.to_string())??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1352,13 +1376,19 @@ pub fn ascend_to_cloud_full(state: State<AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn descend_from_cloud_full(state: State<AppState>) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    backup_service::descend_from_cloud_full(Path::new(game_root))?;
+pub async fn descend_from_cloud_full(state: State<'_, AppState>) -> Result<(), String> {
+    let game_root = {
+        let settings = state.settings.read().unwrap();
+        settings
+            .game_root_dir
+            .clone()
+            .ok_or_else(|| "游戏目录未设置".to_string())?
+    };
+    tauri::async_runtime::spawn_blocking(move || {
+        backup_service::descend_from_cloud_full(Path::new(&game_root))
+    })
+    .await
+    .map_err(|e| e.to_string())??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),

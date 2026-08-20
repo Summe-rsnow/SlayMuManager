@@ -444,36 +444,7 @@ function handleUserRefresh() {
 
     <!-- 初始加载骨架屏 -->
     <div v-if="nexusInitialLoading" :class="skeletonColsClass">
-      <NCard v-for="i in nexusPageSize" :key="i" class="break-inside-avoid mb-4" :style="{ minHeight: '150px' }">
-        <div class="flex gap-4 h-full animate-pulse">
-          <div class="w-28 h-28 rounded-lg flex-shrink-0 bg-c-secondary" />
-          <div class="flex-1 flex flex-col min-w-0">
-            <!-- 标题行：名称 + 版本号 + 操作按钮 -->
-            <div class="flex items-start justify-between gap-2">
-              <div class="flex items-center gap-2 min-w-0 flex-1">
-                <div class="h-5 w-2/3 rounded bg-c-secondary" />
-                <div class="h-4 w-10 rounded bg-c-secondary flex-shrink-0" />
-              </div>
-              <div class="h-7 w-16 rounded bg-c-secondary flex-shrink-0" />
-            </div>
-            <!-- 描述区：~6 行文本（匹配 TruncatedText line-clamp: 6） + 翻译按钮 -->
-            <div class="min-h-0 mt-2 flex flex-col gap-1">
-              <div class="h-3 rounded w-full bg-c-secondary" />
-              <div class="h-3 rounded w-full bg-c-secondary" />
-              <div class="h-3 rounded w-5/6 bg-c-secondary" />
-              <div class="h-3 rounded w-full bg-c-secondary" />
-              <div class="h-3 rounded w-4/5 bg-c-secondary" />
-            </div>
-            <div class="h-6 w-20 rounded bg-c-secondary mt-1.5" />
-            <!-- 底部：作者 + 统计信息 -->
-            <div class="flex items-center gap-3 pt-2 mt-auto">
-              <div class="h-3.5 w-16 rounded bg-c-secondary" />
-              <div class="h-3.5 w-20 rounded bg-c-secondary" />
-              <div class="h-3.5 w-16 rounded bg-c-secondary" />
-            </div>
-          </div>
-        </div>
-      </NCard>
+      <SkeletonDiscoverCard v-for="i in nexusPageSize" :key="'skel-init-'+i" />
     </div>
 
     <!-- 结果列表 -->
@@ -542,7 +513,10 @@ function handleUserRefresh() {
           {{ t("common.refresh") }}
         </NButton>
       </div>
-      <div v-if="workshopResults.length > 0">
+      <div v-if="workshopLoading && workshopResults.length === 0" :class="gridColsClass">
+        <SkeletonDiscoverCard v-for="i in 6" :key="'skel-ws-'+i" />
+      </div>
+      <div v-else-if="workshopResults.length > 0">
         <div class="flex items-center justify-between mb-3">
           <span class="text-sm text-c-muted">{{ t("discover.resultCount", { total: workshopTotalCount }) }}</span>
         </div>

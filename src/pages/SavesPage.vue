@@ -11,7 +11,7 @@ import SlotCard from "@/components/SlotCard.vue"
 import CountBadge from "@/components/CountBadge.vue"
 import {
   HardDrive, ArrowRightLeft, RefreshCw, Database,
-  History, RotateCcw, Trash2, Upload, Download, Cloud, AlertTriangle, User,
+  History, RotateCcw, Trash2, Upload, Download, Cloud, AlertTriangle, User, Check,
 } from "@lucide/vue"
 import type {
   SaveSlot, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
@@ -47,6 +47,8 @@ const restoreToSlotTarget = ref<{ kind: string; slotIndex: number }>({ kind: "va
 const cloudStatus = ref<CloudSaveStatus | null>(null)
 const cloudDiffs = ref<CloudSaveDiffEntry[]>([])
 const showCloudDialog = ref(false)
+const cloudStatusLoading = ref(false)
+const cloudActionLoading = ref(false)
 
 // 备份计数
 const slotBackupCounts = ref<Record<string, { manual: number; auto: number; keepCount: number }>>({})
@@ -352,18 +354,22 @@ async function saveSyncPairs() {
 
 // --- 云存档 ---
 async function openCloudDialog() {
-  loading.value = true
+  if (cloudStatusLoading.value) return
+  cloudStatusLoading.value = true
   try {
-    cloudStatus.value = await invoke<CloudSaveStatus>("get_cloud_save_status")
+    const [status, diffs] = await Promise.all([
+      invoke<CloudSaveStatus>("get_cloud_save_status"),
+      invoke<CloudSaveDiffEntry[]>("list_cloud_save_diff_entries"),
+    ])
     if (!isActive.value) return
-    cloudDiffs.value = await invoke<CloudSaveDiffEntry[]>("list_cloud_save_diff_entries")
-    if (!isActive.value) return
+    cloudStatus.value = status
+    cloudDiffs.value = diffs
     showCloudDialog.value = true
   } catch (e: unknown) {
     if (!isActive.value) return
     message.error(t("saves.error.cloudUnavailable") + ": " + String(e))
   } finally {
-    loading.value = false
+    cloudStatusLoading.value = false
   }
 }
 
@@ -380,7 +386,8 @@ async function copyCloudSide(relPath: string, side: string) {
 }
 
 async function ascendFull() {
-  loading.value = true
+  if (cloudActionLoading.value) return
+  cloudActionLoading.value = true
   try {
     await invoke("ascend_to_cloud_full")
     if (!isActive.value) return
@@ -390,12 +397,13 @@ async function ascendFull() {
     if (!isActive.value) return
     message.error(t("saves.error.ascendFailed") + ": " + String(e))
   } finally {
-    loading.value = false
+    cloudActionLoading.value = false
   }
 }
 
 async function descendFull() {
-  loading.value = true
+  if (cloudActionLoading.value) return
+  cloudActionLoading.value = true
   try {
     await invoke("descend_from_cloud_full")
     if (!isActive.value) return
@@ -405,7 +413,7 @@ async function descendFull() {
     if (!isActive.value) return
     message.error(t("saves.error.descendFailed") + ": " + String(e))
   } finally {
-    loading.value = false
+    cloudActionLoading.value = false
   }
 }
 
@@ -553,9 +561,9 @@ onMounted(async () => {
       <NCard class="save-card-glass mt-4">
         <template #header>
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <NIcon :size="20" :color="'var(--primary-color)'"><ArrowRightLeft /></NIcon>
-              <span class="text-lg font-semibold">{{ t("saves.pairSync.title") }}</span>
+            <div class="flex items-center gap-2.5">
+              <NIcon :size="18" :color="'var(--primary-color)'"><ArrowRightLeft /></NIcon>
+              <span class="text-base font-semibold text-c-primary">{{ t("saves.pairSync.title") }}</span>
               <NTag :type="autoSync ? 'success' : 'default'" size="small" :bordered="false">
                 {{ autoSync ? t("saves.pairSync.autoSyncing") : t("saves.pairSync.manual") }}
               </NTag>
@@ -648,26 +656,28 @@ onMounted(async () => {
       </NCard>
 
       <!-- Steam 云存档 -->
-      <NCard size="small" class="save-card-glass mt-4">
+      <NCard class="save-card-glass mt-4">
         <template #header>
-          <div class="flex items-center gap-2">
-            <NIcon :size="16" :color="'var(--primary-color)'"><Cloud /></NIcon>
-            <span>{{ t("saves.cloud.title") }}</span>
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <NIcon :size="18" :color="'var(--primary-color)'"><Cloud /></NIcon>
+              <span class="text-base font-semibold text-c-primary">{{ t("saves.cloud.title") }}</span>
+            </div>
           </div>
         </template>
-        <p class="text-xs mb-3 text-c-muted">
+        <p class="text-sm mb-4 text-c-secondary">
           {{ t("saves.cloud.description") }}
         </p>
         <NSpace>
-          <NButton secondary size="small" :loading="loading" @click="openCloudDialog">
+          <NButton secondary size="small" :loading="cloudStatusLoading" @click="openCloudDialog">
             <template #icon><NIcon :size="14"><Cloud /></NIcon></template>
             {{ t("saves.cloud.viewStatus") }}
           </NButton>
-          <NButton secondary size="small" @click="ascendFull">
+          <NButton secondary size="small" :loading="cloudActionLoading" @click="ascendFull">
             <template #icon><NIcon :size="14"><Upload /></NIcon></template>
             {{ t("saves.cloud.uploadAll") }}
           </NButton>
-          <NButton secondary size="small" @click="descendFull">
+          <NButton secondary size="small" :loading="cloudActionLoading" @click="descendFull">
             <template #icon><NIcon :size="14"><Download /></NIcon></template>
             {{ t("saves.cloud.downloadAll") }}
           </NButton>
@@ -858,38 +868,103 @@ onMounted(async () => {
         </div>
       </template>
 
-        <div v-if="cloudStatus && cloudStatus.isAvailable" class="grid grid-cols-4 gap-2 mb-4">
-          <div class="text-center p-2 rounded bg-c-secondary">
-            <div class="text-lg font-bold text-c-primary">{{ cloudStatus.localFileCount }}</div>
-            <div class="text-xs text-c-muted">{{ t("saves.cloud.localFiles") }}</div>
-          </div>
-          <div class="text-center p-2 rounded bg-c-secondary">
-            <div class="text-lg font-bold text-c-primary">{{ cloudStatus.cloudFileCount }}</div>
-            <div class="text-xs text-c-muted">{{ t("saves.cloud.cloudFiles") }}</div>
-          </div>
-          <div class="text-center p-2 rounded bg-c-secondary">
-            <div class="text-lg font-bold text-c-warning">{{ cloudStatus.differentCount }}</div>
-            <div class="text-xs text-c-muted">{{ t("saves.cloud.differences") }}</div>
-          </div>
+        <div v-if="cloudStatus && cloudStatus.isAvailable" class="grid grid-cols-4 gap-3 mb-5">
+          <!-- 本地文件 -->
           <div
-            class="text-center p-2 rounded"
-            :class="cloudStatus.hasMismatch ? 'bg-c-warning' : 'bg-green-50'"
+            class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border border-c-default"
+            :style="{
+              backgroundColor: 'var(--glass-surface-bg)',
+              backdropFilter: 'blur(var(--glass-surface-blur))',
+              WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+              boxShadow: 'var(--shadow-glass-surface)',
+            }"
           >
-            <NIcon :size="24" :color="cloudStatus.hasMismatch ? '#f0a020' : '#18a058'">
-              <AlertTriangle v-if="cloudStatus.hasMismatch" />
-              <Cloud v-else />
-            </NIcon>
-            <div class="text-xs mt-1" :class="cloudStatus.hasMismatch ? 'text-c-warning' : 'text-green-600'">
-              {{ mismatchLabel(cloudStatus) }}
+            <div class="text-xl font-bold font-mono text-c-primary leading-tight">
+              {{ cloudStatus.localFileCount }}
+            </div>
+            <div class="text-xs text-c-muted mt-1 font-medium">
+              {{ t("saves.cloud.localFiles") }}
+            </div>
+          </div>
+
+          <!-- 云端文件 -->
+          <div
+            class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border border-c-default"
+            :style="{
+              backgroundColor: 'var(--glass-surface-bg)',
+              backdropFilter: 'blur(var(--glass-surface-blur))',
+              WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+              boxShadow: 'var(--shadow-glass-surface)',
+            }"
+          >
+            <div class="text-xl font-bold font-mono text-c-primary leading-tight">
+              {{ cloudStatus.cloudFileCount }}
+            </div>
+            <div class="text-xs text-c-muted mt-1 font-medium">
+              {{ t("saves.cloud.cloudFiles") }}
+            </div>
+          </div>
+
+          <!-- 差异数量 -->
+          <div
+            class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border"
+            :class="cloudStatus.differentCount > 0 ? 'border-amber-500/40' : 'border-c-default'"
+            :style="{
+              backgroundColor: cloudStatus.differentCount > 0
+                ? 'color-mix(in srgb, #f59e0b 10%, var(--glass-surface-bg))'
+                : 'var(--glass-surface-bg)',
+              backdropFilter: 'blur(var(--glass-surface-blur))',
+              WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+              boxShadow: 'var(--shadow-glass-surface)',
+            }"
+          >
+            <div
+              class="text-xl font-bold font-mono leading-tight"
+              :class="cloudStatus.differentCount > 0 ? 'text-amber-500' : 'text-c-primary'"
+            >
+              {{ cloudStatus.differentCount }}
+            </div>
+            <div class="text-xs text-c-muted mt-1 font-medium">
+              {{ t("saves.cloud.differences") }}
+            </div>
+          </div>
+
+          <!-- 同步状态 -->
+          <div
+            class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border"
+            :class="cloudStatus.hasMismatch ? 'border-amber-500/40' : 'border-emerald-500/40'"
+            :style="{
+              backgroundColor: cloudStatus.hasMismatch
+                ? 'color-mix(in srgb, #f59e0b 10%, var(--glass-surface-bg))'
+                : 'color-mix(in srgb, #10b981 10%, var(--glass-surface-bg))',
+              backdropFilter: 'blur(var(--glass-surface-blur))',
+              WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+              boxShadow: 'var(--shadow-glass-surface)',
+            }"
+          >
+            <div class="flex items-center gap-1.5 leading-tight">
+              <NIcon :size="18" :color="cloudStatus.hasMismatch ? '#f59e0b' : '#10b981'">
+                <AlertTriangle v-if="cloudStatus.hasMismatch" />
+                <Check v-else />
+              </NIcon>
+              <span
+                class="text-sm font-bold truncate max-w-[80px]"
+                :class="cloudStatus.hasMismatch ? 'text-amber-500' : 'text-emerald-500'"
+              >
+                {{ mismatchLabel(cloudStatus) }}
+              </span>
+            </div>
+            <div class="text-xs text-c-muted mt-1 font-medium">
+              {{ t("saves.cloud.title") }}
             </div>
           </div>
         </div>
 
         <div
           v-if="cloudStatus && !cloudStatus.isAvailable"
-          class="p-4 rounded-lg bg-c-warning border border-c-warning mb-4"
+          class="p-4 rounded-xl bg-c-warning/10 border border-c-warning/40 mb-4"
         >
-          <div class="flex items-start gap-2">
+          <div class="flex items-start gap-2.5">
             <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
             <div>
               <div class="text-sm font-medium text-c-warning mb-1">{{ t("saves.cloud.unavailable") }}</div>
@@ -904,16 +979,30 @@ onMounted(async () => {
           </div>
         </div>
 
-        <NSpace class="mb-4">
-          <NButton size="small" secondary :disabled="!cloudStatus?.isAvailable" @click="ascendFull">{{ t("saves.cloud.ascend") }}</NButton>
-          <NButton size="small" secondary :disabled="!cloudStatus?.isAvailable" @click="descendFull">{{ t("saves.cloud.descend") }}</NButton>
-        </NSpace>
+        <div class="flex items-center gap-2 mb-4">
+          <NButton size="small" secondary :disabled="!cloudStatus?.isAvailable" :loading="cloudActionLoading" @click="ascendFull">
+            <template #icon><NIcon :size="14"><Upload /></NIcon></template>
+            {{ t("saves.cloud.ascend") }}
+          </NButton>
+          <NButton size="small" secondary :disabled="!cloudStatus?.isAvailable" :loading="cloudActionLoading" @click="descendFull">
+            <template #icon><NIcon :size="14"><Download /></NIcon></template>
+            {{ t("saves.cloud.descend") }}
+          </NButton>
+        </div>
 
-        <div v-if="cloudDiffs.length > 0" class="max-h-64 overflow-auto border rounded-lg border-c-default">
+        <div
+          v-if="cloudDiffs.length > 0"
+          class="max-h-64 overflow-auto rounded-xl border border-c-default divide-y divide-c-default"
+          :style="{
+            backgroundColor: 'var(--glass-surface-bg)',
+            backdropFilter: 'blur(var(--glass-surface-blur))',
+            WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+          }"
+        >
           <div
             v-for="d in cloudDiffs"
             :key="d.relativePath"
-            class="flex items-center justify-between p-2 border-b last:border-b-0 text-sm border-c-default"
+            class="flex items-center justify-between p-2.5 text-sm transition-colors hover:bg-c-secondary/40"
           >
             <div class="flex-1 min-w-0 flex items-center gap-2">
               <NTag :type="diffKindType(d.kind)" size="tiny" :bordered="false">
