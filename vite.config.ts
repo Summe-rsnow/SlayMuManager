@@ -17,6 +17,8 @@ export default defineConfig(async () => ({
   clearScreen: false,
 
   build: {
+    target: process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
+    cssTarget: "chrome105",
     chunkSizeWarningLimit: 1024,
     rolldownOptions: {
       output: {

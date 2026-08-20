@@ -1041,8 +1041,8 @@ onMounted(async () => {
 .save-card-glass {
   --n-border-color: var(--glass-surface-border) !important;
   background-color: var(--glass-surface-bg) !important;
-  backdrop-filter: blur(var(--glass-surface-blur));
   -webkit-backdrop-filter: blur(var(--glass-surface-blur));
+  backdrop-filter: blur(var(--glass-surface-blur));
   box-shadow: var(--shadow-glass-surface) !important;
 }
 </style>

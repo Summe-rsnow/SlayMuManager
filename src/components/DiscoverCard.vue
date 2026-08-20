@@ -46,8 +46,8 @@ defineProps<{
 <style scoped>
 .discover-card {
   background-color: var(--glass-surface-bg) !important;
-  backdrop-filter: blur(var(--glass-surface-blur));
   -webkit-backdrop-filter: blur(var(--glass-surface-blur));
+  backdrop-filter: blur(var(--glass-surface-blur));
   --n-border-color: var(--glass-surface-border) !important;
   box-shadow: var(--shadow-glass-surface) !important;
 }

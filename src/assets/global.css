@@ -280,8 +280,8 @@ html, body {
 /* Level 1: Surface (基底容器层) */
 .glass-surface {
   background: var(--glass-surface-bg);
-  backdrop-filter: blur(var(--glass-surface-blur)) saturate(var(--blur-saturate));
   -webkit-backdrop-filter: blur(var(--glass-surface-blur)) saturate(var(--blur-saturate));
+  backdrop-filter: blur(var(--glass-surface-blur)) saturate(var(--blur-saturate));
   border: var(--glass-surface-border);
   border-radius: var(--glass-surface-radius);
   box-shadow: var(--shadow-glass-surface);
@@ -290,8 +290,8 @@ html, body {
 /* Level 2: Nav (常驻导航与控制层) */
 .glass-nav {
   background: var(--glass-nav-bg);
-  backdrop-filter: blur(var(--glass-nav-blur)) saturate(var(--blur-saturate));
   -webkit-backdrop-filter: blur(var(--glass-nav-blur)) saturate(var(--blur-saturate));
+  backdrop-filter: blur(var(--glass-nav-blur)) saturate(var(--blur-saturate));
   border: var(--glass-nav-border);
   border-radius: var(--glass-nav-radius);
   box-shadow: var(--shadow-glass-nav);
@@ -301,8 +301,8 @@ html, body {
 .glass-floating,
 .glass-panel {
   background: var(--glass-floating-bg);
-  backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate));
   -webkit-backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate));
+  backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate));
   border: var(--glass-floating-border);
   border-radius: var(--glass-floating-radius);
   box-shadow: var(--shadow-glass-floating);
@@ -311,8 +311,8 @@ html, body {
 /* Level 4: Modal (模态弹窗层) */
 .glass-modal {
   background: var(--glass-modal-bg);
-  backdrop-filter: blur(var(--glass-modal-blur)) saturate(var(--blur-saturate));
   -webkit-backdrop-filter: blur(var(--glass-modal-blur)) saturate(var(--blur-saturate));
+  backdrop-filter: blur(var(--glass-modal-blur)) saturate(var(--blur-saturate));
   border: var(--glass-modal-border);
   border-radius: var(--glass-modal-radius);
   box-shadow: var(--shadow-glass-modal);
@@ -320,8 +320,8 @@ html, body {
 
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--blur-saturate));
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--blur-saturate));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--blur-saturate));
   border: var(--glass-border);
   border-radius: var(--glass-radius);
   box-shadow: var(--shadow-glass);
