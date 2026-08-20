@@ -18,7 +18,18 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <NCard v-if="bordered" size="small" :style="{ boxShadow: 'var(--shadow-card)' }">
+  <NCard
+    v-if="bordered"
+    size="small"
+    class="glass-surface"
+    :style="{
+      backgroundColor: 'var(--glass-surface-bg)',
+      backdropFilter: 'blur(var(--glass-surface-blur))',
+      WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+      borderColor: 'var(--glass-surface-border)',
+      boxShadow: 'var(--shadow-glass-surface)',
+    }"
+  >
     <div class="text-center mx-auto max-w-sm" :class="size === 'sm' ? 'py-8' : size === 'lg' ? 'py-16' : 'py-12'">
       <div class="animate-float">
         <NIcon :size="size === 'sm' ? 32 : 48" class="mb-3" :color="'var(--primary-color)'" :style="{ opacity: 0.5 }">

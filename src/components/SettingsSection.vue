@@ -9,7 +9,13 @@ defineProps<{
 </script>
 
 <template>
-  <NCard :id="id" :title="title" size="small" :class="{ 'setting-highlight': highlighted }" :style="{ boxShadow: 'var(--shadow-card)' }">
+  <NCard
+    :id="id"
+    :title="title"
+    size="small"
+    class="settings-section glass-surface"
+    :class="{ 'setting-highlight': highlighted }"
+  >
     <NSpace vertical>
       <slot />
     </NSpace>
@@ -17,6 +23,10 @@ defineProps<{
 </template>
 
 <style scoped>
+.settings-section {
+  --n-border-color: var(--glass-surface-border) !important;
+  background-color: var(--glass-surface-bg) !important;
+}
 .setting-highlight {
   animation: highlight-flash 2.5s ease-in-out;
 }

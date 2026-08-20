@@ -151,15 +151,16 @@ onUnmounted(() => {
 <template>
   <!-- ============ 左下浮动按钮组 ============ -->
   <div class="absolute left-8 bottom-8 z-30 flex flex-col gap-3">
-    <!-- 菜单面板（展开时在按钮上方淡入） -->
+    <!-- 菜单面板（展开时在按钮上方淡入，Level 3: Floating 质感） -->
     <Transition name="menu">
       <div
         v-if="!sidebarCollapsed"
-        class="absolute left-0 z-20 flex flex-col w-52 glass-panel overflow-hidden"
+        class="absolute left-0 z-20 flex flex-col w-52 glass-floating overflow-hidden"
         :style="{
           bottom: 'calc(100% + 8px)',
           maxHeight: 'calc(100vh - 140px)',
-          boxShadow: 'var(--shadow-glass)',
+          border: 'var(--glass-floating-border)',
+          boxShadow: 'var(--shadow-glass-floating)',
         }"
       >
         <div class="flex-1 overflow-y-auto p-3 pb-0">
@@ -174,15 +175,16 @@ onUnmounted(() => {
       </div>
     </Transition>
 
-    <!-- 「菜单」按钮（主色调 + 高斯模糊） -->
+    <!-- 「菜单」按钮（主色调 + Level 2: Nav 玻璃质感） -->
     <button
-      class="group relative w-12 hover:w-36 h-12 rounded-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out active:scale-95"
+      class="group relative w-12 hover:w-36 h-12 rounded-xl cursor-pointer select-none outline-none overflow-hidden transition-all duration-300 ease-out active:scale-95"
       :style="{
         backgroundColor: 'color-mix(in srgb, var(--primary-color) 50%, transparent)',
-        backdropFilter: 'blur(var(--glass-blur))',
-        WebkitBackdropFilter: 'blur(var(--glass-blur))',
+        backdropFilter: 'blur(var(--glass-nav-blur))',
+        WebkitBackdropFilter: 'blur(var(--glass-nav-blur))',
+        border: 'var(--glass-nav-border)',
         color: '#fff',
-        boxShadow: 'var(--shadow-glass)',
+        boxShadow: 'var(--shadow-glass-nav)',
       }"
       @click="sidebarCollapsed = !sidebarCollapsed"
     >
@@ -203,14 +205,15 @@ onUnmounted(() => {
       @mouseenter="onPresetEnter"
       @mouseleave="onPresetLeave"
     >
-      <!-- 预设选择面板（悬停时在按钮上方展开） -->
+      <!-- 预设选择面板（悬停时在按钮上方展开，Level 3: Floating 质感） -->
       <Transition name="preset">
         <div
           v-if="showPresetPanel"
-          class="absolute left-0 z-20 w-52 glass-panel overflow-hidden"
+          class="absolute left-0 z-20 w-52 glass-floating overflow-hidden"
           :style="{
             bottom: 'calc(100% + 8px)',
-            boxShadow: 'var(--shadow-glass)',
+            border: 'var(--glass-floating-border)',
+            boxShadow: 'var(--shadow-glass-floating)',
           }"
         >
           <div class="p-3">
@@ -228,13 +231,14 @@ onUnmounted(() => {
       </Transition>
 
       <button
-        class="group relative w-12 hover:w-42 h-12 rounded-xl cursor-pointer select-none outline-none border-0 overflow-hidden transition-all duration-300 ease-out active:scale-95"
+        class="group relative w-12 hover:w-42 h-12 rounded-xl cursor-pointer select-none outline-none overflow-hidden transition-all duration-300 ease-out active:scale-95"
         :style="{
           backgroundColor: 'color-mix(in srgb, var(--color-bg-sidebar) 65%, transparent)',
-          backdropFilter: 'blur(var(--glass-blur))',
-          WebkitBackdropFilter: 'blur(var(--glass-blur))',
+          backdropFilter: 'blur(var(--glass-nav-blur))',
+          WebkitBackdropFilter: 'blur(var(--glass-nav-blur))',
+          border: 'var(--glass-nav-border)',
           color: 'var(--color-text-primary)',
-          boxShadow: 'var(--shadow-glass)',
+          boxShadow: 'var(--shadow-glass-nav)',
         }"
         :disabled="launchingGame"
         @click="onLaunchGame"

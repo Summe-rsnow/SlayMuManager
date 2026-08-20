@@ -107,7 +107,7 @@ const close = closeWindow
           <div
             class="h-screen overflow-hidden relative"
             :style="{
-              backgroundColor: 'var(--color-bg-primary)',
+              background: 'var(--app-bg-gradient)',
               color: 'var(--color-text-primary)',
             }"
           >
@@ -134,15 +134,10 @@ const close = closeWindow
               </main>
             </div>
 
-            <!-- 沉浸标题栏（绝对定位叠加，完全透明毛玻璃） -->
+            <!-- 沉浸标题栏（绝对定位叠加，Level 2: Nav 玻璃质感） -->
             <div
               data-tauri-drag-region
-              class="absolute top-0 left-0 right-0 h-12 z-30 flex items-center justify-between px-4 select-none"
-              :style="{
-                backdropFilter: 'blur(20px) saturate(1.5)',
-                WebkitBackdropFilter: 'blur(20px) saturate(1.5)',
-                backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 60%, transparent)',
-              }"
+              class="glass-nav absolute top-0 left-0 right-0 h-12 z-30 flex items-center justify-between px-4 select-none rounded-none! border-t-0! border-l-0! border-r-0!"
             >
               <div class="flex items-center gap-2.5">
                 <svg viewBox="0 0 128 128" class="w-6 h-6 flex-shrink-0">
@@ -179,24 +174,22 @@ const close = closeWindow
               :show="showDialog"
               width="400px"
               :mask-closable="false"
+              :show-footer="false"
             >
-              <template #header>
-                <div class="flex items-center gap-2">
-                  <NIcon :size="20" class="text-primary-theme"><PackageOpen /></NIcon>
-                  <span class="font-semibold">{{ t("update.title") }}</span>
-                </div>
-              </template>
-
-              <div class="space-y-4">
-                <!-- 版本对比卡片 -->
-                <div class="rounded-lg border border-c-default overflow-hidden">
-                  <div class="flex items-center justify-between px-4 py-3 border-b border-c-default bg-c-muted/30">
-                    <span class="text-xs text-c-muted font-medium">{{ t("update.currentVersion") }}</span>
-                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-c-surface text-c-secondary border border-c-default">v{{ APP_VERSION }}</span>
+              <div class="space-y-4 pt-1">
+                <!-- 头部：图标 + 标题 -->
+                <div class="flex items-start gap-3">
+                  <div class="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <NIcon :size="20" class="text-primary-600 dark:text-primary-400"><PackageOpen /></NIcon>
                   </div>
-                  <div class="flex items-center justify-between px-4 py-3">
-                    <span class="text-xs text-c-muted font-medium">{{ t("update.latestVersion") }}</span>
-                    <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary-theme/15 text-primary-theme">v{{ latestVersion }}</span>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-base text-c-primary">
+                      {{ t("update.available") }}
+                    </div>
+                    <div class="text-xs text-c-muted mt-0.5">
+                      {{ t("update.currentVersion", { v: APP_VERSION }) }} →
+                      <span class="font-bold text-primary-600 dark:text-primary-400">v{{ latestVersion }}</span>
+                    </div>
                   </div>
                 </div>
 
@@ -249,41 +242,49 @@ const close = closeWindow
 </style>
 
 <style>
+.n-popover.n-tooltip,
 .n-tooltip {
-  max-width: 420px;
-  max-height: 300px;
+  max-width: 400px;
+  max-height: 280px;
   overflow-y: auto;
   word-break: break-word;
   line-height: 1.5;
+  padding: 10px 14px !important;
 
-  /* 玻璃质感 — 与菜单栏同款 */
-  background: var(--glass-bg) !important;
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--blur-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--blur-saturate));
-  border: var(--glass-border) !important;
-  border-radius: var(--glass-radius) !important;
+  /* Level 3: Floating 浮动气泡与提示框 */
+  background: var(--glass-floating-bg) !important;
+  backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate, 1.4));
+  -webkit-backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate, 1.4));
+  border: var(--glass-floating-border) !important;
+  border-radius: var(--glass-floating-radius) !important;
+  box-shadow: var(--shadow-glass-floating) !important;
 
   /* 完全隐藏滚动条 */
   scrollbar-width: none;
 }
+.n-popover.n-tooltip::-webkit-scrollbar,
 .n-tooltip::-webkit-scrollbar {
   display: none;
   width: 0;
   height: 0;
 }
+.n-popover.n-tooltip::-webkit-scrollbar-track,
 .n-tooltip::-webkit-scrollbar-track {
   background: transparent;
 }
 
 /* 隐藏底部三角形箭头 */
+.n-popover.n-tooltip .n-popover-arrow-wrapper,
+.n-popover.n-tooltip .n-popover-arrow,
 .n-tooltip .n-popover-arrow-wrapper,
 .n-tooltip .n-popover-arrow {
-  display: none;
+  display: none !important;
 }
 
+.n-popover.n-tooltip .n-popover__content,
 .n-tooltip .n-popover__content {
   font-size: 12px;
   white-space: pre-wrap;
-  color: var(--color-text-primary);
+  color: var(--color-text-primary) !important;
 }
 </style>

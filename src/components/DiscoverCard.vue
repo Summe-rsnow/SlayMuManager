@@ -45,10 +45,15 @@ defineProps<{
 
 <style scoped>
 .discover-card {
-  --n-border-color: color-mix(in srgb, var(--color-border), var(--color-text-muted) 50%);
+  background-color: var(--glass-surface-bg) !important;
+  backdrop-filter: blur(var(--glass-surface-blur));
+  -webkit-backdrop-filter: blur(var(--glass-surface-blur));
+  --n-border-color: var(--glass-surface-border) !important;
+  box-shadow: var(--shadow-glass-surface) !important;
 }
 .discover-card:hover {
+  background-color: var(--glass-surface-bg-hover) !important;
   box-shadow: var(--shadow-glow) !important;
-  border-color: color-mix(in srgb, var(--primary-color) 25%, var(--color-border)) !important;
+  border-color: color-mix(in srgb, var(--primary-color) 35%, var(--glass-surface-border)) !important;
 }
 </style>

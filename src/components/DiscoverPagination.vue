@@ -30,15 +30,7 @@ function onPageInput(val: number | null) {
 </script>
 
 <template>
-  <div class="discover-pagination-bar flex items-center gap-3 px-5 py-2.5 rounded-full"
-    :style="{
-      backgroundColor: 'var(--glass-bg)',
-      backdropFilter: 'blur(var(--glass-blur))',
-      WebkitBackdropFilter: 'blur(var(--glass-blur))',
-      border: 'var(--glass-border)',
-      boxShadow: 'var(--shadow-glass)',
-    }"
-  >
+  <div class="discover-pagination-bar glass-nav flex items-center gap-3 px-5 py-2.5 rounded-full">
     <template v-if="showPageSize && pageSizeOptions?.length">
       <div class="flex items-center gap-1.5">
         <NIcon :size="14" class="text-c-muted"><List /></NIcon>

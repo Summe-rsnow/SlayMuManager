@@ -18,7 +18,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <FloatingTip v-if="tip" :text="tip" mode="tooltip">
+  <FloatingTip v-if="tip" :text="tip">
     <NPopconfirm @positive-click="emit('confirm')">
       <template #trigger>
         <NButton text :size="(size ?? 'tiny') as any" :type="(type as any) ?? 'error'" :disabled="disabled" class="transition-transform duration-150 active:scale-90">

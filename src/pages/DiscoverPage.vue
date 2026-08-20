@@ -401,7 +401,7 @@ function handleUserRefresh() {
 <template>
   <div class="flex flex-col h-full">
     <PageHeader :title="t('discover.title')" :subtitle="t('discover.subtitle')">
-      <div class="inline-flex gap-1 p-1 rounded-lg" :style="{ backgroundColor: 'var(--glass-bg)', backdropFilter: 'blur(var(--glass-blur))' }">
+      <div class="glass-surface inline-flex gap-1 p-1">
         <NButton size="small" :type="tab === 'nexus' ? 'primary' : 'default'" @click="switchNexusTab">Nexus</NButton>
         <NButton size="small" :type="tab === 'workshop' ? 'primary' : 'default'" @click="switchWorkshopTab">
           {{ t("discover.workshop.tab") }}

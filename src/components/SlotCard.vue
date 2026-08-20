@@ -23,11 +23,11 @@ const { t } = useI18n()
 <template>
   <div
     :class="slot.hasData
-      ? 'p-3 rounded-xl border border-c-default bg-c-secondary transition-all duration-200 hover:-translate-y-0.5'
-      : 'p-2 rounded-xl border border-dashed border-c-default bg-c-secondary transition-all duration-200'"
-    :style="slot.hasData ? { boxShadow: 'var(--shadow-card)' } : {}"
+      ? 'glass-surface p-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5'
+      : 'p-2 rounded-xl border border-dashed border-c-default bg-c-secondary/40 backdrop-blur-sm transition-all duration-200'"
+    :style="slot.hasData ? { boxShadow: 'var(--shadow-glass-surface)' } : {}"
     @mouseenter="slot.hasData && (($event.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-glow)')"
-    @mouseleave="slot.hasData && (($event.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-card)')"
+    @mouseleave="slot.hasData && (($event.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-glass-surface)')"
   >
     <div :class="slot.hasData ? 'flex items-center justify-between mb-2' : 'flex items-center justify-between'">
       <span class="font-medium text-sm text-c-primary">

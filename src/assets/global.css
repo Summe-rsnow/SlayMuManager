@@ -43,12 +43,16 @@ html, body {
   background: color-mix(in srgb, var(--primary-color) 40%, transparent) !important;
 }
 
-/* 裁剪隐藏原生滚动条：内部容器用负 margin 把滚动条推到父 overflow:hidden 之外 */
+/* 裁剪隐藏原生滚动条并为左侧/四周提供阴影弥散缓冲区（防止 overflow-y:auto 将左侧阴影刀切截断） */
 .scrollbar-hide {
   scrollbar-width: none;
   -ms-overflow-style: none;
+  margin-left: -24px;
+  padding-left: 24px;
   margin-right: -50px;
   padding-right: 50px;
+  padding-top: 6px;
+  padding-bottom: 12px;
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none !important;
@@ -98,18 +102,65 @@ html, body {
   /* 弹窗遮罩的点发光（径向渐变 = 主题色中心发光，不加暗色基底） */
   --blur-backdrop-bg: radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 70%);
 
-  /* 玻璃质感统一变量 */
-  --glass-bg: rgba(0,0,0,0.03);
-  --glass-bg-hover: rgba(0,0,0,0.06);
-  --glass-border: 1px solid rgba(0,0,0,0.06);
-  --glass-border-hover: 1px solid rgba(0,0,0,0.10);
-  --glass-blur: 16px;
-  --glass-radius: 14px;
+  /* 基于主题色的极淡渐变背景（亮色模式：以白底为主，融入 3%~5% 淡雅主题色光泽） */
+  --app-bg-gradient: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--primary-color) 4%, #ffffff) 0%,
+    #fcfcfd 40%,
+    #f8fafc 70%,
+    color-mix(in srgb, var(--primary-color) 3%, #f1f5f9) 100%
+  );
+
+  /* ============================================================
+     4 级层次化毛玻璃体系 (Light Mode)
+     ============================================================ */
+
+  /* Level 1: Surface (卡片基底 / 内嵌面板) */
+  --glass-surface-bg: rgba(255, 255, 255, 0.50);
+  --glass-surface-bg-hover: rgba(255, 255, 255, 0.70);
+  --glass-surface-border: 1px solid rgba(0, 0, 0, 0.05);
+  --glass-surface-border-hover: 1px solid rgba(0, 0, 0, 0.10);
+  --glass-surface-blur: 12px;
+  --glass-surface-radius: 12px;
+  --shadow-glass-surface: 0 1px 3px rgba(0, 0, 0, 0.03), 0 2px 8px rgba(0, 0, 0, 0.02);
+
+  /* Level 2: Nav (常驻导航栏 / 控制条) */
+  --glass-nav-bg: color-mix(in srgb, var(--color-bg-primary) 65%, transparent);
+  --glass-nav-bg-hover: color-mix(in srgb, var(--color-bg-primary) 80%, transparent);
+  --glass-nav-border: 1px solid rgba(0, 0, 0, 0.06);
+  --glass-nav-border-hover: 1px solid rgba(0, 0, 0, 0.12);
+  --glass-nav-blur: 16px;
+  --glass-nav-radius: 14px;
+  --shadow-glass-nav: 0 8px 24px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0, 0, 0, 0.02);
+
+  /* Level 3: Floating (浮动气泡 / 下拉面板 / Tooltip) */
+  --glass-floating-bg: color-mix(in srgb, var(--color-bg-primary) 80%, transparent);
+  --glass-floating-bg-hover: color-mix(in srgb, var(--color-bg-primary) 90%, transparent);
+  --glass-floating-border: 1px solid rgba(0, 0, 0, 0.08);
+  --glass-floating-border-hover: 1px solid rgba(0, 0, 0, 0.14);
+  --glass-floating-blur: 20px;
+  --glass-floating-radius: 14px;
+  --shadow-glass-floating: 0 12px 36px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+
+  /* Level 4: Modal (弹窗对话框 / 模态卡片) */
+  --glass-modal-bg: color-mix(in srgb, var(--color-bg-card) 85%, transparent);
+  --glass-modal-border: 1px solid rgba(0, 0, 0, 0.06);
+  --glass-modal-blur: 24px;
+  --glass-modal-radius: 16px;
+  --shadow-glass-modal: 0 32px 80px rgba(0, 0, 0, 0.14), 0 8px 32px rgba(0, 0, 0, 0.08);
+
+  /* 兼容旧命名别名 */
+  --glass-bg: var(--glass-nav-bg);
+  --glass-bg-hover: var(--glass-nav-bg-hover);
+  --glass-border: var(--glass-nav-border);
+  --glass-border-hover: var(--glass-nav-border-hover);
+  --glass-blur: var(--glass-nav-blur);
+  --glass-radius: var(--glass-nav-radius);
+  --shadow-glass: var(--shadow-glass-nav);
 
   /* 阴影体系 */
   --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
   --shadow-card-hover: 0 12px 32px rgba(0,0,0,0.1), 0 6px 14px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04);
-  --shadow-glass: 0 8px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06);
   --shadow-modal: 0 32px 80px rgba(0,0,0,0.18), 0 8px 32px rgba(0,0,0,0.1);
   --shadow-glow: 0 0 24px color-mix(in srgb, var(--primary-color) 8%, transparent), 0 8px 24px rgba(0,0,0,0.04);
 }
@@ -130,18 +181,65 @@ html, body {
   --color-warning-text: #fbbf24;
   --color-warning-border: #78350f;
 
-  /* 玻璃质感（暗色模式） */
-  --glass-bg: rgba(255,255,255,0.04);
-  --glass-bg-hover: rgba(255,255,255,0.08);
-  --glass-border: 1px solid rgba(255,255,255,0.06);
-  --glass-border-hover: 1px solid rgba(255,255,255,0.12);
-  --glass-blur: 16px;
-  --glass-radius: 14px;
+  /* 基于主题色的微渐变背景（暗色模式：以深黑 #07070D 为主，融入 4%~7% 极淡主题色氛围光泽） */
+  --app-bg-gradient: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--primary-color) 7%, #07070D) 0%,
+    #07070D 40%,
+    #090910 70%,
+    color-mix(in srgb, var(--primary-color) 4%, #07070D) 100%
+  );
+
+  /* ============================================================
+     4 级层次化毛玻璃体系 (Dark Mode) —— 柔和淡雅描边
+     ============================================================ */
+
+  /* Level 1: Surface (卡片基底 / 内嵌面板) */
+  --glass-surface-bg: rgba(255, 255, 255, 0.025);
+  --glass-surface-bg-hover: rgba(255, 255, 255, 0.05);
+  --glass-surface-border: 1px solid rgba(255, 255, 255, 0.05);
+  --glass-surface-border-hover: 1px solid rgba(255, 255, 255, 0.10);
+  --glass-surface-blur: 12px;
+  --glass-surface-radius: 12px;
+  --shadow-glass-surface: 0 2px 8px rgba(0, 0, 0, 0.2);
+
+  /* Level 2: Nav (常驻导航栏 / 控制条) */
+  --glass-nav-bg: color-mix(in srgb, var(--color-bg-primary) 55%, transparent);
+  --glass-nav-bg-hover: color-mix(in srgb, var(--color-bg-primary) 70%, transparent);
+  --glass-nav-border: 1px solid rgba(255, 255, 255, 0.08);
+  --glass-nav-border-hover: 1px solid rgba(255, 255, 255, 0.16);
+  --glass-nav-blur: 16px;
+  --glass-nav-radius: 14px;
+  --shadow-glass-nav: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 8px 32px rgba(0, 0, 0, 0.35);
+
+  /* Level 3: Floating (浮动气泡 / 下拉面板 / Tooltip) */
+  --glass-floating-bg: color-mix(in srgb, var(--color-bg-primary) 50%, transparent);
+  --glass-floating-bg-hover: color-mix(in srgb, var(--color-bg-primary) 65%, transparent);
+  --glass-floating-border: 1px solid rgba(255, 255, 255, 0.10);
+  --glass-floating-border-hover: 1px solid rgba(255, 255, 255, 0.20);
+  --glass-floating-blur: 20px;
+  --glass-floating-radius: 14px;
+  --shadow-glass-floating: inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 12px 36px rgba(0, 0, 0, 0.45);
+
+  /* Level 4: Modal (弹窗对话框 / 模态卡片) */
+  --glass-modal-bg: color-mix(in srgb, var(--color-bg-card) 80%, transparent);
+  --glass-modal-border: 1px solid rgba(255, 255, 255, 0.08);
+  --glass-modal-blur: 24px;
+  --glass-modal-radius: 16px;
+  --shadow-glass-modal: 0 32px 80px rgba(0, 0, 0, 0.55), 0 8px 32px rgba(0, 0, 0, 0.25);
+
+  /* 兼容旧命名别名 */
+  --glass-bg: var(--glass-nav-bg);
+  --glass-bg-hover: var(--glass-nav-bg-hover);
+  --glass-border: var(--glass-nav-border);
+  --glass-border-hover: var(--glass-nav-border-hover);
+  --glass-blur: var(--glass-nav-blur);
+  --glass-radius: var(--glass-nav-radius);
+  --shadow-glass: var(--shadow-glass-nav);
 
   /* 阴影（暗色模式更突出） */
   --shadow-card: 0 2px 8px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2), 0 1px 4px rgba(0,0,0,0.4);
   --shadow-card-hover: 0 12px 32px rgba(0,0,0,0.45), 0 6px 16px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.5);
-  --shadow-glass: 0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2);
   --shadow-modal: 0 32px 80px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.3);
   --shadow-glow: 0 0 24px color-mix(in srgb, var(--primary-color) 15%, transparent), 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
 
@@ -205,8 +303,49 @@ html, body {
 }
 
 /* ============================================================
-   玻璃质感工具类
+   4 级毛玻璃质感工具类
    ============================================================ */
+
+/* Level 1: Surface (基底容器层) */
+.glass-surface {
+  background: var(--glass-surface-bg);
+  backdrop-filter: blur(var(--glass-surface-blur)) saturate(var(--blur-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-surface-blur)) saturate(var(--blur-saturate));
+  border: var(--glass-surface-border);
+  border-radius: var(--glass-surface-radius);
+  box-shadow: var(--shadow-glass-surface);
+}
+
+/* Level 2: Nav (常驻导航与控制层) */
+.glass-nav {
+  background: var(--glass-nav-bg);
+  backdrop-filter: blur(var(--glass-nav-blur)) saturate(var(--blur-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-nav-blur)) saturate(var(--blur-saturate));
+  border: var(--glass-nav-border);
+  border-radius: var(--glass-nav-radius);
+  box-shadow: var(--shadow-glass-nav);
+}
+
+/* Level 3: Floating (浮窗与气泡层) */
+.glass-floating,
+.glass-panel {
+  background: var(--glass-floating-bg);
+  backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate));
+  border: var(--glass-floating-border);
+  border-radius: var(--glass-floating-radius);
+  box-shadow: var(--shadow-glass-floating);
+}
+
+/* Level 4: Modal (模态弹窗层) */
+.glass-modal {
+  background: var(--glass-modal-bg);
+  backdrop-filter: blur(var(--glass-modal-blur)) saturate(var(--blur-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-modal-blur)) saturate(var(--blur-saturate));
+  border: var(--glass-modal-border);
+  border-radius: var(--glass-modal-radius);
+  box-shadow: var(--shadow-glass-modal);
+}
 
 .glass {
   background: var(--glass-bg);
@@ -214,10 +353,12 @@ html, body {
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--blur-saturate));
   border: var(--glass-border);
   border-radius: var(--glass-radius);
+  box-shadow: var(--shadow-glass);
 }
 .glass-hover:hover {
   background: var(--glass-bg-hover);
   border: var(--glass-border-hover);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.35), var(--shadow-glass);
 }
 
 /* ============================================================

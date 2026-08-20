@@ -550,7 +550,7 @@ onMounted(async () => {
       </div>
 
       <!-- 配对同步配置 -->
-      <NCard class="mt-4">
+      <NCard class="save-card-glass mt-4">
         <template #header>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -575,10 +575,18 @@ onMounted(async () => {
           <div
             v-for="i in 3"
             :key="`pair-${i}`"
-            class="pair-card rounded-xl p-4 border-2 transition-all"
+            class="pair-card rounded-xl p-4 border transition-all"
             :class="getPairedModdedSlot(i) !== null
-              ? 'border-primary-theme bg-primary-10-theme'
-              : 'border-c-default bg-c-secondary'"
+              ? 'border-primary-theme'
+              : 'border-c-default'"
+            :style="{
+              backgroundColor: getPairedModdedSlot(i) !== null
+                ? 'color-mix(in srgb, var(--primary-color) 12%, var(--glass-surface-bg))'
+                : 'var(--glass-surface-bg)',
+              backdropFilter: 'blur(var(--glass-surface-blur))',
+              WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+              boxShadow: 'var(--shadow-glass-surface)',
+            }"
           >
             <div class="flex items-center gap-4">
               <div class="flex items-center gap-3 flex-1">
@@ -605,7 +613,7 @@ onMounted(async () => {
               <div class="flex items-center gap-3 flex-1 justify-end">
                 <div
                   class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  :class="getPairedModdedSlot(i) !== null ? 'bg-primary-20-theme' : 'bg-c-secondary'"
+                  :class="getPairedModdedSlot(i) !== null ? 'bg-primary-20-theme' : 'bg-c-secondary/50'"
                 >
                   <span
                     class="text-sm font-bold"
@@ -640,7 +648,7 @@ onMounted(async () => {
       </NCard>
 
       <!-- Steam 云存档 -->
-      <NCard size="small" class="mt-4">
+      <NCard size="small" class="save-card-glass mt-4">
         <template #header>
           <div class="flex items-center gap-2">
             <NIcon :size="16" :color="'var(--primary-color)'"><Cloud /></NIcon>
@@ -942,8 +950,10 @@ onMounted(async () => {
 
 <style scoped>
 .save-card-glass {
-  --n-border-color: color-mix(in srgb, var(--primary-color) 10%, var(--color-border)) !important;
-  background-color: var(--glass-bg) !important;
-  backdrop-filter: blur(var(--glass-blur));
+  --n-border-color: var(--glass-surface-border) !important;
+  background-color: var(--glass-surface-bg) !important;
+  backdrop-filter: blur(var(--glass-surface-blur));
+  -webkit-backdrop-filter: blur(var(--glass-surface-blur));
+  box-shadow: var(--shadow-glass-surface) !important;
 }
 </style>

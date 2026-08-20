@@ -593,11 +593,7 @@ watch(presetAppliedTick, () => {
       <Transition name="filter-dropdown">
         <div
           v-if="showFilterPanel"
-          class="absolute right-0 top-full mt-1 z-50 w-64 p-3 rounded-xl border shadow-lg backdrop-blur-xl"
-          :style="{
-            backgroundColor: 'color-mix(in srgb, var(--color-bg-primary) 95%, transparent)',
-            borderColor: 'var(--color-border)',
-          }"
+          class="glass-floating absolute right-0 top-full mt-1 z-50 w-64 p-3 rounded-xl"
         >
           <div class="flex flex-col gap-3">
             <!-- 显示 -->

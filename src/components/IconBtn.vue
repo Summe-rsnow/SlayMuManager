@@ -12,7 +12,7 @@ const emit = defineEmits<{ click: [] }>()
 </script>
 
 <template>
-  <FloatingTip :text="tip" mode="tooltip">
+  <FloatingTip :text="tip">
     <slot name="trigger" :icon="icon" :disabled="disabled" :type="type">
       <NButton text size="tiny" :disabled="disabled" :type="type ?? 'default'" class="transition-transform duration-150 active:scale-90" @click="emit('click')">
         <template #icon><NIcon :size="14"><component :is="icon" /></NIcon></template>

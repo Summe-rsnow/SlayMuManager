@@ -113,14 +113,12 @@ export const naiveThemeOverrides: Ref<GlobalThemeOverrides> = computed(() => {
       padding: "8px 12px",
     },
     Tooltip: {
-      borderRadius: "10px",
-      padding: "6px 10px",
+      borderRadius: "14px",
+      padding: "10px 14px",
       fontSize: "12px",
-      color: isDark.value ? "rgba(25, 25, 35, 0.9)" : "rgba(50, 50, 60, 0.9)",
-      textColor: isDark.value ? "#e5e7eb" : "#f3f4f6",
-      boxShadow: isDark.value
-        ? "0 8px 32px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.2)"
-        : "0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)",
+      color: "transparent",
+      textColor: isDark.value ? "#EDEDEF" : "#1f2937",
+      boxShadow: "none",
     },
     Tabs: {
       tabGap: "24px",

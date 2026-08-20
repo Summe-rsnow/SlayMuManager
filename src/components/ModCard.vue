@@ -42,12 +42,13 @@ function saveNote(modId: string) {
   setNote(modId, noteDraft.value)
 }
 
-// --- 动态卡片样式（暗色模式适配）---
+// --- 动态卡片样式（Level 1: Surface 玻璃质感）---
 const cardStyle = computed(() => ({
-  backgroundColor: "var(--color-bg-secondary)",
-  borderColor: "var(--color-border)",
-  borderLeftColor: props.enabled ? "var(--primary-color)" : "var(--color-text-muted)",
-  boxShadow: "var(--shadow-card)",
+  backgroundColor: "var(--glass-surface-bg)",
+  backdropFilter: "blur(var(--glass-surface-blur))",
+  WebkitBackdropFilter: "blur(var(--glass-surface-blur))",
+  borderColor: "var(--glass-surface-border)",
+  boxShadow: "var(--shadow-glass-surface)",
 }))
 
 const copied = ref(false)
@@ -64,7 +65,7 @@ async function copyModId() {
 
 <template>
   <div
-    class="group mod-card flex items-center justify-between p-3.5 rounded-xl border border-l-[4px] transition-all duration-200 hover:-translate-y-1"
+    class="group mod-card flex items-center justify-between p-3.5 rounded-xl border transition-all duration-200 hover:-translate-y-1"
     :style="cardStyle"
     :class="[{ 'pointer-events-none opacity-60': busy }]"
   >
@@ -191,8 +192,12 @@ async function copyModId() {
 </template>
 
 <style scoped>
+.mod-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
 .mod-card:hover {
-  box-shadow: var(--shadow-glow) !important;
-  border-color: color-mix(in srgb, var(--primary-color) 30%, var(--color-border)) !important;
+  background-color: var(--glass-surface-bg-hover) !important;
+  box-shadow: var(--shadow-card-hover), var(--shadow-glow) !important;
+  border-color: color-mix(in srgb, var(--primary-color) 35%, var(--glass-surface-border)) !important;
 }
 </style>
