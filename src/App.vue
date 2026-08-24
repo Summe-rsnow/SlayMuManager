@@ -15,7 +15,7 @@ import {
 } from "naive-ui"
 import { Minus, Square, X, PackageOpen } from "@lucide/vue"
 import { currentLocale } from "./i18n"
-import { naiveTheme, naiveThemeOverrides } from "./theme"
+import { naiveTheme, naiveThemeOverrides, effectiveIsDark } from "./theme"
 import { minimizeWindow, toggleMaximizeWindow, closeWindow } from "./utils/window"
 import { useStorage } from "./composables/useStorage"
 import { useAppUpdateCheck } from "./composables/useAppUpdateCheck"
@@ -24,11 +24,21 @@ import { version as APP_VERSION } from "@/../package.json"
 import SideNav from "./components/SideNav.vue"
 import AppDialog from "./components/AppDialog.vue"
 import { useRoute, useRouter } from "vue-router"
+import { useBackgroundStore } from "@/stores/useBackgroundStore"
+import { storeToRefs } from "pinia"
+import { onMounted } from "vue"
 
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const defaultPage = useStorage<string>("slaymgr:default-page", "")
+
+const bgStore = useBackgroundStore()
+const { customBgUrl, customBgBlur, customBgDim } = storeToRefs(bgStore)
+
+onMounted(() => {
+  bgStore.loadCustomBackground()
+})
 
 // 自动更新检查
 const {
@@ -105,12 +115,35 @@ const close = closeWindow
           <div
             class="h-screen overflow-hidden relative"
             :style="{
-              background: 'var(--app-bg-gradient)',
+              background: customBgUrl ? 'var(--color-bg-primary)' : 'var(--app-bg-gradient)',
               color: 'var(--color-text-primary)',
             }"
           >
-            <!-- 环境光动画背景（置于根容器内底层，为全屏毛玻璃提供持续折射光） -->
-            <div class="ambient-bg"><span></span></div>
+            <!-- 自定义背景层 -->
+            <div
+              v-if="customBgUrl"
+              class="custom-bg-container absolute inset-0 pointer-events-none z-0 overflow-hidden"
+            >
+              <div
+                class="custom-bg-image absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-300"
+                :style="{
+                  backgroundImage: `url(${customBgUrl})`,
+                  filter: `blur(${customBgBlur}px)`,
+                  transform: customBgBlur > 0 ? 'scale(1.08)' : 'none',
+                }"
+              />
+              <div
+                class="absolute inset-0 transition-opacity duration-300"
+                :style="{
+                  backgroundColor: effectiveIsDark
+                    ? `rgba(7, 7, 13, ${customBgDim / 100})`
+                    : `rgba(255, 255, 255, ${customBgDim / 100})`,
+                }"
+              />
+            </div>
+
+            <!-- 环境光动画背景（仅在未设置自定义壁纸时开启，保持极致纯净与性能） -->
+            <div v-if="!customBgUrl" class="ambient-bg"><span></span></div>
             <!-- 内容层（全高，标题栏叠加在上方） -->
             <div class="flex h-full pt-12 box-border">
               <SideNav />
@@ -238,53 +271,5 @@ const close = closeWindow
 <style scoped>
 .titlebar-btn:hover {
   background-color: color-mix(in srgb, var(--color-text-primary) 10%, transparent) !important;
-}
-</style>
-
-<style>
-.n-popover.n-tooltip,
-.n-tooltip {
-  max-width: 400px;
-  max-height: 280px;
-  overflow-y: auto;
-  word-break: break-word;
-  line-height: 1.5;
-  padding: 10px 14px !important;
-
-  /* Level 3: Floating 浮动气泡与提示框 */
-  background: var(--glass-floating-bg) !important;
-  backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate, 1.4));
-  -webkit-backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate, 1.4));
-  border: var(--glass-floating-border) !important;
-  border-radius: var(--glass-floating-radius) !important;
-  box-shadow: var(--shadow-glass-floating) !important;
-
-  /* 完全隐藏滚动条 */
-  scrollbar-width: none;
-}
-.n-popover.n-tooltip::-webkit-scrollbar,
-.n-tooltip::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-.n-popover.n-tooltip::-webkit-scrollbar-track,
-.n-tooltip::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* 隐藏底部三角形箭头 */
-.n-popover.n-tooltip .n-popover-arrow-wrapper,
-.n-popover.n-tooltip .n-popover-arrow,
-.n-tooltip .n-popover-arrow-wrapper,
-.n-tooltip .n-popover-arrow {
-  display: none !important;
-}
-
-.n-popover.n-tooltip .n-popover__content,
-.n-tooltip .n-popover__content {
-  font-size: 12px;
-  white-space: pre-wrap;
-  color: var(--color-text-primary) !important;
 }
 </style>

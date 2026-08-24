@@ -333,6 +333,55 @@ html, body {
 }
 
 /* ============================================================
+   Naive UI 浮动气泡与提示框全局毛玻璃化 (Tooltip / Popover / Dropdown)
+   ============================================================ */
+
+.n-popover:not(.n-popover--raw),
+.n-tooltip,
+.n-popover-shared,
+.n-dropdown-menu,
+.n-select-menu {
+  -webkit-backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate)) !important;
+  backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate)) !important;
+  background-color: var(--glass-floating-bg) !important;
+  background: var(--glass-floating-bg) !important;
+  border: var(--glass-floating-border) !important;
+  border-radius: var(--glass-floating-radius) !important;
+  box-shadow: var(--shadow-glass-floating) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.n-popover.n-tooltip,
+.n-tooltip {
+  max-width: 420px;
+  max-height: 280px;
+  overflow-y: auto;
+  word-break: break-word;
+  line-height: 1.5;
+  padding: 10px 14px !important;
+  scrollbar-width: none;
+}
+
+.n-popover.n-tooltip::-webkit-scrollbar,
+.n-tooltip::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.n-popover-arrow-wrapper,
+.n-popover-arrow {
+  display: none !important;
+}
+
+.n-popover__content,
+.n-tooltip .n-popover__content {
+  font-size: 12px;
+  white-space: pre-wrap;
+  color: var(--color-text-primary) !important;
+}
+
+/* ============================================================
    基于 CSS 变量的主题辅助类（替代 UnoCSS 静态 primary）
    ============================================================ */
 

@@ -111,6 +111,8 @@ export const naiveThemeOverrides: Ref<GlobalThemeOverrides> = computed(() => {
     Popover: {
       borderRadius: "14px",
       padding: "8px 12px",
+      color: "transparent",
+      boxShadow: "none",
     },
     Tooltip: {
       borderRadius: "14px",

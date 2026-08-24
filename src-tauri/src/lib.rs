@@ -124,6 +124,10 @@ pub fn run() {
             app::commands::list_activity_logs,
             // 5.12 翻译
             app::commands::translate_text,
+            // 5.13 自定义背景
+            app::commands::pick_custom_background,
+            app::commands::get_custom_background,
+            app::commands::clear_custom_background,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

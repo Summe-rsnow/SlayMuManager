@@ -1742,3 +1742,124 @@ pub fn translate_text(text: String) -> Result<String, String> {
 
     Ok(translated.to_string())
 }
+
+// --- 自定义背景壁纸管理 ---
+
+fn bg_dir() -> std::path::PathBuf {
+    dirs_next::data_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("slaymumanager")
+}
+
+const BASE64_ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+fn base64_encode(data: &[u8]) -> String {
+    let mut result = String::with_capacity((data.len() + 2) / 3 * 4);
+    for chunk in data.chunks(3) {
+        let b0 = chunk[0];
+        let b1 = if chunk.len() > 1 { chunk[1] } else { 0 };
+        let b2 = if chunk.len() > 2 { chunk[2] } else { 0 };
+        result.push(BASE64_ALPHABET[(b0 >> 2) as usize] as char);
+        result.push(BASE64_ALPHABET[(((b0 & 3) << 4) | (b1 >> 4)) as usize] as char);
+        if chunk.len() > 1 {
+            result.push(BASE64_ALPHABET[(((b1 & 15) << 2) | (b2 >> 6)) as usize] as char);
+        } else {
+            result.push('=');
+        }
+        if chunk.len() > 2 {
+            result.push(BASE64_ALPHABET[(b2 & 63) as usize] as char);
+        } else {
+            result.push('=');
+        }
+    }
+    result
+}
+
+fn file_to_data_url(path: &std::path::Path) -> Result<String, String> {
+    let ext = path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("png")
+        .to_lowercase();
+    let mime = match ext.as_str() {
+        "jpg" | "jpeg" => "image/jpeg",
+        "png" => "image/png",
+        "webp" => "image/webp",
+        "gif" => "image/gif",
+        "bmp" => "image/bmp",
+        "avif" => "image/avif",
+        _ => "image/png",
+    };
+    let bytes = std::fs::read(path).map_err(|e| format!("读取背景图片失败: {}", e))?;
+    let encoded = base64_encode(&bytes);
+    Ok(format!("data:{};base64,{}", mime, encoded))
+}
+
+#[tauri::command]
+pub async fn pick_custom_background() -> Result<Option<String>, String> {
+    let file = rfd::AsyncFileDialog::new()
+        .add_filter("图片文件", &["png", "jpg", "jpeg", "webp", "bmp", "gif", "avif"])
+        .pick_file()
+        .await;
+
+    let handle = match file {
+        Some(h) => h,
+        None => return Ok(None),
+    };
+
+    let src_path = handle.path();
+    let ext = src_path
+        .extension()
+        .and_then(|s| s.to_str())
+        .unwrap_or("png")
+        .to_lowercase();
+
+    let target_dir = bg_dir();
+    let _ = std::fs::create_dir_all(&target_dir);
+
+    // 清理旧背景文件
+    if let Ok(entries) = std::fs::read_dir(&target_dir) {
+        for entry in entries.flatten() {
+            if let Some(name) = entry.file_name().to_str() {
+                if name.starts_with("custom_bg.") {
+                    let _ = std::fs::remove_file(entry.path());
+                }
+            }
+        }
+    }
+
+    let target_path = target_dir.join(format!("custom_bg.{}", ext));
+    std::fs::copy(src_path, &target_path).map_err(|e| format!("保存背景图片失败: {}", e))?;
+
+    let data_url = file_to_data_url(&target_path)?;
+    Ok(Some(data_url))
+}
+
+#[tauri::command]
+pub fn get_custom_background() -> Result<Option<String>, String> {
+    let target_dir = bg_dir();
+    if let Ok(entries) = std::fs::read_dir(&target_dir) {
+        for entry in entries.flatten() {
+            if let Some(name) = entry.file_name().to_str() {
+                if name.starts_with("custom_bg.") {
+                    return file_to_data_url(&entry.path()).map(Some);
+                }
+            }
+        }
+    }
+    Ok(None)
+}
+
+#[tauri::command]
+pub fn clear_custom_background() -> Result<(), String> {
+    let target_dir = bg_dir();
+    if let Ok(entries) = std::fs::read_dir(&target_dir) {
+        for entry in entries.flatten() {
+            if let Some(name) = entry.file_name().to_str() {
+                if name.starts_with("custom_bg.") {
+                    let _ = std::fs::remove_file(entry.path());
+                }
+            }
+        }
+    }
+    Ok(())
+}

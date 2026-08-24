@@ -25,6 +25,7 @@ const slots = useSlots()
   <!-- 1. 自定义触发元素模式（包裹任意按钮、开关等） -->
   <NTooltip
     v-if="slots.default"
+    class="glass-floating"
     trigger="hover"
     :placement="placement as any"
     :style="width ? { maxWidth: `${width}px` } : undefined"
@@ -40,6 +41,7 @@ const slots = useSlots()
   <!-- 2. 截断文本模式（用于发现页/预设描述文本 hover 查看全文） -->
   <div v-else-if="truncated" class="truncated-wrapper">
     <NTooltip
+      class="glass-floating"
       trigger="hover"
       :placement="placement as any"
       :style="width ? { maxWidth: `${width}px` } : undefined"
@@ -54,6 +56,7 @@ const slots = useSlots()
   <!-- 3. 带标签或独立问号提示模式 -->
   <NTooltip
     v-else
+    class="glass-floating"
     trigger="hover"
     :placement="placement as any"
     :style="width ? { maxWidth: `${width}px` } : undefined"

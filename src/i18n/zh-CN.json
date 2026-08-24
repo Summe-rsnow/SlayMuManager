@@ -269,7 +269,13 @@
         "cyan": "青色",
         "pink": "粉色",
         "yellow": "黄色"
-      }
+      },
+      "customBackground": "自定义壁纸",
+      "chooseBackground": "选择图片",
+      "changeBackground": "更换壁纸",
+      "clearBackground": "恢复默认",
+      "backgroundBlur": "壁纸模糊度",
+      "backgroundDim": "壁纸暗度"
     },
     "backup": {
       "title": "备份",

@@ -269,7 +269,13 @@
         "cyan": "Cyan",
         "pink": "Pink",
         "yellow": "Yellow"
-      }
+      },
+      "customBackground": "Custom Wallpaper",
+      "chooseBackground": "Select Image",
+      "changeBackground": "Change Wallpaper",
+      "clearBackground": "Reset Default",
+      "backgroundBlur": "Wallpaper Blur",
+      "backgroundDim": "Wallpaper Dim"
     },
     "backup": {
       "title": "Backup",
