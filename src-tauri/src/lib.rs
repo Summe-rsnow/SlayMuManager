@@ -174,31 +174,26 @@ fn start_mods_watcher(app_handle: tauri::AppHandle) {
         let app_handle = app_handle.clone();
         let mut last_emit = std::time::Instant::now();
 
-        loop {
-            match rx.recv() {
-                Ok(Ok(event)) => {
-                    // 只响应实质变更（忽略 access 和无关事件）
-                    let is_relevant = matches!(
-                        event.kind,
-                        EventKind::Create(_)
-                            | EventKind::Modify(_)
-                            | EventKind::Remove(_)
-                    );
-                    if !is_relevant {
-                        continue;
-                    }
-
-                    // 防抖：500ms 内只发一次
-                    let now = std::time::Instant::now();
-                    if now.duration_since(last_emit) < Duration::from_millis(500) {
-                        continue;
-                    }
-                    last_emit = now;
-
-                    let _ = app_handle.emit("slaymgr:mods-changed", ());
-                }
-                _ => break,
+        while let Ok(Ok(event)) = rx.recv() {
+            // 只响应实质变更（忽略 access 和无关事件）
+            let is_relevant = matches!(
+                event.kind,
+                EventKind::Create(_)
+                    | EventKind::Modify(_)
+                    | EventKind::Remove(_)
+            );
+            if !is_relevant {
+                continue;
             }
+
+            // 防抖：500ms 内只发一次
+            let now = std::time::Instant::now();
+            if now.duration_since(last_emit) < Duration::from_millis(500) {
+                continue;
+            }
+            last_emit = now;
+
+            let _ = app_handle.emit("slaymgr:mods-changed", ());
         }
     });
 }

@@ -12,35 +12,85 @@ html, body {
 }
 
 /* ============================================================
-   自定义滚动条 — 极薄主题色 scrollbar
+   自定义滚动条 — 极薄主题色 scrollbar & 彻底移除上下三角箭头
    ============================================================ */
 
-:root {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--primary-color) 25%, transparent) transparent;
+/* 1. 禁用标准 scrollbar-color 避免触发 Windows 原生带三角箭头的滚动条控件 */
+* {
+  scrollbar-width: auto;
 }
 
-/* 全局隐藏所有三角箭头 + 极薄 WebKit 滚动条（对 overlay scrollbar 生效） */
+/* 2. WebKit 滚动条基础尺寸 */
+*::-webkit-scrollbar,
 ::-webkit-scrollbar {
-  width: 4px !important;
-  height: 4px !important;
+  width: 5px !important;
+  height: 5px !important;
+  background-color: transparent !important;
 }
-::-webkit-scrollbar-button {
+
+/* 3. 彻底隐藏与禁用所有三角箭头按钮 (包括所有状态与伪类) */
+*::-webkit-scrollbar-button,
+::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button:single-button,
+::-webkit-scrollbar-button:single-button,
+*::-webkit-scrollbar-button:double-button,
+::-webkit-scrollbar-button:double-button,
+*::-webkit-scrollbar-button:vertical:decrement,
+::-webkit-scrollbar-button:vertical:decrement,
+*::-webkit-scrollbar-button:vertical:increment,
+::-webkit-scrollbar-button:vertical:increment,
+*::-webkit-scrollbar-button:horizontal:decrement,
+::-webkit-scrollbar-button:horizontal:decrement,
+*::-webkit-scrollbar-button:horizontal:increment,
+::-webkit-scrollbar-button:horizontal:increment,
+*::-webkit-scrollbar-button:start:decrement,
+::-webkit-scrollbar-button:start:decrement,
+*::-webkit-scrollbar-button:end:increment,
+::-webkit-scrollbar-button:end:increment,
+*::-webkit-scrollbar-button:start:increment,
+::-webkit-scrollbar-button:start:increment,
+*::-webkit-scrollbar-button:end:decrement,
+::-webkit-scrollbar-button:end:decrement {
   display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  background: none !important;
-}
-::-webkit-scrollbar-track {
+  width: 0px !important;
+  height: 0px !important;
+  max-width: 0px !important;
+  max-height: 0px !important;
   background: transparent !important;
+  border: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
+
+/* 4. 滚动条轨道 */
+*::-webkit-scrollbar-track,
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track-piece,
+::-webkit-scrollbar-track-piece {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* 5. 滚动条角落 */
+*::-webkit-scrollbar-corner,
+::-webkit-scrollbar-corner {
+  background: transparent !important;
+  display: none !important;
+}
+
+/* 6. 滚动条滑块 */
+*::-webkit-scrollbar-thumb,
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--primary-color) 20%, transparent) !important;
-  border-radius: 3px !important;
-  transition: background 0.2s ease;
+  background-color: color-mix(in srgb, var(--primary-color) 25%, transparent) !important;
+  border-radius: 9999px !important;
+  border: none !important;
+  transition: background-color 0.2s ease;
 }
+
+*::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--primary-color) 40%, transparent) !important;
+  background-color: color-mix(in srgb, var(--primary-color) 50%, transparent) !important;
 }
 
 /* 裁剪隐藏原生滚动条并为左侧/四周提供阴影弥散缓冲区（防止 overflow-y:auto 将左侧阴影刀切截断） */

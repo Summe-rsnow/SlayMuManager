@@ -33,7 +33,7 @@ pub fn create_profile(
     };
 
     profiles.push(profile.clone());
-    profile_repo::save_profiles(&profiles).map_err(|e| AppError::Other(e))?;
+    profile_repo::save_profiles(&profiles).map_err(AppError::Other)?;
 
     Ok(profile)
 }
@@ -68,7 +68,7 @@ pub fn update_profile(
     };
 
     profiles[idx] = updated.clone();
-    profile_repo::save_profiles(&profiles).map_err(|e| AppError::Other(e))?;
+    profile_repo::save_profiles(&profiles).map_err(AppError::Other)?;
 
     Ok(updated)
 }
@@ -82,12 +82,12 @@ pub fn delete_profile(id: &str, locale: &str) -> Result<(), AppError> {
         .ok_or_else(|| AppError::Other(format!("预设不存在: {}", id)))?;
 
     profiles.remove(idx);
-    profile_repo::save_profiles(&profiles).map_err(|e| AppError::Other(e))?;
+    profile_repo::save_profiles(&profiles).map_err(AppError::Other)?;
 
     // 如果删除后为空，创建一个默认预设
     if profiles.is_empty() {
         let default = profile_repo::create_default_profile(locale);
-        profile_repo::save_profiles(&[default.clone()]).map_err(|e| AppError::Other(e))?;
+        profile_repo::save_profiles(std::slice::from_ref(&default)).map_err(AppError::Other)?;
     }
 
     Ok(())
@@ -403,7 +403,7 @@ pub fn import_bundle(
         } else {
             profiles.push(new_profile.clone());
         }
-        profile_repo::save_profiles(&profiles).map_err(|e| AppError::Other(e))?;
+        profile_repo::save_profiles(&profiles).map_err(AppError::Other)?;
         return apply_profile(&new_profile.id, game_root, sync_pairs, backup_on_switch);
     }
 

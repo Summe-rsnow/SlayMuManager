@@ -95,7 +95,7 @@ fn scan_workshop_mods() -> Vec<InstalledMod> {
         }
     }
 
-    mods.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    mods.sort_by_key(|a| a.name.to_lowercase());
     mods
 }
 
@@ -108,11 +108,10 @@ fn find_manifest_recursive(dir: &Path) -> (Option<PathBuf>, Option<ModManifest>)
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.filter_map(|e| e.ok()) {
             let sub = entry.path();
-            if sub.is_dir() {
-                if let Some((p, m)) = ModManifest::find_in_dir(&sub) {
+            if sub.is_dir()
+                && let Some((p, m)) = ModManifest::find_in_dir(&sub) {
                     return (Some(p), Some(m));
                 }
-            }
         }
     }
     (None, None)
@@ -145,7 +144,7 @@ fn scan_mods_in_dir(dir: &Path, default_state: InstalledModState, source: &str) 
                 .unwrap_or((None, None));
 
         // 严格验证：4 个必需字段缺一不可
-        let is_valid = manifest.as_ref().map_or(false, |m: &ModManifest| m.is_valid());
+        let is_valid = manifest.as_ref().is_some_and(|m: &ModManifest| m.is_valid());
 
         let id = manifest
             .as_ref()
@@ -187,7 +186,7 @@ fn scan_mods_in_dir(dir: &Path, default_state: InstalledModState, source: &str) 
     }
 
     // 按名称排序
-    mods.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    mods.sort_by_key(|a| a.name.to_lowercase());
     mods
 }
 
@@ -225,13 +224,12 @@ fn toggle_mod(
     // 检查是否为创意工坊 mod，工坊 mod 不支持通过管理器启用/禁用
     {
         let enabled = scan_enabled_mods(game_root);
-        if let Some(m) = enabled.iter().find(|m| m.id == mod_id) {
-            if m.source == "workshop" {
+        if let Some(m) = enabled.iter().find(|m| m.id == mod_id)
+            && m.source == "workshop" {
                 return Err(AppError::Other(
                     "创意工坊 Mod 无法通过管理器切换，请在 Steam 创意工坊中取消订阅以禁用".to_string(),
                 ));
             }
-        }
     }
 
     let plugins_dir = game_root.join("mods");
@@ -322,7 +320,7 @@ fn toggle_mod(
     let (saves_synced, backups_created) = if had_pairs && path_switched {
         match super::save_service::sync_saves(game_root, sync_pairs) {
             Ok(result) => (
-                result.synced_count as u32,
+                result.synced_count,
                 result.details.len() as u32,
             ),
             Err(_e) => (0, 0),
@@ -351,19 +349,17 @@ fn toggle_mod(
 fn has_any_active_mods(game_root: &Path) -> bool {
     // 本地 mods/ 内有子目录
     let local_dir = game_root.join("mods");
-    if let Ok(entries) = std::fs::read_dir(&local_dir) {
-        if entries.filter_map(|e| e.ok()).any(|e| e.path().is_dir()) {
+    if let Ok(entries) = std::fs::read_dir(&local_dir)
+        && entries.filter_map(|e| e.ok()).any(|e| e.path().is_dir()) {
             return true;
         }
-    }
     // 工坊目录有任何子文件夹
     let workshop_dirs = crate::integrations::steam::get_workshop_dirs();
     for wd in &workshop_dirs {
-        if let Ok(entries) = std::fs::read_dir(wd) {
-            if entries.filter_map(|e| e.ok()).any(|e| e.path().is_dir()) {
+        if let Ok(entries) = std::fs::read_dir(wd)
+            && entries.filter_map(|e| e.ok()).any(|e| e.path().is_dir()) {
                 return true;
             }
-        }
     }
     false
 }
@@ -400,11 +396,10 @@ pub fn find_mod_folder(base_dir: &Path, mod_id: &str) -> Result<PathBuf, AppErro
         }
 
         // 按 manifest 中的 id 匹配（兼容多种 manifest 文件名）
-        if let Some((_, manifest)) = ModManifest::find_in_dir(&path) {
-            if manifest.id.as_deref() == Some(mod_id) {
+        if let Some((_, manifest)) = ModManifest::find_in_dir(&path)
+            && manifest.id.as_deref() == Some(mod_id) {
                 return Ok(path);
             }
-        }
 
         // 回退：按文件夹名匹配
         let folder_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
@@ -415,11 +410,10 @@ pub fn find_mod_folder(base_dir: &Path, mod_id: &str) -> Result<PathBuf, AppErro
         // 兼容 unknown: 前缀：扫描时对无 manifest id 的 Mod 会生成 "unknown:文件夹名" 的合成 ID，
         // 但当通过 find_mod_folder 反向查找时，文件夹名不包含 "unknown:" 前缀，导致匹配失败。
         // 因此如果 mod_id 以 "unknown:" 开头，去掉前缀后再与文件夹名比较。
-        if let Some(stripped) = mod_id.strip_prefix("unknown:") {
-            if folder_name == stripped {
+        if let Some(stripped) = mod_id.strip_prefix("unknown:")
+            && folder_name == stripped {
                 return Ok(path);
             }
-        }
     }
 
     Err(AppError::ModNotFound(mod_id.to_string()))
@@ -485,17 +479,12 @@ fn compute_hashes_recursive(
             let path = entry.path();
             if path.is_dir() {
                 compute_hashes_recursive(base, &path, out)?;
-            } else if path.is_file() {
-                if let Ok(rel) = path.strip_prefix(base) {
+            } else if path.is_file()
+                && let Ok(rel) = path.strip_prefix(base) {
                     let rel_str = rel.to_string_lossy().to_string();
-                    if !rel_str.is_empty() && !rel_str.starts_with('.') {
-                        match sha1_of_file(&path) {
-                            Ok(hash) => { out.insert(rel_str, hash); }
-                            Err(_) => {}
-                        }
-                    }
+                    if !rel_str.is_empty() && !rel_str.starts_with('.')
+                        && let Ok(hash) = sha1_of_file(&path) { out.insert(rel_str, hash); }
                 }
-            }
         }
     }
     Ok(())

@@ -296,12 +296,11 @@ fn build_client_inner(api_key: &str, proxy_url: Option<&str>) -> Result<reqwest:
         .connect_timeout(CONNECT_TIMEOUT)
         .timeout(REQUEST_TIMEOUT);
 
-    if let Some(proxy) = proxy_url {
-        if !proxy.is_empty() {
+    if let Some(proxy) = proxy_url
+        && !proxy.is_empty() {
             builder = builder
                 .proxy(reqwest::Proxy::all(proxy).map_err(|e| AppError::Other(format!("代理配置错误: {}", e)))?);
         }
-    }
 
     builder
         .build()

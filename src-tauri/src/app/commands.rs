@@ -193,7 +193,7 @@ pub fn is_game_running() -> bool {
             .args(["/FI", "IMAGENAME eq SlayTheSpire2.exe", "/NH"])
             .output()
             .ok()
-            .map_or(false, |o| {
+            .is_some_and(|o| {
                 let out = String::from_utf8_lossy(&o.stdout);
                 out.contains("SlayTheSpire2.exe")
             })
@@ -361,8 +361,8 @@ fn add_mod_to_active_profile(mod_id: &str, active_name: &str) {
         return;
     }
     let profiles = profile_service::list_profiles();
-    if let Some(active_profile) = profiles.iter().find(|p| p.name == active_name) {
-        if !active_profile.builtin && !active_profile.mod_ids.contains(&mod_id.to_string()) {
+    if let Some(active_profile) = profiles.iter().find(|p| p.name == active_name)
+        && !active_profile.builtin && !active_profile.mod_ids.contains(&mod_id.to_string()) {
             let mut new_ids = active_profile.mod_ids.clone();
             new_ids.push(mod_id.to_string());
             let _ = profile_service::update_profile(
@@ -372,7 +372,6 @@ fn add_mod_to_active_profile(mod_id: &str, active_name: &str) {
                 new_ids,
             );
         }
-    }
 }
 
 /// 从激活的非内置预设移除 mod_id
@@ -381,8 +380,8 @@ fn remove_mod_from_active_profile(mod_id: &str, active_name: &str) {
         return;
     }
     let profiles = profile_service::list_profiles();
-    if let Some(active_profile) = profiles.iter().find(|p| p.name == active_name) {
-        if !active_profile.builtin && active_profile.mod_ids.contains(&mod_id.to_string()) {
+    if let Some(active_profile) = profiles.iter().find(|p| p.name == active_name)
+        && !active_profile.builtin && active_profile.mod_ids.contains(&mod_id.to_string()) {
             let new_ids: Vec<String> = active_profile
                 .mod_ids
                 .iter()
@@ -396,7 +395,6 @@ fn remove_mod_from_active_profile(mod_id: &str, active_name: &str) {
                 new_ids,
             );
         }
-    }
 }
 
 /// 内部辅助：提取 enable_mod / disable_mod 的公共逻辑
@@ -467,8 +465,8 @@ pub fn enable_mod(mod_id: String, state: State<AppState>) -> Result<ModToggleRes
     toggle_mod_internal(
         &state,
         &mod_id,
-        |root, id, sync, backup| mod_service::enable_mod(root, id, sync, backup),
-        |id, name| add_mod_to_active_profile(id, name),
+        mod_service::enable_mod,
+        add_mod_to_active_profile,
         "启用",
     )
 }
@@ -478,8 +476,8 @@ pub fn disable_mod(mod_id: String, state: State<AppState>) -> Result<ModToggleRe
     toggle_mod_internal(
         &state,
         &mod_id,
-        |root, id, sync, backup| mod_service::disable_mod(root, id, sync, backup),
-        |id, name| remove_mod_from_active_profile(id, name),
+        mod_service::disable_mod,
+        remove_mod_from_active_profile,
         "禁用",
     )
 }
@@ -1496,11 +1494,10 @@ pub fn check_mod_updates(state: State<AppState>) -> Result<Vec<ModUpdateInfo>, S
 
 #[tauri::command]
 pub fn get_cached_mod_updates(state: State<AppState>) -> Vec<ModUpdateInfo> {
-    if let Ok(cache) = state.mod_updates_cache.read() {
-        if let Some(ref c) = *cache {
+    if let Ok(cache) = state.mod_updates_cache.read()
+        && let Some(ref c) = *cache {
             return c.results.clone();
         }
-    }
     Vec::new()
 }
 
@@ -1753,7 +1750,7 @@ fn bg_dir() -> std::path::PathBuf {
 
 const BASE64_ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 fn base64_encode(data: &[u8]) -> String {
-    let mut result = String::with_capacity((data.len() + 2) / 3 * 4);
+    let mut result = String::with_capacity(data.len().div_ceil(3) * 4);
     for chunk in data.chunks(3) {
         let b0 = chunk[0];
         let b1 = if chunk.len() > 1 { chunk[1] } else { 0 };
@@ -1819,11 +1816,10 @@ pub async fn pick_custom_background() -> Result<Option<String>, String> {
     // 清理旧背景文件
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
         for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str() {
-                if name.starts_with("custom_bg.") {
+            if let Some(name) = entry.file_name().to_str()
+                && name.starts_with("custom_bg.") {
                     let _ = std::fs::remove_file(entry.path());
                 }
-            }
         }
     }
 
@@ -1839,11 +1835,10 @@ pub fn get_custom_background() -> Result<Option<String>, String> {
     let target_dir = bg_dir();
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
         for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str() {
-                if name.starts_with("custom_bg.") {
+            if let Some(name) = entry.file_name().to_str()
+                && name.starts_with("custom_bg.") {
                     return file_to_data_url(&entry.path()).map(Some);
                 }
-            }
         }
     }
     Ok(None)
@@ -1854,11 +1849,10 @@ pub fn clear_custom_background() -> Result<(), String> {
     let target_dir = bg_dir();
     if let Ok(entries) = std::fs::read_dir(&target_dir) {
         for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str() {
-                if name.starts_with("custom_bg.") {
+            if let Some(name) = entry.file_name().to_str()
+                && name.starts_with("custom_bg.") {
                     let _ = std::fs::remove_file(entry.path());
                 }
-            }
         }
     }
     Ok(())

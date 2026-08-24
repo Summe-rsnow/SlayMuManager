@@ -2,16 +2,21 @@
 import { ref } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NButton } from "naive-ui"
+import { NButton, NIcon } from "naive-ui"
+import { Sparkles } from "@lucide/vue"
 import { version as APP_VERSION } from "@/../package.json"
 import SettingsSection from "./SettingsSection.vue"
 import SettingsRow from "./SettingsRow.vue"
+import ReleaseNotesDialog from "./ReleaseNotesDialog.vue"
+import { useReleaseNotes } from "@/composables/useReleaseNotes"
 
 const { t } = useI18n()
+const { showReleaseNotes, openReleaseNotes } = useReleaseNotes()
 
 const updateStatus = ref<"idle" | "checking" | "uptodate" | "available">("idle")
 const latestVersion = ref("")
 const updateUrl = ref("")
+
 function openUrl(url: string) {
   invoke("open_url_in_browser", { url })
 }
@@ -46,6 +51,20 @@ async function checkForUpdate() {
 
 <template>
   <SettingsSection :title="t('settings.about.title')">
+    <!-- 版本与更新记录 -->
+    <SettingsRow :label="t('settings.about.releaseNotes')">
+      <div class="flex items-center gap-3">
+        <span class="text-xs font-mono text-c-primary">v{{ APP_VERSION }}</span>
+        <NButton text size="tiny" class="text-primary-theme" @click="openReleaseNotes">
+          <template #icon>
+            <NIcon :size="14"><Sparkles /></NIcon>
+          </template>
+          {{ t("settings.about.viewReleaseNotes") }}
+        </NButton>
+      </div>
+    </SettingsRow>
+
+    <!-- Bilibili -->
     <SettingsRow>
       <template #label>
         <span class="text-sm flex items-center gap-2 text-c-primary">
@@ -60,6 +79,8 @@ async function checkForUpdate() {
         {{ t("settings.about.open") }}
       </NButton>
     </SettingsRow>
+
+    <!-- GitHub -->
     <SettingsRow>
       <template #label>
         <span class="text-sm flex items-center gap-2 text-c-primary">
@@ -74,6 +95,7 @@ async function checkForUpdate() {
         {{ t("settings.about.open") }}
       </NButton>
     </SettingsRow>
+
     <SettingsRow :label="t('settings.about.checkUpdate')">
       <NButton v-if="updateStatus === 'idle'" text size="tiny" class="text-primary-theme" @click="checkForUpdate">
         {{ t("settings.about.checkUpdate") }}
@@ -94,5 +116,7 @@ async function checkForUpdate() {
         </NButton>
       </div>
     </SettingsRow>
+
+    <ReleaseNotesDialog v-model:show="showReleaseNotes" />
   </SettingsSection>
 </template>

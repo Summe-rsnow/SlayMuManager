@@ -7,6 +7,7 @@ import { Languages } from "@lucide/vue"
 import { translateText } from "@/utils/translate"
 import { currentLocale } from "@/i18n"
 import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
+import FloatingTip from "./FloatingTip.vue"
 
 const props = defineProps<{
   text: string | null | undefined
@@ -45,9 +46,9 @@ function toggleTranslation() {
         <NIcon :size="12"><Languages /></NIcon>
         {{ showTranslation ? t("discover.showOriginal") : t("discover.translate") }}
       </button>
-      <p v-if="showTranslation" class="text-xs leading-relaxed w-full mt-0.5 text-c-secondary">
-        {{ translatedText }}
-      </p>
+      <div v-if="showTranslation" class="w-full mt-0.5">
+        <FloatingTip :text="translatedText" truncated />
+      </div>
     </template>
     <span v-else-if="translating" class="text-xs text-c-muted">{{ t("discover.translating") }}</span>
     <NPopover v-else trigger="hover" placement="top" :width="240" :disabled="!showTranslateQuotaTip">

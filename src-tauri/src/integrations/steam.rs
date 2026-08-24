@@ -14,11 +14,10 @@ pub fn account_id_to_steam_id64(account_id: u64) -> u64 {
 /// 获取当前活跃的 Steam AccountID（短号，用于 userdata 目录查找）
 pub fn get_active_steam_account_id() -> Option<String> {
     let hkcu = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER);
-    if let Ok(active) = hkcu.open_subkey("SOFTWARE\\Valve\\Steam\\ActiveProcess") {
-        if let Ok(user_id) = active.get_value::<u32, _>("ActiveUser") {
+    if let Ok(active) = hkcu.open_subkey("SOFTWARE\\Valve\\Steam\\ActiveProcess")
+        && let Ok(user_id) = active.get_value::<u32, _>("ActiveUser") {
             return Some(user_id.to_string());
         }
-    }
     None
 }
 
@@ -28,35 +27,32 @@ pub fn get_steam_install_path() -> Option<PathBuf> {
     let hklm = winreg::RegKey::predef(winreg::enums::HKEY_LOCAL_MACHINE);
 
     // 64-bit 注册表路径
-    if let Ok(steam_key) = hklm.open_subkey("SOFTWARE\\WOW6432Node\\Valve\\Steam") {
-        if let Ok(steam_path) = steam_key.get_value::<String, _>("InstallPath") {
+    if let Ok(steam_key) = hklm.open_subkey("SOFTWARE\\WOW6432Node\\Valve\\Steam")
+        && let Ok(steam_path) = steam_key.get_value::<String, _>("InstallPath") {
             let path = PathBuf::from(&steam_path);
             if path.exists() {
                 return Some(path);
             }
         }
-    }
 
     // 原生 64 位路径
-    if let Ok(steam_key) = hklm.open_subkey("SOFTWARE\\Valve\\Steam") {
-        if let Ok(steam_path) = steam_key.get_value::<String, _>("InstallPath") {
+    if let Ok(steam_key) = hklm.open_subkey("SOFTWARE\\Valve\\Steam")
+        && let Ok(steam_path) = steam_key.get_value::<String, _>("InstallPath") {
             let path = PathBuf::from(&steam_path);
             if path.exists() {
                 return Some(path);
             }
         }
-    }
 
     // HKCU 当前用户路径（兜底）
     let hkcu = winreg::RegKey::predef(winreg::enums::HKEY_CURRENT_USER);
-    if let Ok(steam_key) = hkcu.open_subkey("SOFTWARE\\Valve\\Steam") {
-        if let Ok(steam_path) = steam_key.get_value::<String, _>("SteamPath") {
+    if let Ok(steam_key) = hkcu.open_subkey("SOFTWARE\\Valve\\Steam")
+        && let Ok(steam_path) = steam_key.get_value::<String, _>("SteamPath") {
             let path = PathBuf::from(&steam_path);
             if path.exists() {
                 return Some(path);
             }
         }
-    }
 
     None
 }
@@ -122,13 +118,14 @@ fn get_steam_library_folders() -> Vec<(PathBuf, bool)> {
     }
 
     // 包含 STS2 的库排前面
-    entries.sort_by(|a, b| b.1.cmp(&a.1));
+    entries.sort_by_key(|b| std::cmp::Reverse(b.1));
     entries
 }
 
 /// 核心检测函数：三关检测游戏安装
 /// 1. Steam 默认路径（<Steam>/steamapps/common/Slay the Spire 2/）
 /// 2. Steam 库扫描（libraryfolders.vdf）
+///
 /// 返回 (路径, 来源标签)
 pub fn find_game_install() -> Vec<(PathBuf, String)> {
     let mut results: Vec<(PathBuf, String)> = Vec::new();
@@ -256,11 +253,10 @@ pub fn list_steam_users() -> Vec<String> {
             }
             if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
                 // 纯数字目录即为 Steam 用户（AccountID 至少 1 位）
-                if name.chars().all(|c| c.is_ascii_digit()) && !name.is_empty() {
-                    if !users.contains(&name.to_string()) {
+                if name.chars().all(|c| c.is_ascii_digit()) && !name.is_empty()
+                    && !users.contains(&name.to_string()) {
                         users.push(name.to_string());
                     }
-                }
             }
         }
     }

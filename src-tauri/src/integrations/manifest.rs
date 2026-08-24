@@ -23,8 +23,8 @@ pub struct ModManifest {
 impl ModManifest {
     /// 严格验证：id、name 非空，has_pck、has_dll 必须存在
     pub fn is_valid(&self) -> bool {
-        let has_id = self.id.as_ref().map_or(false, |s| !s.trim().is_empty());
-        let has_name = self.name.as_ref().map_or(false, |s| !s.trim().is_empty());
+        let has_id = self.id.as_ref().is_some_and(|s| !s.trim().is_empty());
+        let has_name = self.name.as_ref().is_some_and(|s| !s.trim().is_empty());
         let has_pck = self.has_pck.is_some();
         let has_dll = self.has_dll.is_some();
         has_id && has_name && has_pck && has_dll
@@ -83,11 +83,10 @@ impl ModManifest {
         if let Ok(entries) = std::fs::read_dir(mod_dir) {
             for entry in entries.filter_map(|e| e.ok()) {
                 let p = entry.path();
-                if p.is_file() && p.extension().map_or(false, |e| e == "json") {
-                    if let Some(m) = Self::from_file(&p) {
+                if p.is_file() && p.extension().is_some_and(|e| e == "json")
+                    && let Some(m) = Self::from_file(&p) {
                         return Some((p, m));
                     }
-                }
             }
         }
 

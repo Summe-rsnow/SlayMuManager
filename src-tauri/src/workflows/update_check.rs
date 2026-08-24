@@ -92,7 +92,7 @@ pub fn check_mod_updates(game_root: &Path) -> Result<Vec<ModUpdateInfo>, AppErro
         results.extend(batch.into_inner().unwrap());
     }
 
-    results.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    results.sort_by_key(|a| a.name.to_lowercase());
     Ok(results)
 }
 
@@ -176,10 +176,10 @@ fn compare_versions(local: &str, remote: &str) -> bool {
     let remote = remote.strip_prefix('v').or_else(|| remote.strip_prefix('V')).unwrap_or(remote);
 
     let local_parts: Vec<&str> = local
-        .split(|c| c == '.' || c == '-' || c == '+')
+        .split(['.', '-', '+'])
         .collect();
     let remote_parts: Vec<&str> = remote
-        .split(|c| c == '.' || c == '-' || c == '+')
+        .split(['.', '-', '+'])
         .collect();
 
     let max_len = local_parts.len().max(remote_parts.len());

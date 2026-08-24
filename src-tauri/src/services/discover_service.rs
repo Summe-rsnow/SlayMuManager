@@ -21,7 +21,7 @@ pub fn search_remote_mods(
         DEFAULT_GAME_SLUG,
         query,
         page.max(1),
-        page_size.max(1).min(100),
+        page_size.clamp(1, 100),
         sort_by,
         &api_key,
         settings.proxy_url.as_deref(),

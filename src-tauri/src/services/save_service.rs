@@ -110,23 +110,20 @@ fn build_save_slot(
     let mut file_count = 0u32;
     let mut last_modified: Option<String> = None;
 
-    if dir.is_dir() {
-        if let Ok(entries) = std::fs::read_dir(dir) {
+    if dir.is_dir()
+        && let Ok(entries) = std::fs::read_dir(dir) {
             for entry in entries.filter_map(|e| e.ok()) {
                 let path = entry.path();
                 if path.is_file() {
                     file_count += 1;
                 }
-                if let Ok(meta) = path.metadata() {
-                    if let Ok(mtime) = meta.modified() {
-                        if path.file_name().map_or(false, |n| n == "progress.save") {
+                if let Ok(meta) = path.metadata()
+                    && let Ok(mtime) = meta.modified()
+                        && path.file_name().is_some_and(|n| n == "progress.save") {
                             last_modified = Some(filetime_to_rfc3339(mtime));
                         }
-                    }
-                }
             }
         }
-    }
 
     SaveSlot {
         steam_user_id: steam_user_id.to_string(),
@@ -355,9 +352,9 @@ pub fn list_save_backups(
     let mut filtered: Vec<SaveBackupEntry> = all
         .into_iter()
         .filter(|e| {
-            steam_user_id.map_or(true, |uid| e.steam_user_id == uid)
-                && kind_filter.as_ref().map_or(true, |k| std::mem::discriminant(&e.kind) == std::mem::discriminant(k))
-                && slot_index_filter.map_or(true, |i| e.slot_index == i)
+            steam_user_id.is_none_or(|uid| e.steam_user_id == uid)
+                && kind_filter.as_ref().is_none_or(|k| std::mem::discriminant(&e.kind) == std::mem::discriminant(k))
+                && slot_index_filter.is_none_or(|i| e.slot_index == i)
         })
         .collect();
 
@@ -607,13 +604,11 @@ fn dir_last_modified(dir: &Path) -> Option<std::time::SystemTime> {
     let mut latest: Option<std::time::SystemTime> = None;
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.filter_map(|e| e.ok()) {
-            if let Ok(meta) = entry.metadata() {
-                if let Ok(mtime) = meta.modified() {
-                    if latest.map_or(true, |l| mtime > l) {
+            if let Ok(meta) = entry.metadata()
+                && let Ok(mtime) = meta.modified()
+                    && latest.is_none_or(|l| mtime > l) {
                         latest = Some(mtime);
                     }
-                }
-            }
         }
     }
     latest
@@ -659,7 +654,7 @@ fn incremental_sync_dir(from: &Path, to: &Path) -> Result<(), AppError> {
         to_files.remove(rel_path);
     }
 
-    for (_, extra_path) in &to_files {
+    for extra_path in to_files.values() {
         let _ = std::fs::remove_file(extra_path);
     }
 

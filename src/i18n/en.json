@@ -297,6 +297,8 @@
     },
     "about": {
       "title": "About",
+      "releaseNotes": "Version & Changelog",
+      "viewReleaseNotes": "Release Notes",
       "bilibili": "bilibili Homepage",
       "github": "GitHub Repository",
       "open": "Open",
@@ -584,6 +586,56 @@
       "importPreviewFailed": "Import preview failed: {e}",
       "importFailed": "Import failed: {e}",
       "readModsFailed": "Failed to read mod list: {e}"
+    }
+  },
+
+  "releaseNotes": {
+    "dialogTitle": "What's New",
+    "dialogSubtitle": "SlayMuManager Features & Changelog",
+    "highlights": "Highlights",
+    "tags": {
+      "major": "Major",
+      "feat": "Feature",
+      "perf": "Performance",
+      "ui": "UI",
+      "fix": "Fix",
+      "opt": "Optimized"
+    },
+    "v1_8_5": {
+      "title": "Discover Page Translation & Quality of Life Improvements",
+      "highlights": [
+        "Improved translation text formatting with line limits and hover popover",
+        "Optimized code and improved overall performance"
+      ],
+      "changes": [
+        "Added line clamping and hover popover to translated mod descriptions in Discover",
+        "Added Release Notes modal, accessible anytime in Settings -> About",
+        "Optimized code and improved overall performance",
+        "Fixed minor stability issues"
+      ]
+    },
+    "v1_8_4": {
+      "title": "Custom Background & Tooltip Improvements",
+      "changes": [
+        "Added custom background wallpaper and blur slider",
+        "Improved tooltip display rendering",
+        "Optimized code and improved overall performance"
+      ]
+    },
+    "v1_8_3": {
+      "title": "Steam Cloud Save & UI Polish",
+      "changes": [
+        "Optimized Steam cloud save check speed for smoother interactions",
+        "Refined cloud save status card visuals",
+        "Optimized code and improved overall performance"
+      ]
+    },
+    "v1_8_2": {
+      "title": "Discover Page Loading Improvements",
+      "changes": [
+        "Improved loading experience on Discover page",
+        "Optimized code and improved overall performance"
+      ]
     }
   }
 }

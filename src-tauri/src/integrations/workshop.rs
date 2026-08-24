@@ -51,11 +51,10 @@ fn poll_callback<T>(client: &Client, result: &Arc<Mutex<Option<Result<T, String>
     let max_wait = std::time::Duration::from_secs(timeout_secs);
     loop {
         client.run_callbacks();
-        if let Ok(mut guard) = result.try_lock() {
-            if let Some(res) = guard.take() {
+        if let Ok(mut guard) = result.try_lock()
+            && let Some(res) = guard.take() {
                 return res;
             }
-        }
         if start.elapsed() > max_wait {
             return Err("操作超时".to_string());
         }
@@ -80,7 +79,7 @@ pub fn search_workshop(query: &str, page: u32, page_size: u32, sort_by: &str) ->
 
         let shared: Arc<Mutex<Option<Result<WorkshopSearchResult, String>>>> = Arc::new(Mutex::new(None));
         let shared_clone = shared.clone();
-        let limit = page_size.max(1).min(100);
+        let limit = page_size.clamp(1, 100);
 
         let qh = ugc
             .query_all(

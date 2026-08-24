@@ -305,8 +305,8 @@ fn has_manifest(dir: &Path) -> bool {
             .read_dir()
             .map(|mut rd| {
                 rd.any(|e| {
-                    e.as_ref().map_or(false, |entry| {
-                        entry.path().extension().map_or(false, |ext| ext == "json")
+                    e.as_ref().is_ok_and(|entry| {
+                        entry.path().extension().is_some_and(|ext| ext == "json")
                     })
                 })
             })
@@ -329,27 +329,24 @@ fn find_best_manifest(dir: &Path) -> (Option<PathBuf>, Option<ModManifest>) {
 
     // 1. <folderName>.json（StS2 标准命名约定）
     let named = dir.join(format!("{folder_name}.json"));
-    if let Some(m) = ModManifest::from_file(&named) {
-        if m.is_valid() {
+    if let Some(m) = ModManifest::from_file(&named)
+        && m.is_valid() {
             return (Some(named), Some(m));
         }
-    }
 
     // 2. mod_manifest.json
     let alt = dir.join("mod_manifest.json");
-    if let Some(m) = ModManifest::from_file(&alt) {
-        if m.is_valid() {
+    if let Some(m) = ModManifest::from_file(&alt)
+        && m.is_valid() {
             return (Some(alt), Some(m));
         }
-    }
 
     // 3. manifest.json
     let def = dir.join("manifest.json");
-    if let Some(m) = ModManifest::from_file(&def) {
-        if m.is_valid() {
+    if let Some(m) = ModManifest::from_file(&def)
+        && m.is_valid() {
             return (Some(def), Some(m));
         }
-    }
 
     // 4. 任意 .json — 扫描全部，优先 is_valid，否则回退到第一个可解析的
     if let Ok(entries) = std::fs::read_dir(dir) {
@@ -357,8 +354,8 @@ fn find_best_manifest(dir: &Path) -> (Option<PathBuf>, Option<ModManifest>) {
         let mut fb_manifest: Option<ModManifest> = None;
         for entry in entries.filter_map(|e| e.ok()) {
             let p = entry.path();
-            if p.is_file() && p.extension().map_or(false, |e| e == "json") {
-                if let Some(m) = ModManifest::from_file(&p) {
+            if p.is_file() && p.extension().is_some_and(|e| e == "json")
+                && let Some(m) = ModManifest::from_file(&p) {
                     if m.is_valid() {
                         return (Some(p), Some(m));
                     }
@@ -367,7 +364,6 @@ fn find_best_manifest(dir: &Path) -> (Option<PathBuf>, Option<ModManifest>) {
                         fb_manifest = Some(m);
                     }
                 }
-            }
         }
         if let (Some(fp), Some(fm)) = (fb_path, fb_manifest) {
             return (Some(fp), Some(fm));
@@ -497,7 +493,7 @@ fn build_discovered_mod(
         .unwrap_or_else(|| folder_name.to_string());
 
     DiscoveredMod {
-        mod_id: mod_id,
+        mod_id,
         name,
         version: manifest.as_ref().and_then(|m| m.version.clone()),
         author: manifest.as_ref().and_then(|m| m.author.clone()),
@@ -567,8 +563,8 @@ pub fn detect_conflicts_full(
             if !matches!(dmod.status, DiscoveredModStatus::Ready) {
                 continue;
             }
-            if let Ok(source_folder) = find_source_mod_folder(extracted, &dmod.folder_name) {
-                if let Ok(hashes) = mod_service::compute_mod_hashes(&source_folder) {
+            if let Ok(source_folder) = find_source_mod_folder(extracted, &dmod.folder_name)
+                && let Ok(hashes) = mod_service::compute_mod_hashes(&source_folder) {
                     let file_conflicts = mod_service::find_file_conflicts(&hashes);
                     for conflict in file_conflicts {
                         if !dmod.conflicts.contains(&conflict) {
@@ -579,7 +575,6 @@ pub fn detect_conflicts_full(
                         dmod.status = DiscoveredModStatus::Conflict;
                     }
                 }
-            }
         }
     }
 }
@@ -646,11 +641,10 @@ pub fn install_discovered_mods(
         // ② 按 mod_id 查找并删除旧 Mod 文件夹（新旧不同名时生效）
         if matches!(resolution, ConflictResolution::Replace) && !dmod.conflicts.is_empty() {
             for base in [game_root.join("mods"), game_root.join("mods_disabled")] {
-                if let Ok(old_path) = mod_service::find_mod_folder(&base, &dmod.mod_id) {
-                    if old_path != dest_path {
+                if let Ok(old_path) = mod_service::find_mod_folder(&base, &dmod.mod_id)
+                    && old_path != dest_path {
                         let _ = std::fs::remove_dir_all(&old_path);
                     }
-                }
             }
         }
 

@@ -79,7 +79,7 @@ pub fn get_cloud_save_status(_game_root: &Path) -> Result<CloudSaveStatus, AppEr
     let mut cloud_only = 0u32;
     let mut different = 0u32;
 
-    for (rel, _) in &local_files {
+    for rel in local_files.keys() {
         if cloud_files.contains_key(rel) {
             let lh = hash_file_opt(&local_dir.join(rel));
             let ch = hash_file_opt(&cloud_dir.join(rel));
@@ -256,7 +256,7 @@ pub fn ascend_to_cloud_full(game_root: &Path) -> Result<(), AppError> {
 
     // 全量复制本地 → 云端
     let local_files = list_files_relative(local_dir);
-    for (rel, _) in &local_files {
+    for rel in local_files.keys() {
         let src = local_dir.join(rel);
         let dst = cloud_dir.join(rel);
         if let Some(parent) = dst.parent() {
@@ -282,7 +282,7 @@ pub fn descend_from_cloud_full(game_root: &Path) -> Result<(), AppError> {
 
     // 全量复制云端 → 本地
     let cloud_files = list_files_relative(cloud_dir);
-    for (rel, _) in &cloud_files {
+    for rel in cloud_files.keys() {
         let src = cloud_dir.join(rel);
         let dst = local_dir.join(rel);
         if let Some(parent) = dst.parent() {
@@ -314,7 +314,7 @@ pub fn get_backup_artifact_status(game_root: &Path) -> Result<bool, AppError> {
     }
     // 检查制品目录是否有内容
     let dir = artifacts_dir();
-    Ok(dir.exists() && std::fs::read_dir(&dir).map_or(false, |mut r| r.next().is_some()))
+    Ok(dir.exists() && std::fs::read_dir(&dir).is_ok_and(|mut r| r.next().is_some()))
 }
 
 pub fn cleanup_backup_artifacts(game_root: &Path) -> Result<(), AppError> {

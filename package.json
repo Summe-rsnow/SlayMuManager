@@ -1,7 +1,7 @@
 {
   "name": "slaymumanager",
   "private": true,
-  "version": "1.8.4",
+  "version": "1.8.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,25 +10,25 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@lucide/vue": "^1.24.0",
+    "@lucide/vue": "^1.33.0",
     "@poupe/material-color-utilities": "^0.4.1",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-updater": "^2.10.1",
     "naive-ui": "^2.44.1",
     "pinia": "^3.0.4",
-    "vue": "^3.5.39",
-    "vue-i18n": "^11.4.6",
-    "vue-router": "^5.1.0"
+    "vue": "^3.5.41",
+    "vue-i18n": "^11.4.8",
+    "vue-router": "^5.2.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.11.4",
-    "@unocss/preset-icons": "^66.7.5",
-    "@unocss/preset-uno": "^66.7.5",
-    "@unocss/transformer-directives": "^66.7.5",
-    "@vitejs/plugin-vue": "^6.0.7",
+    "@unocss/preset-icons": "^66.8.1",
+    "@unocss/preset-uno": "^66.8.1",
+    "@unocss/transformer-directives": "^66.8.1",
+    "@vitejs/plugin-vue": "^6.0.8",
     "typescript": "~6.0.3",
-    "unocss": "^66.7.5",
-    "vite": "^8.1.4",
-    "vue-tsc": "^3.3.7"
+    "unocss": "^66.8.1",
+    "vite": "^8.2.2",
+    "vue-tsc": "^3.3.11"
   }
 }
