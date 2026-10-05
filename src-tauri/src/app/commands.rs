@@ -561,6 +561,139 @@ pub fn open_mod_folder(mod_id: String, state: State<AppState>) -> Result<(), Str
 }
 
 #[tauri::command]
+pub fn uninstall_mod_instance(
+    install_dir: String,
+    mod_id: String,
+    state: State<AppState>,
+) -> Result<(), String> {
+    let settings = state.settings.read().unwrap();
+    let game_root = settings
+        .game_root_dir
+        .as_ref()
+        .ok_or("游戏目录未设置")?;
+
+    mod_service::uninstall_mod_by_path(Path::new(game_root), &install_dir)?;
+    // 清理文件哈希
+    let _ = crate::repositories::mod_hashes_repo::remove_mod_hashes(&mod_id);
+    // 清除更新缓存
+    updates_cache_repo::clear_updates_cache();
+    if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
+        *cache_lock = None;
+    }
+
+    state.push_activity(ActivityLogEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        category: "mod".to_string(),
+        title: format!("卸载 Mod 实例: {}", mod_id),
+        detail: Some(install_dir),
+        created_at: chrono::Utc::now().to_rfc3339(),
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn open_mod_folder_by_path(install_dir: String) -> Result<(), String> {
+    let path = std::path::PathBuf::from(&install_dir);
+    if !path.exists() {
+        return Err(format!("目录不存在: {}", install_dir));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("打开文件夹失败: {}", e))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn keep_mod_version_and_clean_others(
+    install_dir: String,
+    mod_id: String,
+    state: State<AppState>,
+) -> Result<u32, String> {
+    let settings = state.settings.read().unwrap();
+    let game_root = settings
+        .game_root_dir
+        .as_ref()
+        .ok_or("游戏目录未设置")?;
+
+    let count = mod_service::keep_mod_version_and_clean_others(
+        Path::new(game_root),
+        &install_dir,
+        &mod_id,
+    )?;
+
+    // 确保 active profile 包含此 mod_id
+    let active_name = settings.active_profile_name.clone();
+    drop(settings);
+    add_mod_to_active_profile(&mod_id, &active_name);
+
+    updates_cache_repo::clear_updates_cache();
+    if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
+        *cache_lock = None;
+    }
+
+    state.push_activity(ActivityLogEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        category: "mod".to_string(),
+        title: format!("保留 Mod 版本并清理旧版: {}", mod_id),
+        detail: Some(format!("清理了 {} 个旧版本", count)),
+        created_at: chrono::Utc::now().to_rfc3339(),
+    });
+
+    Ok(count)
+}
+
+#[tauri::command]
+pub fn switch_active_mod_version(
+    install_dir: String,
+    mod_id: String,
+    state: State<AppState>,
+) -> Result<(), String> {
+    let settings = state.settings.read().unwrap();
+    let game_root = settings
+        .game_root_dir
+        .as_ref()
+        .ok_or("游戏目录未设置")?;
+
+    mod_service::switch_active_mod_version(Path::new(game_root), &install_dir, &mod_id)?;
+
+    let active_name = settings.active_profile_name.clone();
+    drop(settings);
+    add_mod_to_active_profile(&mod_id, &active_name);
+
+    state.push_activity(ActivityLogEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        category: "mod".to_string(),
+        title: format!("切换激活 Mod 版本: {}", mod_id),
+        detail: Some(install_dir),
+        created_at: chrono::Utc::now().to_rfc3339(),
+    });
+
+    Ok(())
+}
+
+
+#[tauri::command]
 pub fn open_mods_directory(state: State<AppState>) -> Result<(), String> {
     let settings = state.settings.read().unwrap();
     let game_root = settings

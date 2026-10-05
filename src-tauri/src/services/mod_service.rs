@@ -377,6 +377,154 @@ pub fn uninstall_mod(game_root: &Path, mod_id: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+fn is_direct_child_of(child: &Path, parent: &Path) -> bool {
+    if let Some(child_parent) = child.parent() {
+        if child_parent == parent {
+            return true;
+        }
+        if let (Ok(cp), Ok(pp)) = (child_parent.canonicalize(), parent.canonicalize()) {
+            return cp == pp;
+        }
+    }
+    false
+}
+
+fn move_dir_safely(from: &Path, to: &Path) -> Result<(), AppError> {
+    if let Err(_e) = std::fs::rename(from, to) {
+        super::save_service::copy_dir_recursive(from, to)?;
+        std::fs::remove_dir_all(from).map_err(AppError::Io)?;
+    }
+    Ok(())
+}
+
+fn unique_target_path(dir: &Path, base_name: &std::ffi::OsStr) -> PathBuf {
+    let mut candidate = dir.join(base_name);
+    if !candidate.exists() {
+        return candidate;
+    }
+    let base_str = base_name.to_string_lossy();
+    let mut i = 1;
+    loop {
+        candidate = dir.join(format!("{}_{}", base_str, i));
+        if !candidate.exists() {
+            return candidate;
+        }
+        i += 1;
+    }
+}
+
+/// 精确卸载指定物理路径的 Mod 实例（必须位于 mods/ 或 mods_disabled/ 下）
+pub fn uninstall_mod_by_path(game_root: &Path, install_dir: &str) -> Result<(), AppError> {
+    let target = PathBuf::from(install_dir);
+    let plugins_dir = game_root.join("mods");
+    let disabled_dir = game_root.join("mods_disabled");
+
+    let is_safe = is_direct_child_of(&target, &plugins_dir) || is_direct_child_of(&target, &disabled_dir);
+    if !is_safe || !target.exists() {
+        return Err(AppError::Other(format!("无效或不受管理的模组路径: {}", install_dir)));
+    }
+
+    std::fs::remove_dir_all(&target).map_err(AppError::Io)?;
+    Ok(())
+}
+
+/// 保留指定实例版本，并清理该模组的其他所有物理版本
+pub fn keep_mod_version_and_clean_others(game_root: &Path, install_dir: &str, mod_id: &str) -> Result<u32, AppError> {
+    let target = PathBuf::from(install_dir);
+    let plugins_dir = game_root.join("mods");
+    let disabled_dir = game_root.join("mods_disabled");
+
+    let is_safe = is_direct_child_of(&target, &plugins_dir) || is_direct_child_of(&target, &disabled_dir);
+    if !is_safe || !target.exists() {
+        return Err(AppError::Other(format!("无效或不受管理的模组路径: {}", install_dir)));
+    }
+
+    let target_canonical = target.canonicalize().map_err(AppError::Io)?;
+    let mut deleted_count = 0;
+
+    // 扫描 mods/ 和 mods_disabled/ 中所有具有相同 mod_id 但不是 target 的文件夹
+    for dir in [&plugins_dir, &disabled_dir] {
+        if !dir.exists() {
+            continue;
+        }
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                let p = entry.path();
+                if !p.is_dir() {
+                    continue;
+                }
+                if let Ok(p_can) = p.canonicalize() {
+                    if p_can == target_canonical {
+                        continue;
+                    }
+                    if let Some((_, manifest)) = ModManifest::find_in_dir(&p) {
+                        if manifest.id.as_deref() == Some(mod_id) {
+                            let _ = std::fs::remove_dir_all(&p);
+                            deleted_count += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 如果选中的保留版本原本在 mods_disabled/，移动至 mods/ 启用
+    if is_direct_child_of(&target, &disabled_dir) {
+        std::fs::create_dir_all(&plugins_dir).map_err(AppError::Io)?;
+        let folder_name = target.file_name().unwrap_or_default();
+        let dest = unique_target_path(&plugins_dir, folder_name);
+        move_dir_safely(&target, &dest)?;
+    }
+
+    Ok(deleted_count)
+}
+
+/// 切换激活版本：将目标版本设为启用，并将同 ID 的其他已启用版本设为禁用
+pub fn switch_active_mod_version(game_root: &Path, install_dir: &str, mod_id: &str) -> Result<(), AppError> {
+    let target = PathBuf::from(install_dir);
+    let plugins_dir = game_root.join("mods");
+    let disabled_dir = game_root.join("mods_disabled");
+
+    let is_safe = is_direct_child_of(&target, &plugins_dir) || is_direct_child_of(&target, &disabled_dir);
+    if !is_safe || !target.exists() {
+        return Err(AppError::Other(format!("无效或不受管理的模组路径: {}", install_dir)));
+    }
+
+    // 如果已经在 mods/ 下，已经是启用状态
+    if is_direct_child_of(&target, &plugins_dir) {
+        return Ok(());
+    }
+
+    std::fs::create_dir_all(&plugins_dir).map_err(AppError::Io)?;
+    std::fs::create_dir_all(&disabled_dir).map_err(AppError::Io)?;
+
+    // 将 mods/ 下所有具有相同 mod_id 的其他启用实例移至 mods_disabled/
+    if plugins_dir.exists() {
+        if let Ok(entries) = std::fs::read_dir(&plugins_dir) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                let p = entry.path();
+                if !p.is_dir() {
+                    continue;
+                }
+                if let Some((_, manifest)) = ModManifest::find_in_dir(&p) {
+                    if manifest.id.as_deref() == Some(mod_id) {
+                        let name = p.file_name().unwrap_or_default();
+                        let dest = unique_target_path(&disabled_dir, name);
+                        move_dir_safely(&p, &dest)?;
+                    }
+                }
+            }
+        }
+    }
+
+    // 将 target 从 mods_disabled/ 移至 mods/
+    let folder_name = target.file_name().unwrap_or_default();
+    let dest = unique_target_path(&plugins_dir, folder_name);
+    move_dir_safely(&target, &dest)?;
+
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // 工具
 // ---------------------------------------------------------------------------

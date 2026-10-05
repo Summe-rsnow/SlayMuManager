@@ -51,7 +51,11 @@ pub fn run() {
             app::commands::enable_mod,
             app::commands::disable_mod,
             app::commands::uninstall_mod,
+            app::commands::uninstall_mod_instance,
             app::commands::open_mod_folder,
+            app::commands::open_mod_folder_by_path,
+            app::commands::keep_mod_version_and_clean_others,
+            app::commands::switch_active_mod_version,
             app::commands::open_mods_directory,
             app::commands::get_mod_files,
             // 5.4 ZIP 安装 + 批量导入

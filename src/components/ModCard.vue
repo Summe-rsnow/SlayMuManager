@@ -5,12 +5,13 @@ import { currentLocale } from "@/i18n"
 import {
   NTag, NButton, NIcon, NSwitch, NPopover, NCheckbox, NSpace, NInput, NTooltip,
 } from "naive-ui"
-import { FolderOpen, Trash2, Plus, StickyNote, Copy, Check } from "@lucide/vue"
+import { FolderOpen, Trash2, Plus, StickyNote, Copy, Check, Layers } from "@lucide/vue"
 import IconBtn from "./IconBtn.vue"
 import ConfirmBtn from "./ConfirmBtn.vue"
 import FloatingTip from "./FloatingTip.vue"
 import { useTagStore, PRESET_TAGS } from "@/stores/useTagStore"
 import { useNoteStore } from "@/stores/useNoteStore"
+import { useModCacheStore } from "@/stores/useModCacheStore"
 import type { InstalledMod, ModUpdateInfo } from "../types"
 
 const props = defineProps<{
@@ -28,9 +29,14 @@ const emit = defineEmits<{
   (e: "uninstall", mod: InstalledMod): void
   (e: "openUpdateUrl", mod: InstalledMod): void
   (e: "unsubscribe", workshopId: string): void
+  (e: "manageVersions", mod: InstalledMod): void
 }>()
 
 const { t } = useI18n()
+const modCacheStore = useModCacheStore()
+const conflictGroup = computed(() => modCacheStore.getConflictGroup(props.mod.id))
+const hasConflict = computed(() => !!conflictGroup.value)
+const conflictCount = computed(() => conflictGroup.value?.instances.length ?? 0)
 const { getTags, toggleTag, getTagLabel, isPresetTag } = useTagStore()
 const { getNote, setNote, hasNote } = useNoteStore()
 
@@ -100,6 +106,21 @@ async function copyModId() {
         <NTag v-if="mod.affectsGameplay" type="warning" size="tiny" :bordered="false">
           {{ t("library.mod.affectsGameplay") }}
         </NTag>
+        <!-- 多版本共存警告标签 -->
+        <NTooltip v-if="hasConflict" trigger="hover" placement="top">
+          <template #trigger>
+            <NTag
+              type="warning"
+              size="tiny"
+              :bordered="false"
+              class="cursor-pointer font-bold animate-pulse hover:opacity-80"
+              @click.stop="emit('manageVersions', mod)"
+            >
+              ⚠️ 多版本共存 ({{ conflictCount }})
+            </NTag>
+          </template>
+          检测到此模组安装了 {{ conflictCount }} 个不同版本，点击打开版本保留管理面板
+        </NTooltip>
         <NTag
           v-for="tagId in getTags(mod.id)"
           :key="tagId"
@@ -168,6 +189,13 @@ async function copyModId() {
           </NPopover>
         </template>
       </IconBtn>
+
+      <IconBtn
+        v-if="hasConflict"
+        :icon="Layers"
+        tip="多版本管理与保留"
+        @click="emit('manageVersions', mod)"
+      />
 
       <IconBtn :icon="FolderOpen" :tip="t('library.mod.openFolder')" @click="emit('openFolder', mod)" />
 

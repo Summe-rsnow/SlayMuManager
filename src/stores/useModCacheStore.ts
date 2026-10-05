@@ -1,13 +1,51 @@
 import { defineStore } from "pinia"
-import { ref, shallowRef } from "vue"
+import { ref, shallowRef, computed } from "vue"
 import { invoke } from "@tauri-apps/api/core"
 import type { InstalledMod } from "../types"
+
+export interface ModConflictGroup {
+  modId: string
+  name: string
+  instances: InstalledMod[]
+}
 
 export const useModCacheStore = defineStore("mod-cache", () => {
   const enabledMods = shallowRef<InstalledMod[]>([])
   const disabledMods = shallowRef<InstalledMod[]>([])
   const loading = ref(false)
   const lastFetched = ref<number | null>(null)
+
+  const allMods = computed(() => [...enabledMods.value, ...disabledMods.value])
+
+  // 检测多版本/多文件夹冲突组（同一个 mod.id 存在多个物理实例）
+  const conflictGroups = computed<Map<string, ModConflictGroup>>(() => {
+    const map = new Map<string, ModConflictGroup>()
+    for (const mod of allMods.value) {
+      const key = mod.id.toLowerCase()
+      if (!map.has(key)) {
+        map.set(key, { modId: mod.id, name: mod.name, instances: [] })
+      }
+      map.get(key)!.instances.push(mod)
+    }
+
+    const conflicts = new Map<string, ModConflictGroup>()
+    for (const [key, group] of map.entries()) {
+      if (group.instances.length > 1) {
+        conflicts.set(key, group)
+      }
+    }
+    return conflicts
+  })
+
+  const conflictCount = computed(() => conflictGroups.value.size)
+
+  function hasConflict(modId: string): boolean {
+    return conflictGroups.value.has(modId.toLowerCase())
+  }
+
+  function getConflictGroup(modId: string): ModConflictGroup | undefined {
+    return conflictGroups.value.get(modId.toLowerCase())
+  }
 
   async function fetchMods() {
     loading.value = true
@@ -27,5 +65,16 @@ export const useModCacheStore = defineStore("mod-cache", () => {
     }
   }
 
-  return { enabledMods, disabledMods, loading, lastFetched, fetchMods }
+  return {
+    enabledMods,
+    disabledMods,
+    loading,
+    lastFetched,
+    conflictGroups,
+    conflictCount,
+    hasConflict,
+    getConflictGroup,
+    fetchMods,
+  }
 })
+

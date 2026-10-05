@@ -59,12 +59,16 @@ export function useModOperations() {
     }
   }
 
-  /** 卸载 Mod */
+  /** 卸载 Mod（优先使用物理路径精准删除特定实例，彻底避免同 ID 误删） */
   async function handleUninstall(mod: InstalledMod) {
     if (busyId.value) return
-    busyId.value = mod.id
+    busyId.value = mod.installDir || mod.id
     try {
-      await invoke("uninstall_mod", { modId: mod.id })
+      if (mod.installDir) {
+        await invoke("uninstall_mod_instance", { installDir: mod.installDir, modId: mod.id })
+      } else {
+        await invoke("uninstall_mod", { modId: mod.id })
+      }
       message.success(t("library.success.uninstalled", { name: mod.name }))
       await fetchMods()
     } catch (e: unknown) {
@@ -74,10 +78,14 @@ export function useModOperations() {
     }
   }
 
-  /** 打开 Mod 文件夹 */
+  /** 打开 Mod 文件夹（优先使用具体实例物理路径） */
   async function handleOpenFolder(mod: InstalledMod) {
     try {
-      await invoke("open_mod_folder", { modId: mod.id })
+      if (mod.installDir) {
+        await invoke("open_mod_folder_by_path", { installDir: mod.installDir })
+      } else {
+        await invoke("open_mod_folder", { modId: mod.id })
+      }
     } catch (e: unknown) {
       message.error(t("library.error.openFailed", { e }))
     }

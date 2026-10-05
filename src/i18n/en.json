@@ -601,6 +601,19 @@
       "fix": "Fix",
       "opt": "Optimized"
     },
+    "v1_8_6": {
+      "title": "Multi-Version Mod Conflict Management & Precise Instance Targeting",
+      "highlights": [
+        "Added automatic multi-version mod conflict detection and a dedicated Version Retention Panel with one-click cleanup",
+        "Refactored mod uninstall and folder location to use precise physical file paths, completely resolving accidental deletion across versions"
+      ],
+      "changes": [
+        "Added Version Retention Panel: visual version comparison, switch active version, keep & clean old versions, delete specific instance",
+        "Fixed critical bug where deleting a disabled mod with duplicate ID mistakenly uninstalled the enabled version",
+        "Added multi-version conflict badge (⚠️), conflict quick filter, and mutual exclusion guard preventing duplicate active versions",
+        "Optimized mod operations and fixed duplicate DOM key collisions for multi-instance mods"
+      ]
+    },
     "v1_8_5": {
       "title": "Discover Page Translation & Quality of Life Improvements",
       "highlights": [

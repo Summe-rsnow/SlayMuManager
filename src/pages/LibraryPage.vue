@@ -24,6 +24,7 @@ import { useSidebarStore } from "@/stores/useSidebarStore"
 import DragOverlay from "@/components/DragOverlay.vue"
 import FloatingTip from "@/components/FloatingTip.vue"
 import ModCard from "@/components/ModCard.vue"
+import ModVersionConflictModal from "@/components/ModVersionConflictModal.vue"
 import AppDialog from "@/components/AppDialog.vue"
 import EmptyState from "@/components/EmptyState.vue"
 import PageHeader from "@/components/PageHeader.vue"
@@ -44,6 +45,30 @@ const modCacheStore = useModCacheStore()
 const { enabledMods, disabledMods, loading } = storeToRefs(modCacheStore)
 const { fetchMods } = modCacheStore
 const tagStore = useTagStore()
+
+// --- 多版本共存管理 ---
+const showVersionConflictModal = ref(false)
+const selectedConflictModId = ref<string | null>(null)
+const filterOnlyConflicts = ref(false)
+
+function openVersionConflictModal(mod: InstalledMod) {
+  selectedConflictModId.value = mod.id
+  showVersionConflictModal.value = true
+}
+
+async function onCardToggle(mod: InstalledMod) {
+  // 如果当前是禁用状态，用户尝试启用，但此时该模组已有另一个版本处于启用状态
+  if (mod.state === "disabled" && modCacheStore.hasConflict(mod.id)) {
+    const group = modCacheStore.getConflictGroup(mod.id)
+    const alreadyEnabled = group?.instances.find(i => i.state === "enabled")
+    if (alreadyEnabled) {
+      message.warning(`该模组已有版本 (v${alreadyEnabled.version ?? alreadyEnabled.folderName}) 处于生效状态，请在版本面板中切换！`)
+      openVersionConflictModal(mod)
+      return
+    }
+  }
+  await handleToggle(mod)
+}
 
 // --- 组件生命周期守卫（防止切换页面时异步回调卡死）---
 const { isActive } = useIsActive()
@@ -339,6 +364,7 @@ const filterTagIds = ref<Set<string>>(new Set())
 const activeFilterCount = computed(() => {
   let n = 0
   if (filterAffectsGameplay.value) n++
+  if (filterOnlyConflicts.value) n++
   if (!filterShowEnabled.value) n++
   if (!filterShowDisabled.value) n++
   if (filterTagIds.value.size > 0) n++
@@ -347,6 +373,7 @@ const activeFilterCount = computed(() => {
 
 function clearFilters() {
   filterAffectsGameplay.value = false
+  filterOnlyConflicts.value = false
   filterShowEnabled.value = true
   filterShowDisabled.value = true
   filterTagIds.value = new Set()
@@ -408,6 +435,9 @@ const filteredEnabled = computed(() => {
   if (filterAffectsGameplay.value) {
     list = list.filter((m) => m.affectsGameplay)
   }
+  if (filterOnlyConflicts.value) {
+    list = list.filter((m) => modCacheStore.hasConflict(m.id))
+  }
   if (filterTagIds.value.size > 0) {
     list = list.filter((m) => {
       const tags = tagStore.getTags(m.id)
@@ -431,6 +461,9 @@ const filteredDisabled = computed(() => {
   if (filterAffectsGameplay.value) {
     list = list.filter((m) => m.affectsGameplay)
   }
+  if (filterOnlyConflicts.value) {
+    list = list.filter((m) => modCacheStore.hasConflict(m.id))
+  }
   if (filterTagIds.value.size > 0) {
     list = list.filter((m) => {
       const tags = tagStore.getTags(m.id)
@@ -444,7 +477,7 @@ const hasSearch = computed(() => searchQuery.value.length > 0)
 const hasMods = computed(() => enabledMods.value.length + disabledMods.value.length > 0)
 const anyFilterActive = computed(() =>
   !filterShowEnabled.value || !filterShowDisabled.value ||
-  filterAffectsGameplay.value || filterTagIds.value.size > 0
+  filterAffectsGameplay.value || filterOnlyConflicts.value || filterTagIds.value.size > 0
 )
 const hasGamePath = ref<boolean | null>(null)
 const emptyReason = computed(() => {
@@ -612,6 +645,10 @@ watch(presetAppliedTick, () => {
             <NCheckbox v-model:checked="filterAffectsGameplay" size="small">
               <span class="text-xs">{{ t("library.filter.affectsGameplay") }}</span>
             </NCheckbox>
+            <!-- 多版本冲突 -->
+            <NCheckbox v-model:checked="filterOnlyConflicts" size="small">
+              <span class="text-xs text-amber-500 font-medium">仅看多版本共存模组</span>
+            </NCheckbox>
             <!-- 标签 -->
             <div v-if="usedPresetTags.length > 0">
               <div class="text-xs font-medium mb-1.5 text-c-secondary">{{ t("library.filter.tags") }}</div>
@@ -639,6 +676,31 @@ watch(presetAppliedTick, () => {
           </div>
         </div>
       </Transition>
+    </div>
+
+    <!-- 多版本冲突全局横幅 -->
+    <div
+      v-if="modCacheStore.conflictCount > 0"
+      class="mb-4 flex items-center justify-between p-3 rounded-xl border transition-all duration-200"
+      :style="{
+        backgroundColor: 'color-mix(in srgb, var(--warning-color, #f59e0b) 10%, transparent)',
+        borderColor: 'color-mix(in srgb, var(--warning-color, #f59e0b) 30%, transparent)',
+      }"
+    >
+      <div class="flex items-center gap-2 text-sm text-c-primary">
+        <NIcon :size="18" class="text-amber-500 shrink-0"><AlertTriangle /></NIcon>
+        <span>检测到 <strong>{{ modCacheStore.conflictCount }}</strong> 个模组存在多版本共存冲突，可能导致游戏加载异常。</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <NButton
+          size="tiny"
+          :type="filterOnlyConflicts ? 'warning' : 'default'"
+          secondary
+          @click="filterOnlyConflicts = !filterOnlyConflicts"
+        >
+          {{ filterOnlyConflicts ? '显示全部模组' : '仅看冲突模组' }}
+        </NButton>
+      </div>
     </div>
 
     <Transition name="preset-fade" mode="out-in">
@@ -669,18 +731,19 @@ watch(presetAppliedTick, () => {
               <TransitionGroup name="stagger" tag="div" class="flex flex-col gap-2">
                 <ModCard
                   v-for="mod in filteredEnabled"
-                  :key="mod.id"
+                  :key="mod.installDir || mod.id"
                   :mod="mod"
                   :enabled="true"
-                  :busy="busyId === mod.id"
+                  :busy="busyId === mod.id || busyId === mod.installDir"
                   :toggle-disabled="false"
                   :has-update="hasUpdate(mod.id)"
                   :update-info="getUpdateInfo(mod.id) ?? null"
-                  @toggle="handleToggle"
+                  @toggle="onCardToggle"
                   @open-folder="handleOpenFolder"
                   @uninstall="handleUninstall"
                   @open-update-url="openUpdateUrl"
                   @unsubscribe="handleUnsubscribe"
+                  @manage-versions="openVersionConflictModal"
                 />
               </TransitionGroup>
             </NSpace>
@@ -698,18 +761,19 @@ watch(presetAppliedTick, () => {
               <TransitionGroup name="stagger" tag="div" class="flex flex-col gap-2">
                 <ModCard
                   v-for="mod in filteredDisabled"
-                  :key="mod.id"
+                  :key="mod.installDir || mod.id"
                   :mod="mod"
                   :enabled="false"
-                  :busy="busyId === mod.id"
+                  :busy="busyId === mod.id || busyId === mod.installDir"
                   :toggle-disabled="false"
                   :has-update="hasUpdate(mod.id)"
                   :update-info="getUpdateInfo(mod.id) ?? null"
-                  @toggle="handleToggle"
+                  @toggle="onCardToggle"
                   @open-folder="handleOpenFolder"
                   @uninstall="handleUninstall"
                   @open-update-url="openUpdateUrl"
                   @unsubscribe="handleUnsubscribe"
+                  @manage-versions="openVersionConflictModal"
                 />
               </TransitionGroup>
             </NSpace>
@@ -873,6 +937,12 @@ watch(presetAppliedTick, () => {
 
     <!-- 拖拽导入遮罩 -->
     <DragOverlay :accept-ext="['zip', '7z', 'rar']" title="松开以导入模组" />
+
+    <!-- 模组多版本共存管理弹窗 -->
+    <ModVersionConflictModal
+      v-model:show="showVersionConflictModal"
+      :mod-id="selectedConflictModId"
+    />
 
   </div>
 </template>
