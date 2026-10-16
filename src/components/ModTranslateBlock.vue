@@ -50,8 +50,16 @@ function toggleTranslation() {
         <FloatingTip :text="translatedText" truncated />
       </div>
     </template>
-    <span v-else-if="translating" class="text-xs text-c-muted">{{ t("discover.translating") }}</span>
-    <NPopover v-else trigger="hover" placement="top" :width="240" :disabled="!showTranslateQuotaTip">
+    <span v-else-if="translating" class="text-xs text-c-muted">{{
+      t("discover.translating")
+    }}</span>
+    <NPopover
+      v-else
+      trigger="hover"
+      placement="top"
+      :width="240"
+      :disabled="!showTranslateQuotaTip"
+    >
       <template #trigger>
         <button class="translate-toggle" @click="handleTranslate">
           <NIcon :size="12"><Languages /></NIcon>

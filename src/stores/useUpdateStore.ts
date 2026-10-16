@@ -7,7 +7,9 @@ import { useI18n } from "vue-i18n"
 import type { ModUpdateInfo, InstalledMod } from "../types"
 
 interface ModUpdateCheckEvent {
-  reqId: number; success: boolean; error: string | null
+  reqId: number
+  success: boolean
+  error: string | null
   results: ModUpdateInfo[]
   summary: { totalMods: number; updatedMods: number }
 }
@@ -63,7 +65,9 @@ export const useUpdateStore = defineStore("updates", () => {
         else if (err.includes("游戏目录")) message.warning(t("library.updateCheck.noGamePath"))
         else message.error(t("library.updateCheck.error", { e: err }))
       }
-    }).catch(() => { /* ignore */ })
+    }).catch(() => {
+      /* ignore */
+    })
   }
 
   async function loadCachedUpdates() {
@@ -72,7 +76,9 @@ export const useUpdateStore = defineStore("updates", () => {
       const map = new Map<string, ModUpdateInfo>()
       for (const info of cached) map.set(info.modId, info)
       updateModsMap.value = map
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   function checkUpdates() {
@@ -88,16 +94,19 @@ export const useUpdateStore = defineStore("updates", () => {
       message.error(t("library.updateCheck.timeout"))
     }, CHECK_TIMEOUT_MS)
 
-    invoke("start_mod_update_check", { reqId: currentReqId })
-      .catch((e: unknown) => {
-        clearCheckTimeout()
-        checkingUpdates.value = false
-        message.error(t("library.updateCheck.error", { e: String(e) }))
-      })
+    invoke("start_mod_update_check", { reqId: currentReqId }).catch((e: unknown) => {
+      clearCheckTimeout()
+      checkingUpdates.value = false
+      message.error(t("library.updateCheck.error", { e: String(e) }))
+    })
   }
 
-  function hasUpdate(modId: string): boolean { return updateModsMap.value.get(modId)?.hasUpdate ?? false }
-  function getUpdateInfo(modId: string): ModUpdateInfo | undefined { return updateModsMap.value.get(modId) }
+  function hasUpdate(modId: string): boolean {
+    return updateModsMap.value.get(modId)?.hasUpdate ?? false
+  }
+  function getUpdateInfo(modId: string): ModUpdateInfo | undefined {
+    return updateModsMap.value.get(modId)
+  }
 
   function openUpdateUrl(mod: InstalledMod) {
     const url = updateModsMap.value.get(mod.id)?.remoteMod?.detailUrl
@@ -105,7 +114,13 @@ export const useUpdateStore = defineStore("updates", () => {
   }
 
   return {
-    updateModsMap, checkingUpdates, lastCheckResult,
-    loadCachedUpdates, checkUpdates, hasUpdate, getUpdateInfo, openUpdateUrl,
+    updateModsMap,
+    checkingUpdates,
+    lastCheckResult,
+    loadCachedUpdates,
+    checkUpdates,
+    hasUpdate,
+    getUpdateInfo,
+    openUpdateUrl,
   }
 })

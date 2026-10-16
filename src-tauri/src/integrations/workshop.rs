@@ -1,8 +1,9 @@
 use crate::domain::workshop_mod::{WorkshopMod, WorkshopSearchResult};
-use std::sync::{Mutex, Arc};
-use steamworks::{Client, PublishedFileId, AppId, UGCQueryType, UGCType, AppIDs};
+use parking_lot::Mutex;
+use std::sync::Arc;
+use steamworks::{AppIDs, AppId, Client, PublishedFileId, UGCQueryType, UGCType};
 
-static STEAM_CLIENT: Mutex<Option<Client>> = Mutex::new(None);
+static STEAM_LOCK: Mutex<()> = Mutex::new(());
 
 pub fn is_steam_running() -> bool {
     crate::integrations::steam::get_active_steam_account_id().is_some()
@@ -16,37 +17,35 @@ fn ensure_steam_ready() -> Result<(), String> {
     Ok(())
 }
 
-pub fn init_client() -> Result<(), String> {
-    let mut guard = STEAM_CLIENT.lock().unwrap();
-    if guard.is_none() {
-        match Client::init_app(AppId(2868840)) {
-            Ok(c) => {
-                *guard = Some(c);
-            }
-            Err(e) => {
-                let msg = format!("{:?}", e);
-                // "ConnectToGlobalUser failed" 意味着 Steam 运行中但用户会话未就绪
-                if msg.contains("ConnectToGlobalUser") || msg.contains("NoSteamClient") {
-                    return Err("请确保 Steam 已完全启动并登录账号，然后重试".to_string());
-                }
-                return Err(format!("Steam 初始化失败: {}", msg));
-            }
-        }
-    }
-    Ok(())
-}
-
+/// 执行 Steamworks 操作：按需临时初始化，并在操作结束后立即 Drop 客户端，
+/// 从而触发 SteamAPI_Shutdown()，彻底杜绝 SlayMuManager 被 Steam 误识别为长期在玩游戏的问题。
 fn with_client<F, R>(f: F) -> Result<R, String>
 where
     F: FnOnce(&Client) -> Result<R, String>,
 {
-    let guard = STEAM_CLIENT.lock().unwrap();
-    let client = guard.as_ref().ok_or_else(|| "Steam 未初始化".to_string())?;
-    f(client)
+    ensure_steam_ready()?;
+    let _lock = STEAM_LOCK.lock();
+
+    let client = Client::init_app(AppId(2868840)).map_err(|e| {
+        let msg = format!("{:?}", e);
+        if msg.contains("ConnectToGlobalUser") || msg.contains("NoSteamClient") {
+            "请确保 Steam 已完全启动并登录账号，然后重试".to_string()
+        } else {
+            format!("Steam 初始化失败: {}", msg)
+        }
+    })?;
+
+    let result = f(&client);
+    drop(client); // 立即释放并调用 SteamAPI_Shutdown()，退出游戏状态
+    result
 }
 
 /// 持续调用 run_callbacks 直到 callback 设置结果或超时
-fn poll_callback<T>(client: &Client, result: &Arc<Mutex<Option<Result<T, String>>>>, timeout_secs: u64) -> Result<T, String> {
+fn poll_callback<T>(
+    client: &Client,
+    result: &Arc<std::sync::Mutex<Option<Result<T, String>>>>,
+    timeout_secs: u64,
+) -> Result<T, String> {
     let start = std::time::Instant::now();
     let max_wait = std::time::Duration::from_secs(timeout_secs);
     loop {
@@ -70,14 +69,18 @@ fn ugc_query_type_from_sort(sort_by: &str) -> UGCQueryType {
     }
 }
 
-pub fn search_workshop(query: &str, page: u32, page_size: u32, sort_by: &str) -> Result<WorkshopSearchResult, String> {
-    ensure_steam_ready()?;
-    init_client()?;
+fn direct_search_workshop(
+    query: &str,
+    page: u32,
+    page_size: u32,
+    sort_by: &str,
+) -> Result<WorkshopSearchResult, String> {
     with_client(|client| {
         let ugc = client.ugc();
         let subscribed = ugc.subscribed_items(true);
 
-        let shared: Arc<Mutex<Option<Result<WorkshopSearchResult, String>>>> = Arc::new(Mutex::new(None));
+        let shared: Arc<std::sync::Mutex<Option<Result<WorkshopSearchResult, String>>>> =
+            Arc::new(std::sync::Mutex::new(None));
         let shared_clone = shared.clone();
         let limit = page_size.clamp(1, 100);
 
@@ -94,34 +97,35 @@ pub fn search_workshop(query: &str, page: u32, page_size: u32, sort_by: &str) ->
             .include_long_desc(true);
 
         qh.fetch(move |result| {
-            let mapped = result.map(|qr| {
-                let total = qr.total_results();
-                let returned = qr.returned_results();
-                let take = (returned as usize).min(limit as usize);
-                let mut mods = Vec::with_capacity(take);
-                for i in 0..take {
-                    if let Some(item) = qr.get(i as u32) {
-                        let preview = qr.preview_url(i as u32);
-                        mods.push(WorkshopMod {
-                            id: item.published_file_id.0,
-                            name: item.title,
-                            author: item.owner.raw().to_string(),
-                            description: item.description,
-                            preview_url: preview,
-                            tags: item.tags,
-                            subscribers: 0,
-                            votes_up: item.num_upvotes,
-                            votes_down: item.num_downvotes,
-                            subscribed: subscribed.contains(&item.published_file_id),
-                        });
+            let mapped = result
+                .map(|qr| {
+                    let total = qr.total_results();
+                    let returned = qr.returned_results();
+                    let take = (returned as usize).min(limit as usize);
+                    let mut mods = Vec::with_capacity(take);
+                    for i in 0..take {
+                        if let Some(item) = qr.get(i as u32) {
+                            let preview = qr.preview_url(i as u32);
+                            mods.push(WorkshopMod {
+                                id: item.published_file_id.0,
+                                name: item.title,
+                                author: item.owner.raw().to_string(),
+                                description: item.description,
+                                preview_url: preview,
+                                tags: item.tags,
+                                subscribers: 0,
+                                votes_up: item.num_upvotes,
+                                votes_down: item.num_downvotes,
+                                subscribed: subscribed.contains(&item.published_file_id),
+                            });
+                        }
                     }
-                }
-                WorkshopSearchResult {
-                    items: mods,
-                    total_count: total,
-                }
-            })
-            .map_err(|e| format!("{:?}", e));
+                    WorkshopSearchResult {
+                        items: mods,
+                        total_count: total,
+                    }
+                })
+                .map_err(|e| format!("{:?}", e));
             if let Ok(mut guard) = shared_clone.lock() {
                 *guard = Some(mapped);
             }
@@ -129,6 +133,46 @@ pub fn search_workshop(query: &str, page: u32, page_size: u32, sort_by: &str) ->
 
         poll_callback(client, &shared, 15)
     })
+}
+
+pub fn search_workshop(
+    query: &str,
+    page: u32,
+    page_size: u32,
+    sort_by: &str,
+) -> Result<WorkshopSearchResult, String> {
+    ensure_steam_ready()?;
+    let current_exe = std::env::current_exe().map_err(|e| format!("获取程序路径失败: {}", e))?;
+    let mut cmd = std::process::Command::new(current_exe);
+    let query_param = if query.is_empty() { "__EMPTY__" } else { query };
+    cmd.args([
+        "--steam-worker",
+        "search",
+        query_param,
+        &page.to_string(),
+        &page_size.to_string(),
+        sort_by,
+    ]);
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW
+        cmd.creation_flags(0x08000000);
+    }
+
+    let output = cmd.output().map_err(|e| format!("启动 Steam Worker 查询失败: {}", e))?;
+    if output.status.success() {
+        serde_json::from_slice::<WorkshopSearchResult>(&output.stdout)
+            .map_err(|e| format!("解析工坊查询结果失败: {}", e))
+    } else {
+        let err_msg = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        if err_msg.is_empty() {
+            Err(format!("Steam 工坊查询失败 (退出码: {:?})", output.status.code()))
+        } else {
+            Err(err_msg)
+        }
+    }
 }
 
 fn format_workshop_error(e: &str) -> String {
@@ -144,13 +188,12 @@ fn format_workshop_error(e: &str) -> String {
         format!("创意工坊操作失败: {}。您可点击「前往网页订阅」在 Steam 社区页面手动订阅。", e)
     }
 }
-
-pub fn subscribe_mod(published_file_id: u64) -> Result<(), String> {
-    ensure_steam_ready()?;
-    init_client()?;
+/// 直接在进程内执行 Steam 订阅操作（仅供 worker 进程调用）
+fn direct_subscribe_mod(published_file_id: u64) -> Result<(), String> {
     with_client(|client| {
         let ugc = client.ugc();
-        let shared: Arc<Mutex<Option<Result<(), String>>>> = Arc::new(Mutex::new(None));
+        let shared: Arc<std::sync::Mutex<Option<Result<(), String>>>> =
+            Arc::new(std::sync::Mutex::new(None));
         let shared_c = shared.clone();
 
         ugc.subscribe_item(PublishedFileId(published_file_id), move |result| {
@@ -164,12 +207,12 @@ pub fn subscribe_mod(published_file_id: u64) -> Result<(), String> {
     })
 }
 
-pub fn unsubscribe_mod(published_file_id: u64) -> Result<(), String> {
-    ensure_steam_ready()?;
-    init_client()?;
+/// 直接在进程内执行 Steam 取消订阅操作（仅供 worker 进程调用）
+fn direct_unsubscribe_mod(published_file_id: u64) -> Result<(), String> {
     with_client(|client| {
         let ugc = client.ugc();
-        let shared: Arc<Mutex<Option<Result<(), String>>>> = Arc::new(Mutex::new(None));
+        let shared: Arc<std::sync::Mutex<Option<Result<(), String>>>> =
+            Arc::new(std::sync::Mutex::new(None));
         let shared_c = shared.clone();
 
         ugc.unsubscribe_item(PublishedFileId(published_file_id), move |result| {
@@ -181,4 +224,111 @@ pub fn unsubscribe_mod(published_file_id: u64) -> Result<(), String> {
 
         poll_callback(client, &shared, 15).map_err(|e| format_workshop_error(&e))
     })
+}
+
+/// 轻量独立 Worker 子进程入口
+pub fn run_steam_worker(args: &[String]) {
+    if args.is_empty() {
+        std::process::exit(1);
+    }
+    let action = &args[0];
+    match action.as_str() {
+        "search" => {
+            let raw_query = args.get(1).map(|s| s.as_str()).unwrap_or("");
+            let query = if raw_query == "__EMPTY__" { "" } else { raw_query };
+            let page = args.get(2).and_then(|s| s.parse::<u32>().ok()).unwrap_or(1);
+            let page_size = args.get(3).and_then(|s| s.parse::<u32>().ok()).unwrap_or(20);
+            let sort_by = args.get(4).map(|s| s.as_str()).unwrap_or("trending");
+            match direct_search_workshop(query, page, page_size, sort_by) {
+                Ok(res) => {
+                    if let Ok(json) = serde_json::to_string(&res) {
+                        print!("{}", json);
+                        std::process::exit(0);
+                    }
+                    std::process::exit(3);
+                }
+                Err(err) => {
+                    eprintln!("{}", err);
+                    std::process::exit(2);
+                }
+            }
+        }
+        "subscribe" => {
+            if let Some(id_str) = args.get(1)
+                && let Ok(id) = id_str.parse::<u64>() {
+                    match direct_subscribe_mod(id) {
+                        Ok(_) => std::process::exit(0),
+                        Err(err) => {
+                            eprintln!("{}", err);
+                            std::process::exit(2);
+                        }
+                    }
+                }
+            std::process::exit(1);
+        }
+        "unsubscribe" => {
+            if let Some(id_str) = args.get(1)
+                && let Ok(id) = id_str.parse::<u64>() {
+                    match direct_unsubscribe_mod(id) {
+                        Ok(_) => std::process::exit(0),
+                        Err(err) => {
+                            eprintln!("{}", err);
+                            std::process::exit(2);
+                        }
+                    }
+                }
+            std::process::exit(1);
+        }
+        _ => std::process::exit(1),
+    }
+}
+
+/// 启动自身轻量 Worker 子进程执行 Steam 订阅/取消操作，
+/// 从而使 Steamworks 初始化与绑定只发生在短暂的 Worker 进程中，
+/// 主 GUI 进程绝不被 Steam 绑定为游戏运行进程，解决误判运行和强杀主程序问题。
+fn execute_worker(action: &str, id: u64) -> Result<(), String> {
+    ensure_steam_ready()?;
+    let current_exe = std::env::current_exe().map_err(|e| format!("获取程序路径失败: {}", e))?;
+    let mut cmd = std::process::Command::new(current_exe);
+    cmd.args(["--steam-worker", action, &id.to_string()]);
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW
+        cmd.creation_flags(0x08000000);
+    }
+
+    let output = cmd.output().map_err(|e| format!("启动 Steam Worker 失败: {}", e))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        let err_msg = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        if err_msg.is_empty() {
+            Err(format!("Steam {} 操作失败 (进程退出码: {:?})", action, output.status.code()))
+        } else {
+            Err(err_msg)
+        }
+    }
+}
+
+pub fn subscribe_mod(published_file_id: u64) -> Result<(), String> {
+    execute_worker("subscribe", published_file_id)
+}
+
+pub fn unsubscribe_mod(published_file_id: u64) -> Result<(), String> {
+    let res = execute_worker("unsubscribe", published_file_id);
+    // 同时物理删除本地下载目录中的该创意工坊文件夹，避免取消订阅后因文件残留仍显示在已安装列表中
+    remove_workshop_item_dir(published_file_id);
+    res
+}
+pub fn remove_workshop_item_dir(published_file_id: u64) {
+    let id_str = published_file_id.to_string();
+    let workshop_dirs = crate::integrations::steam::get_workshop_dirs();
+    for dir in workshop_dirs {
+        let item_path = dir.join(&id_str);
+        if item_path.exists() {
+            let _ = std::fs::remove_dir_all(&item_path);
+        }
+    }
 }

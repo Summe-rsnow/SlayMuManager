@@ -15,6 +15,8 @@ import { ref, onBeforeUnmount } from "vue"
  */
 export function useIsActive() {
   const isActive = ref(true)
-  onBeforeUnmount(() => { isActive.value = false })
+  onBeforeUnmount(() => {
+    isActive.value = false
+  })
   return { isActive }
 }

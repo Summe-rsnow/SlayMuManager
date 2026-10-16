@@ -8,7 +8,7 @@ function containsCJK(text: string): boolean {
 }
 
 export async function translateText(
-  text: string | null | undefined
+  text: string | null | undefined,
 ): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
   if (!text) return { ok: false, error: "No text to translate" }
   const targetLang = currentLocale.value === "zh-CN" ? "zh-CN" : "en"

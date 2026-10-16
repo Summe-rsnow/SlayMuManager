@@ -7,7 +7,8 @@
   font-display: swap;
 }
 
-html, body {
+html,
+body {
   font-family: "OPPO Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
@@ -101,8 +102,9 @@ html, body {
   padding-left: 24px;
   margin-right: -50px;
   padding-right: 50px;
-  padding-top: 6px;
-  padding-bottom: 12px;
+  margin-top: -14px;
+  padding-top: 14px;
+  padding-bottom: 24px;
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none !important;
@@ -150,12 +152,25 @@ html, body {
   --blur-saturate: 1.4;
 
   /* 弹窗遮罩的点发光（径向渐变 = 主题色中心发光，不加暗色基底） */
-  --blur-backdrop-bg: radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 70%);
+  --blur-backdrop-bg: radial-gradient(
+    ellipse 80% 70% at 50% 45%,
+    color-mix(in srgb, var(--primary-color) 10%, transparent) 0%,
+    transparent 70%
+  );
 
   /* 基于主题色的微渐变环境背景（浅色模式：清爽雅致超微光底色） */
-  --app-bg-gradient: radial-gradient(circle at 15% 15%, color-mix(in srgb, var(--primary-color) 4%, #ffffff) 0%, transparent 60%),
-                     radial-gradient(circle at 85% 85%, color-mix(in srgb, var(--primary-color) 2%, #edf1f8) 0%, transparent 55%),
-                     #edf0f6;
+  --app-bg-gradient:
+    radial-gradient(
+      circle at 15% 15%,
+      color-mix(in srgb, var(--primary-color) 4%, #ffffff) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at 85% 85%,
+      color-mix(in srgb, var(--primary-color) 2%, #edf1f8) 0%,
+      transparent 55%
+    ),
+    #edf0f6;
 
   /* ============================================================
      4 级层次化毛玻璃体系 (Light Mode) —— 通透白冰毛玻璃
@@ -164,33 +179,34 @@ html, body {
   /* Level 1: Surface (卡片基底 / 内嵌面板) */
   --glass-surface-bg: rgba(255, 255, 255, 0.55);
   --glass-surface-bg-hover: rgba(255, 255, 255, 0.78);
-  --glass-surface-border: 1px solid rgba(255, 255, 255, 0.70);
+  --glass-surface-border: 1px solid rgba(255, 255, 255, 0.7);
   --glass-surface-border-hover: 1px solid rgba(255, 255, 255, 0.95);
   --glass-surface-blur: 16px;
   --glass-surface-radius: 12px;
-  --shadow-glass-surface: inset 0 1px 0 0 rgba(255, 255, 255, 0.60), 0 2px 8px rgba(0, 0, 0, 0.03);
+  --shadow-glass-surface: inset 0 1px 0 0 rgba(255, 255, 255, 0.6), 0 2px 8px rgba(0, 0, 0, 0.03);
 
   /* Level 2: Nav (常驻导航栏 / 控制条) */
   --glass-nav-bg: rgba(255, 255, 255, 0.65);
   --glass-nav-bg-hover: rgba(255, 255, 255, 0.82);
-  --glass-nav-border: 1px solid rgba(255, 255, 255, 0.80);
-  --glass-nav-border-hover: 1px solid rgba(255, 255, 255, 1.0);
+  --glass-nav-border: 1px solid rgba(255, 255, 255, 0.8);
+  --glass-nav-border-hover: 1px solid rgba(255, 255, 255, 1);
   --glass-nav-blur: 18px;
   --glass-nav-radius: 14px;
-  --shadow-glass-nav: inset 0 1px 0 0 rgba(255, 255, 255, 0.80), 0 8px 24px rgba(0, 0, 0, 0.05);
+  --shadow-glass-nav: inset 0 1px 0 0 rgba(255, 255, 255, 0.8), 0 8px 24px rgba(0, 0, 0, 0.05);
 
   /* Level 3: Floating (浮动气泡 / 下拉面板 / Tooltip / 侧边浮动菜单) */
-  --glass-floating-bg: rgba(255, 255, 255, 0.80);
+  --glass-floating-bg: rgba(255, 255, 255, 0.8);
   --glass-floating-bg-hover: #ffffff;
-  --glass-floating-border: 1px solid rgba(255, 255, 255, 0.90);
-  --glass-floating-border-hover: 1px solid rgba(255, 255, 255, 1.0);
+  --glass-floating-border: 1px solid rgba(255, 255, 255, 0.9);
+  --glass-floating-border-hover: 1px solid rgba(255, 255, 255, 1);
   --glass-floating-blur: 20px;
   --glass-floating-radius: 14px;
-  --shadow-glass-floating: inset 0 1px 0 0 rgba(255, 255, 255, 0.90), 0 12px 36px rgba(0, 0, 0, 0.08);
+  --shadow-glass-floating:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.9), 0 12px 36px rgba(0, 0, 0, 0.08);
 
   /* Level 4: Modal (弹窗对话框 / 模态卡片) */
   --glass-modal-bg: color-mix(in srgb, var(--color-bg-card) 85%, transparent);
-  --glass-modal-border: 1px solid rgba(255, 255, 255, 0.90);
+  --glass-modal-border: 1px solid rgba(255, 255, 255, 0.9);
   --glass-modal-blur: 24px;
   --glass-modal-radius: 16px;
   --shadow-glass-modal: 0 32px 80px rgba(0, 0, 0, 0.14), 0 8px 32px rgba(0, 0, 0, 0.08);
@@ -205,32 +221,45 @@ html, body {
   --shadow-glass: var(--shadow-glass-nav);
 
   /* 阴影体系 */
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
-  --shadow-card-hover: 0 12px 32px rgba(0,0,0,0.1), 0 6px 14px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04);
-  --shadow-modal: 0 32px 80px rgba(0,0,0,0.18), 0 8px 32px rgba(0,0,0,0.1);
-  --shadow-glow: 0 0 24px color-mix(in srgb, var(--primary-color) 8%, transparent), 0 8px 24px rgba(0,0,0,0.04);
+  --shadow-card:
+    0 1px 3px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover:
+    0 12px 32px rgba(0, 0, 0, 0.1), 0 6px 14px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
+  --shadow-modal: 0 32px 80px rgba(0, 0, 0, 0.18), 0 8px 32px rgba(0, 0, 0, 0.1);
+  --shadow-glow:
+    0 0 24px color-mix(in srgb, var(--primary-color) 8%, transparent),
+    0 8px 24px rgba(0, 0, 0, 0.04);
 }
 
 .dark {
-  --color-bg-primary: #07070D;
-  --color-bg-secondary: #0A0A12;
-  --color-bg-card: #0D0D17;
-  --color-text-primary: #EDEDEF;
-  --color-text-secondary: #A0A0A8;
-  --color-text-muted: #5C5C68;
-  --color-border: rgba(255,255,255,0.06);
-  --color-bg-sidebar: #07070D;
-  --color-titlebar-bg: #07070D;
-  --color-titlebar-border: rgba(255,255,255,0.06);
-  --color-main-bg: #07070D;
+  --color-bg-primary: #07070d;
+  --color-bg-secondary: #0a0a12;
+  --color-bg-card: #0d0d17;
+  --color-text-primary: #ededef;
+  --color-text-secondary: #a0a0a8;
+  --color-text-muted: #5c5c68;
+  --color-border: rgba(255, 255, 255, 0.06);
+  --color-bg-sidebar: #07070d;
+  --color-titlebar-bg: #07070d;
+  --color-titlebar-border: rgba(255, 255, 255, 0.06);
+  --color-main-bg: #07070d;
   --color-warning-bg: #271000;
   --color-warning-text: #fbbf24;
   --color-warning-border: #78350f;
 
   /* 基于主题色的微渐变背景（暗色模式：纯粹深邃曜黑基底 + 极微主题氛围） */
-  --app-bg-gradient: radial-gradient(circle at 15% 15%, color-mix(in srgb, var(--primary-color) 6%, #08080E) 0%, transparent 60%),
-                     radial-gradient(circle at 85% 85%, color-mix(in srgb, var(--primary-color) 4%, #08080E) 0%, transparent 55%),
-                     #08080E;
+  --app-bg-gradient:
+    radial-gradient(
+      circle at 15% 15%,
+      color-mix(in srgb, var(--primary-color) 6%, #08080e) 0%,
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at 85% 85%,
+      color-mix(in srgb, var(--primary-color) 4%, #08080e) 0%,
+      transparent 55%
+    ),
+    #08080e;
 
   /* ============================================================
      4 级层次化毛玻璃体系 (Dark Mode) —— 质感黑曜毛玻璃
@@ -248,24 +277,29 @@ html, body {
   /* Level 2: Nav (常驻导航栏 / 控制条) */
   --glass-nav-bg: color-mix(in srgb, var(--color-bg-primary) 65%, rgba(255, 255, 255, 0.03));
   --glass-nav-bg-hover: color-mix(in srgb, var(--color-bg-primary) 78%, rgba(255, 255, 255, 0.06));
-  --glass-nav-border: 1px solid rgba(255, 255, 255, 0.10);
-  --glass-nav-border-hover: 1px solid rgba(255, 255, 255, 0.20);
+  --glass-nav-border: 1px solid rgba(255, 255, 255, 0.1);
+  --glass-nav-border-hover: 1px solid rgba(255, 255, 255, 0.2);
   --glass-nav-blur: 18px;
   --glass-nav-radius: 14px;
   --shadow-glass-nav: inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 8px 32px rgba(0, 0, 0, 0.35);
 
   /* Level 3: Floating (浮动气泡 / 下拉面板 / Tooltip / 侧边浮动菜单) */
   --glass-floating-bg: color-mix(in srgb, var(--color-bg-primary) 60%, rgba(255, 255, 255, 0.06));
-  --glass-floating-bg-hover: color-mix(in srgb, var(--color-bg-primary) 75%, rgba(255, 255, 255, 0.10));
+  --glass-floating-bg-hover: color-mix(
+    in srgb,
+    var(--color-bg-primary) 75%,
+    rgba(255, 255, 255, 0.1)
+  );
   --glass-floating-border: 1px solid rgba(255, 255, 255, 0.14);
   --glass-floating-border-hover: 1px solid rgba(255, 255, 255, 0.24);
   --glass-floating-blur: 20px;
   --glass-floating-radius: 14px;
-  --shadow-glass-floating: inset 0 1px 0 0 rgba(255, 255, 255, 0.10), 0 12px 36px rgba(0, 0, 0, 0.45);
+  --shadow-glass-floating:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1), 0 12px 36px rgba(0, 0, 0, 0.45);
 
   /* Level 4: Modal (弹窗对话框 / 模态卡片) */
   --glass-modal-bg: color-mix(in srgb, var(--color-bg-card) 85%, transparent);
-  --glass-modal-border: 1px solid rgba(255, 255, 255, 0.10);
+  --glass-modal-border: 1px solid rgba(255, 255, 255, 0.1);
   --glass-modal-blur: 24px;
   --glass-modal-radius: 16px;
   --shadow-glass-modal: 0 32px 80px rgba(0, 0, 0, 0.55), 0 8px 32px rgba(0, 0, 0, 0.25);
@@ -280,16 +314,24 @@ html, body {
   --shadow-glass: var(--shadow-glass-nav);
 
   /* 阴影（暗色模式更突出） */
-  --shadow-card: 0 2px 8px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.2), 0 1px 4px rgba(0,0,0,0.4);
-  --shadow-card-hover: 0 12px 32px rgba(0,0,0,0.45), 0 6px 16px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.5);
-  --shadow-modal: 0 32px 80px rgba(0,0,0,0.6), 0 8px 32px rgba(0,0,0,0.3);
-  --shadow-glow: 0 0 24px color-mix(in srgb, var(--primary-color) 15%, transparent), 0 8px 32px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-card:
+    0 2px 8px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.2), 0 1px 4px rgba(0, 0, 0, 0.4);
+  --shadow-card-hover:
+    0 12px 32px rgba(0, 0, 0, 0.45), 0 6px 16px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-modal: 0 32px 80px rgba(0, 0, 0, 0.6), 0 8px 32px rgba(0, 0, 0, 0.3);
+  --shadow-glow:
+    0 0 24px color-mix(in srgb, var(--primary-color) 15%, transparent),
+    0 8px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.3);
 
   --blur-backdrop: 12px;
   --blur-saturate: 1.4;
 
   /* 弹窗遮罩的点发光 */
-  --blur-backdrop-bg: radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 15%, transparent) 0%, transparent 70%);
+  --blur-backdrop-bg: radial-gradient(
+    ellipse 80% 70% at 50% 45%,
+    color-mix(in srgb, var(--primary-color) 15%, transparent) 0%,
+    transparent 70%
+  );
 }
 
 /* ============================================================
@@ -297,9 +339,15 @@ html, body {
    ============================================================ */
 
 @keyframes ambient-shift {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(3%, 2%) scale(1.04); }
-  100% { transform: translate(0, 0) scale(1); }
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(3%, 2%) scale(1.04);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
 }
 
 .ambient-bg {
@@ -310,17 +358,32 @@ html, body {
   pointer-events: none;
 }
 .ambient-bg::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: -30%;
-  background: radial-gradient(circle at 25% 25%, color-mix(in srgb, var(--primary-color) 4%, transparent) 0%, transparent 50%),
-              radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--primary-color) 3%, transparent) 0%, transparent 45%),
-              radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--primary-color) 2%, transparent) 0%, transparent 60%);
+  background:
+    radial-gradient(
+      circle at 25% 25%,
+      color-mix(in srgb, var(--primary-color) 4%, transparent) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 80%,
+      color-mix(in srgb, var(--primary-color) 3%, transparent) 0%,
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--primary-color) 2%, transparent) 0%,
+      transparent 60%
+    );
   animation: ambient-shift 24s ease-in-out infinite alternate;
   will-change: transform;
 }
 @media (prefers-reduced-motion: reduce) {
-  .ambient-bg::before { animation: none; }
+  .ambient-bg::before {
+    animation: none;
+  }
 }
 
 /* ============================================================
@@ -379,7 +442,9 @@ html, body {
 .glass-hover:hover {
   background: var(--glass-bg-hover);
   border: var(--glass-border-hover);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.35), var(--shadow-glass);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+    var(--shadow-glass);
 }
 
 /* ============================================================
@@ -435,80 +500,146 @@ html, body {
    基于 CSS 变量的主题辅助类（替代 UnoCSS 静态 primary）
    ============================================================ */
 
-.bg-primary-theme { background-color: var(--primary-color); }
-.text-primary-theme { color: var(--primary-color); }
-.border-primary-theme { border-color: var(--primary-color); }
-.hover\:text-primary-theme:hover { color: var(--primary-color); }
-.hover\:bg-primary-10-theme:hover { background-color: color-mix(in srgb, var(--primary-color) 10%, transparent); }
-.bg-primary-10-theme { background-color: color-mix(in srgb, var(--primary-color) 10%, transparent); }
-.bg-primary-20-theme { background-color: color-mix(in srgb, var(--primary-color) 20%, transparent); }
-.bg-primary-50-theme { background-color: var(--primary-50); }
-.text-primary-600-theme { color: var(--primary-600); }
+.bg-primary-theme {
+  background-color: var(--primary-color);
+}
+.text-primary-theme {
+  color: var(--primary-color);
+}
+.border-primary-theme {
+  border-color: var(--primary-color);
+}
+.hover\:text-primary-theme:hover {
+  color: var(--primary-color);
+}
+.hover\:bg-primary-10-theme:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+.bg-primary-10-theme {
+  background-color: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+.bg-primary-20-theme {
+  background-color: color-mix(in srgb, var(--primary-color) 20%, transparent);
+}
+.bg-primary-50-theme {
+  background-color: var(--primary-50);
+}
+.text-primary-600-theme {
+  color: var(--primary-600);
+}
 
 /* ============================================================
    语义色辅助类 — 替代硬编码 UnoCSS 颜色类
    ============================================================ */
 
-.text-c-primary { color: var(--color-text-primary); }
-.text-c-secondary { color: var(--color-text-secondary); }
-.text-c-muted { color: var(--color-text-muted); }
-.bg-c-card { background-color: var(--color-bg-card); }
-.bg-c-secondary { background-color: var(--color-bg-secondary); }
-.bg-c-muted { background-color: var(--color-text-muted); }
-.bg-c-warning { background-color: var(--color-warning-bg); }
-.text-c-warning { color: var(--color-warning-text); }
-.border-c-warning { border-color: var(--color-warning-border); }
-.border-c-default { border-color: var(--color-border); }
+.text-c-primary {
+  color: var(--color-text-primary);
+}
+.text-c-secondary {
+  color: var(--color-text-secondary);
+}
+.text-c-muted {
+  color: var(--color-text-muted);
+}
+.bg-c-card {
+  background-color: var(--color-bg-card);
+}
+.bg-c-secondary {
+  background-color: var(--color-bg-secondary);
+}
+.bg-c-muted {
+  background-color: var(--color-text-muted);
+}
+.bg-c-warning {
+  background-color: var(--color-warning-bg);
+}
+.text-c-warning {
+  color: var(--color-warning-text);
+}
+.border-c-warning {
+  border-color: var(--color-warning-border);
+}
+.border-c-default {
+  border-color: var(--color-border);
+}
 
 /* ============================================================
    预设切换淡入淡出动画
    ============================================================ */
 
 .preset-fade-enter-active,
-.preset-fade-leave-active { transition: opacity 0.2s ease; }
+.preset-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
 .preset-fade-enter-from,
-.preset-fade-leave-to { opacity: 0; }
+.preset-fade-leave-to {
+  opacity: 0;
+}
 
 /* ============================================================
    页面过渡动画 - 路由切换
    ============================================================ */
 
 .page-fade-enter-active,
-.page-fade-leave-active { transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-.page-fade-enter-from { opacity: 0; transform: translateY(8px); }
-.page-fade-leave-to { opacity: 0; transform: translateY(-4px); }
+.page-fade-leave-active {
+  transition: opacity 0.12s ease-out;
+}
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}
 
 /* ============================================================
    列表交错入场动画
    ============================================================ */
 
-.stagger-enter-active { transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
-.stagger-leave-active { transition: all 0.2s ease-in; }
-.stagger-enter-from { opacity: 0; transform: translateY(16px); }
-.stagger-leave-to { opacity: 0; transform: translateX(-20px); }
+.stagger-enter-active {
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.stagger-leave-active {
+  transition: opacity 0.15s ease-in;
+}
+.stagger-enter-from {
+  opacity: 0;
+}
+.stagger-leave-to {
+  opacity: 0;
+}
 
-.stagger-enter-active:nth-child(1) { transition-delay: 0ms; }
-.stagger-enter-active:nth-child(2) { transition-delay: 25ms; }
-.stagger-enter-active:nth-child(3) { transition-delay: 50ms; }
-.stagger-enter-active:nth-child(4) { transition-delay: 75ms; }
-.stagger-enter-active:nth-child(5) { transition-delay: 100ms; }
-.stagger-enter-active:nth-child(6) { transition-delay: 125ms; }
-.stagger-enter-active:nth-child(7) { transition-delay: 150ms; }
-.stagger-enter-active:nth-child(8) { transition-delay: 175ms; }
-.stagger-enter-active:nth-child(9) { transition-delay: 200ms; }
-.stagger-enter-active:nth-child(10) { transition-delay: 225ms; }
-.stagger-enter-active:nth-child(n+11) { transition-delay: 250ms; }
+/* 全局通用弹窗与抽屉毛玻璃遮罩规范 (Level 4: Modal Mask) */
+.n-modal-mask,
+.n-drawer-mask {
+  backdrop-filter: blur(var(--blur-backdrop)) saturate(var(--blur-saturate));
+  -webkit-backdrop-filter: blur(var(--blur-backdrop)) saturate(var(--blur-saturate));
+  background: transparent !important;
+  transition: backdrop-filter 0.25s ease;
+}
 
+.n-modal-mask.fade-in-transition-leave-active,
+.n-drawer-mask.fade-in-transition-leave-active {
+  backdrop-filter: blur(0px) saturate(var(--blur-saturate)) !important;
+  -webkit-backdrop-filter: blur(0px) saturate(var(--blur-saturate)) !important;
+}
+
+.mod-card {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
 /* ============================================================
    骨架屏 shimmer 动画
    ============================================================ */
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 .skeleton-shimmer {
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     var(--color-bg-secondary) 25%,
     color-mix(in srgb, var(--primary-color) 5%, var(--color-bg-card)) 50%,
     var(--color-bg-secondary) 75%

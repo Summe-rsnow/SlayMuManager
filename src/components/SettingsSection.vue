@@ -31,8 +31,14 @@ defineProps<{
   animation: highlight-flash 2.5s ease-in-out;
 }
 @keyframes highlight-flash {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 50%, transparent); }
-  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 30%, transparent); }
-  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 0%, transparent); }
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 50%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color) 30%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary-color) 0%, transparent);
+  }
 }
 </style>

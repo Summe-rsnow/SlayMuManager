@@ -25,7 +25,7 @@ function isAcceptable(path: string): boolean {
   const lower = path.toLowerCase()
   // 扩展名过滤
   if (props.acceptExt && props.acceptExt.length > 0) {
-    if (props.acceptExt.some(ext => lower.endsWith(`.${ext}`))) return true
+    if (props.acceptExt.some((ext) => lower.endsWith(`.${ext}`))) return true
     // 文件夹
     if (props.acceptFolders !== false) {
       const base = path.split(/[\\/]/).pop() ?? ""
@@ -66,14 +66,17 @@ onUnmounted(() => {
         v-if="showOverlay"
         class="fixed inset-0 z-[9999] flex items-center justify-center select-none"
         :style="{
-          background: 'radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 70%)',
+          background:
+            'radial-gradient(ellipse 80% 70% at 50% 45%, color-mix(in srgb, var(--primary-color) 10%, transparent) 0%, transparent 70%)',
           backdropFilter: 'blur(var(--blur-backdrop)) saturate(var(--blur-saturate))',
         }"
       >
         <div class="flex flex-col items-center gap-8">
           <div
             class="w-36 h-36 rounded-full flex items-center justify-center"
-            :style="{ backgroundColor: 'color-mix(in srgb, var(--primary-color) 15%, transparent)' }"
+            :style="{
+              backgroundColor: 'color-mix(in srgb, var(--primary-color) 15%, transparent)',
+            }"
           >
             <NIcon :size="60" :color="'var(--primary-color)'">
               <Upload />

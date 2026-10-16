@@ -32,16 +32,17 @@ export function useModOperations() {
     const isEnabling = mod.state === "disabled"
     busyId.value = mod.id
     try {
-      const result = await invoke<ModToggleResult>(
-        isEnabling ? "enable_mod" : "disable_mod",
-        { modId: mod.id },
-      )
+      const result = await invoke<ModToggleResult>(isEnabling ? "enable_mod" : "disable_mod", {
+        modId: mod.id,
+      })
       if (result.saveGuard.pathSwitched) {
         saveGuardInfo.value = result
         showSaveGuardDialog.value = true
       } else {
         message.success(
-          t(isEnabling ? "library.success.enabled" : "library.success.disabled", { name: mod.name }),
+          t(isEnabling ? "library.success.enabled" : "library.success.disabled", {
+            name: mod.name,
+          }),
         )
       }
       await fetchMods()
@@ -113,7 +114,9 @@ export function useModOperations() {
       try {
         await invoke<ModToggleResult>("enable_mod", { modId: mod.id })
         success++
-      } catch { /* skip failed */ }
+      } catch {
+        /* skip failed */
+      }
       if (!isActive.value) break
     }
     batchBusy.value = false
@@ -124,7 +127,7 @@ export function useModOperations() {
 
   /** 全部启用 → 禁用 */
   async function disableAllMods() {
-    const targets = enabledMods.value.filter(m => m.source !== "workshop")
+    const targets = enabledMods.value.filter((m) => m.source !== "workshop")
     if (targets.length === 0) {
       message.info(t("library.info.allAlreadyDisabled"))
       return
@@ -135,7 +138,9 @@ export function useModOperations() {
       try {
         await invoke<ModToggleResult>("disable_mod", { modId: mod.id })
         success++
-      } catch { /* skip failed */ }
+      } catch {
+        /* skip failed */
+      }
       if (!isActive.value) break
     }
     batchBusy.value = false

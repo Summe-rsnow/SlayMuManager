@@ -24,13 +24,17 @@ export function useStorage<T>(key: string, defaultValue: T): Ref<T> {
   }
 
   // 自动持久化：数据变化时写入 localStorage
-  watch(data, (val) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(val))
-    } catch {
-      // 配额超限等，静默忽略
-    }
-  }, { deep: true })
+  watch(
+    data,
+    (val) => {
+      try {
+        localStorage.setItem(key, JSON.stringify(val))
+      } catch {
+        // 配额超限等，静默忽略
+      }
+    },
+    { deep: true },
+  )
 
   return data
 }

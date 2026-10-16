@@ -11,16 +11,12 @@ export const useDownloadStore = defineStore("download", () => {
   let unlistenFinished: UnlistenFn | null = null
 
   const activeDownloads = computed(() =>
-    tasks.value.filter(t => t.status === "downloading" || t.status === "pending")
+    tasks.value.filter((t) => t.status === "downloading" || t.status === "pending"),
   )
-  const completedDownloads = computed(() =>
-    tasks.value.filter(t => t.status === "completed")
-  )
-  const failedDownloads = computed(() =>
-    tasks.value.filter(t => t.status === "failed")
-  )
+  const completedDownloads = computed(() => tasks.value.filter((t) => t.status === "completed"))
+  const failedDownloads = computed(() => tasks.value.filter((t) => t.status === "failed"))
   const totalActiveSpeed = computed(() =>
-    activeDownloads.value.reduce((acc, t) => acc + (t.speedBytesPerSec || 0), 0)
+    activeDownloads.value.reduce((acc, t) => acc + (t.speedBytesPerSec || 0), 0),
   )
 
   async function fetchTasks() {
@@ -32,14 +28,19 @@ export const useDownloadStore = defineStore("download", () => {
     }
   }
 
-  async function startNexusDownload(modId: number, fileId: number, modName: string, fileName: string) {
+  async function startNexusDownload(
+    modId: number,
+    fileId: number,
+    modName: string,
+    fileName: string,
+  ) {
     const task = await invoke<DownloadTask>("start_nexus_download", {
       modId,
       fileId,
       modName,
       fileName,
     })
-    const idx = tasks.value.findIndex(t => t.id === task.id)
+    const idx = tasks.value.findIndex((t) => t.id === task.id)
     if (idx >= 0) {
       tasks.value[idx] = task
     } else {
@@ -50,7 +51,7 @@ export const useDownloadStore = defineStore("download", () => {
 
   async function pauseDownload(taskId: string) {
     await invoke("pause_download", { taskId })
-    const task = tasks.value.find(t => t.id === taskId)
+    const task = tasks.value.find((t) => t.id === taskId)
     if (task) {
       task.status = "paused"
       task.speedBytesPerSec = 0
@@ -59,7 +60,7 @@ export const useDownloadStore = defineStore("download", () => {
 
   async function resumeDownload(taskId: string) {
     await invoke("resume_download", { taskId })
-    const task = tasks.value.find(t => t.id === taskId)
+    const task = tasks.value.find((t) => t.id === taskId)
     if (task) {
       task.status = "pending"
     }
@@ -67,7 +68,7 @@ export const useDownloadStore = defineStore("download", () => {
 
   async function cancelDownload(taskId: string) {
     await invoke("cancel_download", { taskId })
-    const task = tasks.value.find(t => t.id === taskId)
+    const task = tasks.value.find((t) => t.id === taskId)
     if (task) {
       task.status = "cancelled"
       task.speedBytesPerSec = 0
@@ -89,7 +90,7 @@ export const useDownloadStore = defineStore("download", () => {
 
     unlistenProgress = await listen<DownloadTask>("download-progress", (event) => {
       const updated = event.payload
-      const idx = tasks.value.findIndex(t => t.id === updated.id)
+      const idx = tasks.value.findIndex((t) => t.id === updated.id)
       if (idx >= 0) {
         tasks.value[idx] = updated
       } else {
@@ -99,7 +100,7 @@ export const useDownloadStore = defineStore("download", () => {
 
     unlistenFinished = await listen<DownloadTask>("download-finished", (event) => {
       const updated = event.payload
-      const idx = tasks.value.findIndex(t => t.id === updated.id)
+      const idx = tasks.value.findIndex((t) => t.id === updated.id)
       if (idx >= 0) {
         tasks.value[idx] = updated
       } else {

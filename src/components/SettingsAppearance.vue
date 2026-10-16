@@ -2,16 +2,26 @@
 import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NSelect, NRadioGroup, NRadio, NButton, NIcon, NSlider } from "naive-ui"
-import { Image, RotateCcw } from "@lucide/vue"
+import { NSelect, NRadioGroup, NRadio, NButton, NIcon, NSlider, useMessage } from "naive-ui"
+import { Image, RotateCcw, Crop } from "@lucide/vue"
 import { setLocale } from "@/i18n"
-import { displayMode, setDisplayMode, themeColorKey, setThemeColor, colorPalettes, type ThemeColorKey, type DisplayMode } from "@/theme"
+import {
+  displayMode,
+  setDisplayMode,
+  themeColorKey,
+  setThemeColor,
+  colorPalettes,
+  type ThemeColorKey,
+  type DisplayMode,
+} from "@/theme"
 import { useBackgroundStore } from "@/stores/useBackgroundStore"
 import { storeToRefs } from "pinia"
 import SettingsSection from "./SettingsSection.vue"
 import SettingsRow from "./SettingsRow.vue"
+import WallpaperCropModal from "./WallpaperCropModal.vue"
 
 const { t } = useI18n()
+const message = useMessage()
 
 const bgStore = useBackgroundStore()
 const { customBgUrl, customBgBlur, customBgDim, loading: bgLoading } = storeToRefs(bgStore)
@@ -49,17 +59,38 @@ const themeColorOptions = computed<{ label: string; value: ThemeColorKey }[]>(()
 async function updateLocale(val: string) {
   locale.value = val
   setLocale(val)
-  try { await invoke("update_app_locale", { locale: val }) } catch { /* ignore */ }
+  try {
+    await invoke("update_app_locale", { locale: val })
+  } catch {
+    /* ignore */
+  }
 }
 
 async function handleDisplayModeChange(val: DisplayMode) {
   setDisplayMode(val)
-  try { await invoke("update_theme_mode", { mode: val }) } catch { /* ignore */ }
+  try {
+    await invoke("update_theme_mode", { mode: val })
+  } catch {
+    /* ignore */
+  }
 }
 
 async function handleThemeColorChange(val: ThemeColorKey) {
   setThemeColor(val)
-  try { await invoke("update_theme_color", { color: val }) } catch { /* ignore */ }
+  try {
+    await invoke("update_theme_color", { color: val })
+  } catch {
+    /* ignore */
+  }
+}
+
+async function handleCropApply(payload: {
+  croppedUrl: string
+  originalUrl: string
+  fillColor: string
+}) {
+  await bgStore.applyCroppedWallpaper(payload.croppedUrl, payload.originalUrl, payload.fillColor)
+  message.success(t("settings.appearance.cropSuccess"))
 }
 </script>
 
@@ -74,13 +105,20 @@ async function handleThemeColorChange(val: ThemeColorKey) {
         @update:value="updateLocale"
       />
     </SettingsRow>
+
     <SettingsRow :label="t('settings.appearance.displayMode')">
-      <NRadioGroup :value="displayMode" size="small" @update:value="handleDisplayModeChange">
+      <NRadioGroup
+        :value="displayMode"
+        name="displayMode"
+        size="small"
+        @update:value="handleDisplayModeChange"
+      >
         <NRadio v-for="opt in displayModeOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
         </NRadio>
       </NRadioGroup>
     </SettingsRow>
+
     <SettingsRow :label="t('settings.appearance.themeColor')">
       <div class="flex gap-1.5">
         <button
@@ -98,12 +136,27 @@ async function handleThemeColorChange(val: ThemeColorKey) {
     <!-- 自定义背景图片 -->
     <SettingsRow :label="t('settings.appearance.customBackground')">
       <div class="flex items-center gap-2.5">
-        <!-- 缩略图预览 -->
+        <!-- 缩略图预览（点击直接打开裁切） -->
         <div
           v-if="customBgUrl"
-          class="w-10 h-7 rounded-md border border-white/20 shadow-sm flex-shrink-0 bg-cover bg-center"
+          class="w-10 h-7 rounded-md border border-white/20 shadow-sm flex-shrink-0 bg-cover bg-center cursor-pointer hover:opacity-80 transition-opacity"
           :style="{ backgroundImage: `url(${customBgUrl})` }"
+          :title="t('settings.appearance.cropBackground')"
+          @click="bgStore.reopenCurrentCrop"
         />
+        <!-- 裁切调整按钮（仅在已设置壁纸时出现） -->
+        <NButton
+          v-if="customBgUrl"
+          size="small"
+          secondary
+          :loading="bgLoading"
+          @click="bgStore.reopenCurrentCrop"
+        >
+          <template #icon>
+            <NIcon :size="15"><Crop /></NIcon>
+          </template>
+          {{ t("settings.appearance.cropBackground") }}
+        </NButton>
         <NButton
           size="small"
           :loading="bgLoading"
@@ -113,7 +166,11 @@ async function handleThemeColorChange(val: ThemeColorKey) {
           <template #icon>
             <NIcon :size="15"><Image /></NIcon>
           </template>
-          {{ customBgUrl ? t("settings.appearance.changeBackground") : t("settings.appearance.chooseBackground") }}
+          {{
+            customBgUrl
+              ? t("settings.appearance.changeBackground")
+              : t("settings.appearance.chooseBackground")
+          }}
         </NButton>
         <NButton
           v-if="customBgUrl"
@@ -132,39 +189,29 @@ async function handleThemeColorChange(val: ThemeColorKey) {
     </SettingsRow>
 
     <!-- 背景模糊调节（仅在设置了自定义背景时生效） -->
-    <SettingsRow
-      v-if="customBgUrl"
-      :label="t('settings.appearance.backgroundBlur')"
-    >
+    <SettingsRow v-if="customBgUrl" :label="t('settings.appearance.backgroundBlur')">
       <div class="flex items-center gap-3 w-56">
-        <NSlider
-          v-model:value="customBgBlur"
-          :min="0"
-          :max="40"
-          :step="1"
-          size="small"
-        />
+        <NSlider v-model:value="customBgBlur" :min="0" :max="40" :step="1" size="small" />
         <span class="text-xs font-mono text-c-muted w-10 text-right">{{ customBgBlur }}px</span>
       </div>
     </SettingsRow>
 
     <!-- 背景遮罩暗度调节（仅在设置了自定义背景时生效） -->
-    <SettingsRow
-      v-if="customBgUrl"
-      :label="t('settings.appearance.backgroundDim')"
-    >
+    <SettingsRow v-if="customBgUrl" :label="t('settings.appearance.backgroundDim')">
       <div class="flex items-center gap-3 w-56">
-        <NSlider
-          v-model:value="customBgDim"
-          :min="0"
-          :max="80"
-          :step="5"
-          size="small"
-        />
+        <NSlider v-model:value="customBgDim" :min="0" :max="80" :step="5" size="small" />
         <span class="text-xs font-mono text-c-muted w-10 text-right">{{ customBgDim }}%</span>
       </div>
     </SettingsRow>
   </SettingsSection>
+
+  <!-- 壁纸裁切调整弹窗 -->
+  <WallpaperCropModal
+    v-model:show="bgStore.showCropModal"
+    :image-url="bgStore.cropSourceUrl"
+    :initial-fill-color="bgStore.customBgFillColor"
+    @apply="handleCropApply"
+  />
 </template>
 
 <style scoped>
@@ -174,13 +221,16 @@ async function handleThemeColorChange(val: ThemeColorKey) {
   border-radius: 50%;
   border: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
 }
-.color-btn:hover { transform: scale(1.1); }
-.color-btn.active {
-  border-color: white;
-  box-shadow: 0 0 0 1.5px var(--primary-color);
+.color-btn:hover {
   transform: scale(1.15);
+}
+.color-btn.active {
+  border-color: #fff;
+  transform: scale(1.15);
+  box-shadow: 0 0 0 2px var(--primary-color);
 }
 </style>

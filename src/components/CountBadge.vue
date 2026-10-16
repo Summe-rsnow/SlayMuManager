@@ -1,11 +1,14 @@
 <script setup lang="ts">
-withDefaults(defineProps<{
-  label: string
-  count: number
-  dotColor?: string
-}>(), {
-  dotColor: "bg-c-muted",
-})
+withDefaults(
+  defineProps<{
+    label: string
+    count: number
+    dotColor?: string
+  }>(),
+  {
+    dotColor: "bg-c-muted",
+  },
+)
 </script>
 
 <template>

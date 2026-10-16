@@ -36,7 +36,9 @@ async function testProxy() {
   proxyTesting.value = true
   try {
     const ok = await invoke<boolean>("test_proxy", { url: proxyUrl.value.trim() })
-    message[ok ? "success" : "error"](ok ? t("settings.success.proxyOk") : t("settings.error.proxyFail"))
+    message[ok ? "success" : "error"](
+      ok ? t("settings.success.proxyOk") : t("settings.error.proxyFail"),
+    )
   } catch (e: unknown) {
     message.error(t("settings.error.testFailed", { e }))
   } finally {
@@ -49,7 +51,9 @@ async function testProxy() {
   <SettingsSection :title="t('settings.proxy.title')">
     <div class="flex gap-2">
       <NInput v-model:value="proxyUrl" placeholder="http://127.0.0.1:7890" clearable>
-        <template #prefix><NIcon :size="16"><Globe /></NIcon></template>
+        <template #prefix
+          ><NIcon :size="16"><Globe /></NIcon
+        ></template>
       </NInput>
       <NButton secondary @click="saveProxy">{{ t("common.save") }}</NButton>
     </div>

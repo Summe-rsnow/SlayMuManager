@@ -17,19 +17,31 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-
 </script>
 
 <template>
   <div
-    :class="slot.hasData
-      ? 'glass-surface p-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5'
-      : 'p-2 rounded-xl border border-dashed border-c-default bg-c-secondary/40 backdrop-blur-sm transition-all duration-200'"
+    :class="
+      slot.hasData
+        ? 'glass-surface p-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5'
+        : 'p-2 rounded-xl border border-dashed border-c-default bg-c-secondary/40 backdrop-blur-sm transition-all duration-200'
+    "
     :style="slot.hasData ? { boxShadow: 'var(--shadow-glass-surface)' } : {}"
-    @mouseenter="slot.hasData && (($event.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-glow)')"
-    @mouseleave="slot.hasData && (($event.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-glass-surface)')"
+    @mouseenter="
+      slot.hasData && (($event.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-glow)')
+    "
+    @mouseleave="
+      slot.hasData &&
+      (($event.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-glass-surface)')
+    "
   >
-    <div :class="slot.hasData ? 'flex items-center justify-between mb-2' : 'flex items-center justify-between'">
+    <div
+      :class="
+        slot.hasData
+          ? 'flex items-center justify-between mb-2'
+          : 'flex items-center justify-between'
+      "
+    >
       <span class="font-medium text-sm text-c-primary">
         {{ t("saves.slotIndex", { i: slot.slotIndex }) }}
       </span>
@@ -37,11 +49,7 @@ const { t } = useI18n()
         <NTag v-if="slot.hasCurrentRun" type="warning" size="tiny" :bordered="false">
           {{ t("saves.currentRun") }}
         </NTag>
-        <NTag
-          :type="slot.hasData ? 'success' : 'default'"
-          size="tiny"
-          :bordered="false"
-        >
+        <NTag :type="slot.hasData ? 'success' : 'default'" size="tiny" :bordered="false">
           {{ slot.hasData ? t("saves.fileCount", { n: slot.fileCount }) : t("saves.empty.empty") }}
         </NTag>
       </NSpace>
@@ -49,25 +57,33 @@ const { t } = useI18n()
 
     <div v-if="slot.hasData" class="flex items-center gap-1 text-xs text-c-muted mb-2">
       <NIcon :size="12"><Clock /></NIcon>
-      {{ slot.lastModifiedAt ? new Date(slot.lastModifiedAt).toLocaleString(currentLocale) : t("common.unknown") }}
+      {{
+        slot.lastModifiedAt
+          ? new Date(slot.lastModifiedAt).toLocaleString(currentLocale)
+          : t("common.unknown")
+      }}
     </div>
 
     <!-- 操作按钮行 -->
     <div v-if="slot.hasData" class="flex items-center gap-1 flex-wrap">
       <NButton size="tiny" secondary @click="emit('backup', slot)">
-        <template #icon><NIcon :size="12"><Database /></NIcon></template>
+        <template #icon
+          ><NIcon :size="12"><Database /></NIcon
+        ></template>
         {{ t("saves.backup") }}
       </NButton>
       <NButton size="tiny" secondary @click="emit('migrate', slot)">
-        <template #icon><NIcon :size="12"><Upload /></NIcon></template>
+        <template #icon
+          ><NIcon :size="12"><Upload /></NIcon
+        ></template>
         {{ t("saves.migrate") }}
       </NButton>
-      <NPopconfirm
-        @positive-click="() => emit('delete', slot)"
-      >
+      <NPopconfirm @positive-click="() => emit('delete', slot)">
         <template #trigger>
           <NButton size="tiny" type="error" secondary>
-            <template #icon><NIcon :size="12"><Trash2 /></NIcon></template>
+            <template #icon
+              ><NIcon :size="12"><Trash2 /></NIcon
+            ></template>
             {{ t("saves.deleteSlot") }}
           </NButton>
         </template>
@@ -77,7 +93,9 @@ const { t } = useI18n()
             <span class="font-medium">{{ t("saves.confirmDeleteSlotTitle") }}</span>
           </div>
           <p class="text-xs text-c-secondary">
-            {{ t("saves.confirmDeleteSlotDesc", { kind: kindLabel(t, slot.kind), i: slot.slotIndex }) }}
+            {{
+              t("saves.confirmDeleteSlotDesc", { kind: kindLabel(t, slot.kind), i: slot.slotIndex })
+            }}
           </p>
           <p class="text-xs text-c-warning mt-1">
             {{ t("saves.confirmDeleteSlotNote") }}

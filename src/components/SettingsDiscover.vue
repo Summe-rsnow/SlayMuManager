@@ -9,8 +9,20 @@ import FloatingTip from "./FloatingTip.vue"
 
 const { t } = useI18n()
 const discoverPrefStore = useDiscoverPrefStore()
-const { discoverColumns, prefetchEnabled, showTranslateQuotaTip, discoverViewMode } = storeToRefs(discoverPrefStore)
-const { setDiscoverColumns, setPrefetchEnabled, setShowTranslateQuotaTip, setDiscoverViewMode } = discoverPrefStore
+const {
+  discoverColumns,
+  prefetchEnabled,
+  showTranslateQuotaTip,
+  discoverViewMode,
+  parseWorkshopBBCode,
+} = storeToRefs(discoverPrefStore)
+const {
+  setDiscoverColumns,
+  setPrefetchEnabled,
+  setShowTranslateQuotaTip,
+  setDiscoverViewMode,
+  setParseWorkshopBBCode,
+} = discoverPrefStore
 </script>
 
 <template>
@@ -31,9 +43,25 @@ const { setDiscoverColumns, setPrefetchEnabled, setShowTranslateQuotaTip, setDis
     </SettingsRow>
     <SettingsRow>
       <template #label>
-        <FloatingTip :label="t('settings.discover.prefetch')" :text="t('settings.discover.prefetchDesc')" placement="right" :width="240" />
+        <FloatingTip
+          :label="t('settings.discover.prefetch')"
+          :text="t('settings.discover.prefetchDesc')"
+          placement="right"
+          :width="240"
+        />
       </template>
       <NSwitch :value="prefetchEnabled" @update:value="setPrefetchEnabled" />
+    </SettingsRow>
+    <SettingsRow>
+      <template #label>
+        <FloatingTip
+          :label="t('settings.discover.parseBBCode')"
+          :text="t('settings.discover.parseBBCodeDesc')"
+          placement="right"
+          :width="280"
+        />
+      </template>
+      <NSwitch :value="parseWorkshopBBCode" @update:value="setParseWorkshopBBCode" />
     </SettingsRow>
     <SettingsRow :label="t('settings.discover.translateQuotaTip')">
       <NSwitch :value="showTranslateQuotaTip" @update:value="setShowTranslateQuotaTip" />

@@ -19,8 +19,12 @@ export type PresetTagId = (typeof PRESET_TAGS)[number]["id"]
 export const useTagStore = defineStore("tags", () => {
   const tagMap = useStorage<Record<string, string[]>>("slaymumanager_mod_tags", {})
 
-  function getTags(modId: string): string[] { return tagMap.value[modId] ?? [] }
-  function setTags(modId: string, tags: string[]) { tagMap.value = { ...tagMap.value, [modId]: [...new Set(tags)] } }
+  function getTags(modId: string): string[] {
+    return tagMap.value[modId] ?? []
+  }
+  function setTags(modId: string, tags: string[]) {
+    tagMap.value = { ...tagMap.value, [modId]: [...new Set(tags)] }
+  }
   function addTag(modId: string, tag: string) {
     const current = getTags(modId)
     if (!current.includes(tag)) tagMap.value = { ...tagMap.value, [modId]: [...current, tag] }
@@ -45,7 +49,9 @@ export const useTagStore = defineStore("tags", () => {
     return tagId
   }
 
-  function isPresetTag(tagId: string): boolean { return PRESET_TAGS.some((t) => t.id === tagId) }
+  function isPresetTag(tagId: string): boolean {
+    return PRESET_TAGS.some((t) => t.id === tagId)
+  }
 
   return { getTags, setTags, addTag, removeTag, toggleTag, usedTags, getTagLabel, isPresetTag }
 })

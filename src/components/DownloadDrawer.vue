@@ -3,12 +3,28 @@ import { ref } from "vue"
 import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
 import {
-  NDrawer, NDrawerContent, NTabs, NTabPane, NButton,
-  NIcon, NProgress, NTag, NSpace, useMessage,
+  NDrawer,
+  NDrawerContent,
+  NTabs,
+  NTabPane,
+  NButton,
+  NIcon,
+  NProgress,
+  NTag,
+  NSpace,
+  useMessage,
 } from "naive-ui"
 import {
-  Download, Pause, Play, X, Trash2, FolderOpen,
-  CheckCircle2, AlertCircle, PackageCheck, Clock,
+  Download,
+  Pause,
+  Play,
+  X,
+  Trash2,
+  FolderOpen,
+  CheckCircle2,
+  AlertCircle,
+  PackageCheck,
+  Clock,
 } from "@lucide/vue"
 import { useDownloadStore } from "@/stores/useDownloadStore"
 import EmptyState from "@/components/EmptyState.vue"
@@ -89,13 +105,13 @@ async function handleOpenFolder() {
     :show="show"
     :width="460"
     placement="right"
+    class="custom-glass-drawer"
     @update:show="(v: boolean) => emit('update:show', v)"
   >
-    <NDrawerContent class="glass-drawer" closable>
+    <NDrawerContent closable>
       <template #header>
         <div class="flex items-center justify-between w-full pr-4">
           <div class="flex items-center gap-2">
-            <NIcon :size="20" class="text-primary-theme"><Download /></NIcon>
             <span class="font-bold text-base text-c-primary">{{ t("download.title") }}</span>
           </div>
           <NSpace :size="6">
@@ -105,7 +121,9 @@ async function handleOpenFolder() {
               :title="t('download.openFolder')"
               @click="handleOpenFolder"
             >
-              <template #icon><NIcon :size="13"><FolderOpen /></NIcon></template>
+              <template #icon
+                ><NIcon :size="13"><FolderOpen /></NIcon
+              ></template>
               {{ t("download.openFolder") }}
             </NButton>
             <NButton
@@ -115,7 +133,9 @@ async function handleOpenFolder() {
               :title="t('download.clearCompleted')"
               @click="handleClearCompleted"
             >
-              <template #icon><NIcon :size="13"><Trash2 /></NIcon></template>
+              <template #icon
+                ><NIcon :size="13"><Trash2 /></NIcon
+              ></template>
               {{ t("download.clearCompleted") }}
             </NButton>
           </NSpace>
@@ -128,21 +148,29 @@ async function handleOpenFolder() {
           <template #tab>
             <div class="flex items-center gap-1.5">
               <span>{{ t("download.tabs.active") }}</span>
-              <NTag v-if="activeDownloads.length > 0" type="primary" size="tiny" round :bordered="false">
+              <NTag
+                v-if="activeDownloads.length > 0"
+                type="primary"
+                size="tiny"
+                round
+                :bordered="false"
+              >
                 {{ activeDownloads.length }}
               </NTag>
             </div>
           </template>
 
-          <div v-if="activeDownloads.length > 0" class="flex flex-col gap-3 pt-2">
+          <div v-if="activeDownloads.length > 0" class="flex flex-col gap-3 p-3.5">
             <div
               v-for="task in activeDownloads"
               :key="task.id"
-              class="download-task-card p-3 rounded-xl border border-c-default transition-all"
+              class="download-task-card p-3.5 rounded-xl border transition-all duration-200 hover:-translate-y-0.5"
             >
               <div class="flex items-start justify-between gap-2 mb-1.5">
                 <div class="min-w-0 flex-1">
-                  <div class="font-semibold text-sm text-c-primary truncate">{{ task.modName }}</div>
+                  <div class="font-semibold text-sm text-c-primary truncate">
+                    {{ task.modName }}
+                  </div>
                   <div class="text-xs text-c-muted truncate font-mono">{{ task.fileName }}</div>
                 </div>
                 <NSpace :size="4" class="flex-shrink-0">
@@ -152,7 +180,9 @@ async function handleOpenFolder() {
                     secondary
                     @click="handlePause(task.id)"
                   >
-                    <template #icon><NIcon :size="12"><Pause /></NIcon></template>
+                    <template #icon
+                      ><NIcon :size="12"><Pause /></NIcon
+                    ></template>
                   </NButton>
                   <NButton
                     v-else-if="task.status === 'paused'"
@@ -161,14 +191,14 @@ async function handleOpenFolder() {
                     type="primary"
                     @click="handleResume(task.id)"
                   >
-                    <template #icon><NIcon :size="12"><Play /></NIcon></template>
+                    <template #icon
+                      ><NIcon :size="12"><Play /></NIcon
+                    ></template>
                   </NButton>
-                  <NButton
-                    size="tiny"
-                    secondary
-                    @click="handleCancel(task.id)"
-                  >
-                    <template #icon><NIcon :size="12"><X /></NIcon></template>
+                  <NButton size="tiny" secondary @click="handleCancel(task.id)">
+                    <template #icon
+                      ><NIcon :size="12"><X /></NIcon
+                    ></template>
                   </NButton>
                 </NSpace>
               </div>
@@ -185,12 +215,18 @@ async function handleOpenFolder() {
 
               <div class="flex items-center justify-between text-xs text-c-muted font-mono">
                 <span>
-                  {{ formatBytes(task.downloadedBytes) }} / {{ task.totalBytes > 0 ? formatBytes(task.totalBytes) : '...' }}
+                  {{ formatBytes(task.downloadedBytes) }} /
+                  {{ task.totalBytes > 0 ? formatBytes(task.totalBytes) : "..." }}
                 </span>
                 <span v-if="task.status === 'downloading'" class="text-primary-theme font-medium">
                   {{ formatBytes(task.speedBytesPerSec) }}/s
                 </span>
-                <NTag v-else-if="task.status === 'paused'" type="warning" size="tiny" :bordered="false">
+                <NTag
+                  v-else-if="task.status === 'paused'"
+                  type="warning"
+                  size="tiny"
+                  :bordered="false"
+                >
                   {{ t("download.status.paused") }}
                 </NTag>
               </div>
@@ -218,36 +254,67 @@ async function handleOpenFolder() {
             </div>
           </template>
 
-          <div v-if="completedDownloads.length > 0" class="flex flex-col gap-3 pt-2">
+          <div v-if="completedDownloads.length > 0" class="flex flex-col gap-3 p-3.5">
             <div
               v-for="task in completedDownloads"
               :key="task.id"
-              class="download-task-card p-3 rounded-xl border border-c-default transition-all"
+              class="download-task-card p-3.5 rounded-xl border transition-all duration-200 hover:-translate-y-0.5"
             >
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0 flex-1">
-                  <div class="font-semibold text-sm text-c-primary truncate">{{ task.modName }}</div>
-                  <div class="text-xs text-c-muted truncate font-mono mt-0.5">{{ task.fileName }}</div>
+                  <div class="font-semibold text-sm text-c-primary truncate">
+                    {{ task.modName }}
+                  </div>
+                  <div class="text-xs text-c-muted truncate font-mono mt-0.5">
+                    {{ task.fileName }}
+                  </div>
                 </div>
-                <NTag v-if="task.installed" type="success" size="tiny" :bordered="false" class="flex-shrink-0">
-                  <template #icon><NIcon :size="10"><PackageCheck /></NIcon></template>
+                <NTag
+                  v-if="task.installed"
+                  type="success"
+                  size="tiny"
+                  :bordered="false"
+                  class="flex-shrink-0"
+                >
+                  <template #icon
+                    ><NIcon :size="10"><PackageCheck /></NIcon
+                  ></template>
                   {{ t("download.status.installed") }}
                 </NTag>
-                <NTag v-else-if="task.installError" type="warning" size="tiny" :bordered="false" class="flex-shrink-0">
-                  <template #icon><NIcon :size="10"><AlertCircle /></NIcon></template>
+                <NTag
+                  v-else-if="task.installError"
+                  type="warning"
+                  size="tiny"
+                  :bordered="false"
+                  class="flex-shrink-0"
+                >
+                  <template #icon
+                    ><NIcon :size="10"><AlertCircle /></NIcon
+                  ></template>
                   {{ t("download.status.notInstalled") }}
                 </NTag>
                 <NTag v-else type="info" size="tiny" :bordered="false" class="flex-shrink-0">
-                  <template #icon><NIcon :size="10"><CheckCircle2 /></NIcon></template>
+                  <template #icon
+                    ><NIcon :size="10"><CheckCircle2 /></NIcon
+                  ></template>
                   {{ t("download.status.completed") }}
                 </NTag>
               </div>
 
-              <div class="flex items-center justify-between text-xs text-c-muted mt-2 pt-1 border-t border-c-subtle">
-                <span class="font-mono">{{ formatBytes(task.totalBytes || task.downloadedBytes) }}</span>
+              <div
+                class="flex items-center justify-between text-xs text-c-muted mt-2 pt-1 border-t border-c-subtle"
+              >
+                <span class="font-mono">{{
+                  formatBytes(task.totalBytes || task.downloadedBytes)
+                }}</span>
                 <span v-if="task.completedAt" class="flex items-center gap-1">
                   <NIcon :size="11"><Clock /></NIcon>
-                  {{ new Date(task.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                  {{
+                    new Date(task.completedAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  }}
                 </span>
               </div>
             </div>
@@ -267,17 +334,39 @@ async function handleOpenFolder() {
 </template>
 
 <style scoped>
-.glass-drawer {
-  background-color: var(--glass-surface-bg) !important;
-  backdrop-filter: blur(var(--glass-surface-blur));
-  -webkit-backdrop-filter: blur(var(--glass-surface-blur));
+:global(.custom-glass-drawer.n-drawer) {
+  background-color: var(--glass-modal-bg) !important;
+  backdrop-filter: blur(var(--glass-modal-blur, 20px)) saturate(var(--blur-saturate)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-modal-blur, 20px)) saturate(var(--blur-saturate)) !important;
+  border-left: 1px solid var(--glass-modal-border, var(--glass-surface-border)) !important;
+  box-shadow: var(--shadow-glass-modal) !important;
+}
+:global(.custom-glass-drawer .n-drawer-content) {
+  background: transparent !important;
+}
+:global(.custom-glass-drawer .n-drawer-header) {
+  border-bottom: 1px solid var(--glass-surface-border) !important;
 }
 .download-task-card {
   background-color: var(--glass-surface-bg) !important;
   border-color: var(--glass-surface-border) !important;
+  backdrop-filter: blur(var(--glass-surface-blur)) saturate(var(--blur-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-surface-blur)) saturate(var(--blur-saturate));
+  box-shadow: var(--shadow-glass-surface) !important;
+  transform: translateZ(0);
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 .download-task-card:hover {
   background-color: var(--glass-surface-bg-hover) !important;
-  box-shadow: var(--shadow-glow) !important;
+  box-shadow: var(--shadow-card-hover), var(--shadow-glow) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--primary-color) 35%,
+    var(--glass-surface-border)
+  ) !important;
 }
 </style>

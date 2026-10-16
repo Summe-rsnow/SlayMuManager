@@ -21,8 +21,16 @@ const emit = defineEmits<{
   <FloatingTip v-if="tip" :text="tip">
     <NPopconfirm @positive-click="emit('confirm')">
       <template #trigger>
-        <NButton text :size="(size ?? 'tiny') as any" :type="(type as any) ?? 'error'" :disabled="disabled" class="transition-transform duration-150 active:scale-90">
-          <template #icon><NIcon :size="14"><component :is="icon" /></NIcon></template>
+        <NButton
+          text
+          :size="(size ?? 'tiny') as any"
+          :type="(type as any) ?? 'error'"
+          :disabled="disabled"
+          class="transition-transform duration-150 active:scale-90"
+        >
+          <template #icon
+            ><NIcon :size="14"><component :is="icon" /></NIcon
+          ></template>
         </NButton>
       </template>
       <slot name="confirm-content">{{ confirmText }}</slot>
@@ -30,8 +38,16 @@ const emit = defineEmits<{
   </FloatingTip>
   <NPopconfirm v-else @positive-click="emit('confirm')">
     <template #trigger>
-      <NButton text :size="(size ?? 'tiny') as any" :type="(type as any) ?? 'error'" :disabled="disabled" class="transition-transform duration-150 active:scale-90">
-        <template #icon><NIcon :size="14"><component :is="icon" /></NIcon></template>
+      <NButton
+        text
+        :size="(size ?? 'tiny') as any"
+        :type="(type as any) ?? 'error'"
+        :disabled="disabled"
+        class="transition-transform duration-150 active:scale-90"
+      >
+        <template #icon
+          ><NIcon :size="14"><component :is="icon" /></NIcon
+        ></template>
       </NButton>
     </template>
     <slot name="confirm-content">{{ confirmText }}</slot>

@@ -2,12 +2,8 @@
 import { ref, computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import {
-  NButton, NTag, NIcon, NTooltip, useMessage, useDialog,
-} from "naive-ui"
-import {
-  Trash2, FolderOpen, ShieldCheck, ArrowRightLeft, AlertTriangle, Check,
-} from "@lucide/vue"
+import { NButton, NTag, NIcon, NTooltip, useMessage, useDialog } from "naive-ui"
+import { Trash2, FolderOpen, ShieldCheck, ArrowRightLeft, AlertTriangle, Check } from "@lucide/vue"
 import AppDialog from "./AppDialog.vue"
 import ConfirmBtn from "./ConfirmBtn.vue"
 import type { InstalledMod } from "../types"
@@ -54,7 +50,9 @@ async function handleDeleteInstance(mod: InstalledMod) {
       installDir: mod.installDir,
       modId: mod.id,
     })
-    message.success(t("library.success.uninstalled", { name: `${mod.name} (v${mod.version ?? mod.folderName})` }))
+    message.success(
+      t("library.success.uninstalled", { name: `${mod.name} (v${mod.version ?? mod.folderName})` }),
+    )
     await modCacheStore.fetchMods()
     if (!modCacheStore.hasConflict(mod.id)) {
       emit("update:show", false)
@@ -100,7 +98,9 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
           installDir: targetMod.installDir,
           modId: targetMod.id,
         })
-        message.success(`已保留版本 v${targetMod.version ?? targetMod.folderName}，并成功清理 ${cleanedCount} 个旧版本！`)
+        message.success(
+          `已保留版本 v${targetMod.version ?? targetMod.folderName}，并成功清理 ${cleanedCount} 个旧版本！`,
+        )
         await modCacheStore.fetchMods()
         emit("update:show", false)
       } catch (e: unknown) {
@@ -118,7 +118,7 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
     :show="show"
     :title="`模组版本共存管理 - ${group?.name ?? ''}`"
     width="680px"
-    @update:show="v => emit('update:show', v)"
+    @update:show="(v) => emit('update:show', v)"
   >
     <div v-if="group" class="space-y-4">
       <!-- 提示横条 -->
@@ -132,7 +132,9 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
       >
         <NIcon :size="18" class="text-amber-500 shrink-0"><AlertTriangle /></NIcon>
         <div class="leading-snug">
-          检测到系统中共存 <strong>{{ group.instances.length }}</strong> 个不同版本的安装实例。请选择需要的版本生效，或清理冗余文件避免冲突。
+          检测到系统中共存
+          <strong>{{ group.instances.length }}</strong>
+          个不同版本的安装实例。请选择需要的版本生效，或清理冗余文件避免冲突。
         </div>
       </div>
 
@@ -143,12 +145,14 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
           :key="item.installDir"
           class="p-3 rounded-xl border flex items-center justify-between gap-3 transition-all duration-200"
           :style="{
-            backgroundColor: item.state === 'enabled'
-              ? 'color-mix(in srgb, var(--primary-color) 6%, var(--glass-surface-bg))'
-              : 'var(--glass-surface-bg)',
-            borderColor: item.state === 'enabled'
-              ? 'color-mix(in srgb, var(--primary-color) 40%, var(--glass-surface-border))'
-              : 'var(--glass-surface-border)',
+            backgroundColor:
+              item.state === 'enabled'
+                ? 'color-mix(in srgb, var(--primary-color) 6%, var(--glass-surface-bg))'
+                : 'var(--glass-surface-bg)',
+            borderColor:
+              item.state === 'enabled'
+                ? 'color-mix(in srgb, var(--primary-color) 40%, var(--glass-surface-border))'
+                : 'var(--glass-surface-border)',
           }"
         >
           <!-- 左侧信息 -->
@@ -157,29 +161,14 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
               <span class="font-bold text-[15px] font-mono text-c-primary">
                 v{{ item.version ?? "未知版本" }}
               </span>
-              <NTag
-                v-if="item.state === 'enabled'"
-                type="success"
-                size="tiny"
-                :bordered="false"
-              >
-                <template #icon><NIcon :size="12"><Check /></NIcon></template>
+              <NTag v-if="item.state === 'enabled'" type="success" size="tiny" :bordered="false">
+                <template #icon
+                  ><NIcon :size="12"><Check /></NIcon
+                ></template>
                 当前生效
               </NTag>
-              <NTag
-                v-else
-                type="default"
-                size="tiny"
-                :bordered="false"
-              >
-                已禁用
-              </NTag>
-              <NTag
-                v-if="item.source === 'workshop'"
-                type="info"
-                size="tiny"
-                :bordered="false"
-              >
+              <NTag v-else type="default" size="tiny" :bordered="false"> 已禁用 </NTag>
+              <NTag v-if="item.source === 'workshop'" type="info" size="tiny" :bordered="false">
                 创意工坊
               </NTag>
             </div>
@@ -201,7 +190,9 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
               :disabled="busy"
               @click="handleSwitchActive(item)"
             >
-              <template #icon><NIcon :size="14"><ArrowRightLeft /></NIcon></template>
+              <template #icon
+                ><NIcon :size="14"><ArrowRightLeft /></NIcon
+              ></template>
               设为当前版本
             </NButton>
 
@@ -215,7 +206,9 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
                   :disabled="busy"
                   @click="confirmKeepThisAndCleanOthers(item)"
                 >
-                  <template #icon><NIcon :size="14"><ShieldCheck /></NIcon></template>
+                  <template #icon
+                    ><NIcon :size="14"><ShieldCheck /></NIcon
+                  ></template>
                   保留并清理旧版
                 </NButton>
               </template>
@@ -225,12 +218,10 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
             <!-- 打开文件夹 -->
             <NTooltip trigger="hover" placement="top">
               <template #trigger>
-                <NButton
-                  size="small"
-                  quaternary
-                  @click="handleOpenFolder(item)"
-                >
-                  <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
+                <NButton size="small" quaternary @click="handleOpenFolder(item)">
+                  <template #icon
+                    ><NIcon :size="14"><FolderOpen /></NIcon
+                  ></template>
                 </NButton>
               </template>
               打开所在文件夹

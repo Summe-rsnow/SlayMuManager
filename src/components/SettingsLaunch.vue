@@ -25,7 +25,11 @@ onMounted(async () => {
 
 async function toggleAutoCheck(val: boolean) {
   autoCheckUpdate.value = val
-  try { await invoke("update_auto_check_update", { enabled: val }) } catch { /* ignore */ }
+  try {
+    await invoke("update_auto_check_update", { enabled: val })
+  } catch {
+    /* ignore */
+  }
 }
 
 const pageOptions = computed(() => {
@@ -49,7 +53,11 @@ const pageOptions = computed(() => {
         :options="pageOptions"
         size="small"
         style="width: 200px"
-        @update:value="(v: string) => { defaultPage = v }"
+        @update:value="
+          (v: string) => {
+            defaultPage = v
+          }
+        "
       />
     </SettingsRow>
     <SettingsRow :label="t('settings.launch.autoCheck')">

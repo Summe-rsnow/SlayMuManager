@@ -19,7 +19,13 @@ export interface InstalledMod {
   workshopId: string | null
 }
 
-export type ModState = "enabled" | "disabled" | "update_available" | "conflict" | "broken" | "unknown"
+export type ModState =
+  | "enabled"
+  | "disabled"
+  | "update_available"
+  | "conflict"
+  | "broken"
+  | "unknown"
 
 // --- 存档相关 ---
 
@@ -275,7 +281,13 @@ export interface WorkshopMod {
   subscribed: boolean
 }
 
-export type DownloadStatus = "pending" | "downloading" | "paused" | "completed" | "failed" | "cancelled"
+export type DownloadStatus =
+  | "pending"
+  | "downloading"
+  | "paused"
+  | "completed"
+  | "failed"
+  | "cancelled"
 
 export interface DownloadTask {
   id: string

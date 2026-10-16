@@ -2,12 +2,8 @@
 import { ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import {
-  NButton, NIcon, NTag, useMessage,
-} from "naive-ui"
-import {
-  Download, ExternalLink, HardDrive, Sparkles, AlertCircle,
-} from "@lucide/vue"
+import { NButton, NIcon, NTag, useMessage } from "naive-ui"
+import { Download, ExternalLink, HardDrive, Sparkles, AlertCircle } from "@lucide/vue"
 import type { NexusModFile, AppBootstrap } from "@/types"
 import { useDownloadStore } from "@/stores/useDownloadStore"
 import AppDialog from "@/components/AppDialog.vue"
@@ -50,8 +46,8 @@ async function loadFiles(modId: number) {
     const list = await invoke<NexusModFile[]>("get_nexus_mod_files", { modId })
     // 将主要文件排在最前
     list.sort((a: NexusModFile, b: NexusModFile) => {
-      const aMain = (a.category_id === 1 || a.category_name === "MAIN" || a.is_primary) ? 1 : 0
-      const bMain = (b.category_id === 1 || b.category_name === "MAIN" || b.is_primary) ? 1 : 0
+      const aMain = a.category_id === 1 || a.category_name === "MAIN" || a.is_primary ? 1 : 0
+      const bMain = b.category_id === 1 || b.category_name === "MAIN" || b.is_primary ? 1 : 0
       return bMain - aMain
     })
     files.value = list
@@ -88,19 +84,18 @@ function handleOpenWebDownload(file: NexusModFile) {
   invoke("open_url_in_browser", { url })
 }
 
-watch(() => props.show, (val) => {
-  if (val && props.modId) {
-    loadFiles(props.modId)
-  }
-})
+watch(
+  () => props.show,
+  (val) => {
+    if (val && props.modId) {
+      loadFiles(props.modId)
+    }
+  },
+)
 </script>
 
 <template>
-  <AppDialog
-    :show="show"
-    width="600px"
-    @update:show="(v: boolean) => emit('update:show', v)"
-  >
+  <AppDialog :show="show" width="600px" @update:show="(v: boolean) => emit('update:show', v)">
     <template #header>
       <div class="flex items-center gap-2">
         <NIcon :size="20" class="text-primary-theme"><Download /></NIcon>
@@ -110,14 +105,20 @@ watch(() => props.show, (val) => {
       </div>
     </template>
 
-    <div v-if="!isPremium" class="mb-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5">
+    <div
+      v-if="!isPremium"
+      class="mb-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-2.5"
+    >
       <NIcon :size="16" class="text-amber-500 flex-shrink-0 mt-0.5"><AlertCircle /></NIcon>
       <div class="text-xs text-amber-500 leading-relaxed">
         {{ t("download.nonPremiumNotice") }}
       </div>
     </div>
 
-    <div v-else class="mb-3 px-3 py-2 rounded-xl bg-primary-theme/10 border border-primary-theme/20 flex items-center gap-2">
+    <div
+      v-else
+      class="mb-3 px-3 py-2 rounded-xl bg-primary-theme/10 border border-primary-theme/20 flex items-center gap-2"
+    >
       <NIcon :size="15" class="text-primary-theme"><Sparkles /></NIcon>
       <span class="text-xs text-primary-theme font-medium">
         {{ t("download.premiumNotice") }}
@@ -125,7 +126,10 @@ watch(() => props.show, (val) => {
     </div>
 
     <div class="max-h-[60vh] overflow-y-auto pr-1">
-      <div v-if="loading" class="py-12 flex flex-col items-center justify-center gap-2 text-c-muted">
+      <div
+        v-if="loading"
+        class="py-12 flex flex-col items-center justify-center gap-2 text-c-muted"
+      >
         <NIcon :size="24" class="animate-spin text-primary-theme"><Download /></NIcon>
         <span class="text-xs">{{ t("common.loading") }}</span>
       </div>
@@ -139,7 +143,9 @@ watch(() => props.show, (val) => {
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-1.5 flex-wrap">
               <span class="font-semibold text-sm text-c-primary truncate">{{ file.name }}</span>
-              <NTag v-if="file.version" size="tiny" :bordered="false" class="font-mono">v{{ file.version }}</NTag>
+              <NTag v-if="file.version" size="tiny" :bordered="false" class="font-mono"
+                >v{{ file.version }}</NTag
+              >
               <NTag
                 v-if="file.category_id === 1 || file.category_name === 'MAIN' || file.is_primary"
                 type="primary"
@@ -154,7 +160,9 @@ watch(() => props.show, (val) => {
             </div>
             <div class="flex items-center gap-2 text-xs text-c-muted mt-1.5 font-mono">
               <span>{{ formatBytes(file.size_in_bytes) }}</span>
-              <span v-if="file.uploaded_time">· {{ new Date(file.uploaded_time).toLocaleDateString() }}</span>
+              <span v-if="file.uploaded_time"
+                >· {{ new Date(file.uploaded_time).toLocaleDateString() }}</span
+              >
             </div>
           </div>
 
@@ -166,28 +174,22 @@ watch(() => props.show, (val) => {
               :loading="startingDownloadFileId === file.file_id"
               @click="handleDownload(file)"
             >
-              <template #icon><NIcon :size="14"><Download /></NIcon></template>
+              <template #icon
+                ><NIcon :size="14"><Download /></NIcon
+              ></template>
               {{ t("download.directDownload") }}
             </NButton>
-            <NButton
-              v-else
-              size="small"
-              secondary
-              @click="handleOpenWebDownload(file)"
-            >
-              <template #icon><NIcon :size="14"><ExternalLink /></NIcon></template>
+            <NButton v-else size="small" secondary @click="handleOpenWebDownload(file)">
+              <template #icon
+                ><NIcon :size="14"><ExternalLink /></NIcon
+              ></template>
               {{ t("download.webDownload") }}
             </NButton>
           </div>
         </div>
       </div>
 
-      <EmptyState
-        v-else
-        :icon="HardDrive"
-        :title="t('download.empty.noFiles')"
-        bordered
-      />
+      <EmptyState v-else :icon="HardDrive" :title="t('download.empty.noFiles')" bordered />
     </div>
 
     <template #footer>

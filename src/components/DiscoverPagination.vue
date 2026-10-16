@@ -3,15 +3,18 @@ import { computed } from "vue"
 import { NIcon, NSelect, NPagination, NInputNumber } from "naive-ui"
 import { List } from "@lucide/vue"
 
-const props = withDefaults(defineProps<{
-  page: number
-  pageSize: number
-  totalCount: number
-  showPageSize?: boolean
-  pageSizeOptions?: Array<{ label: string; value: number }>
-}>(), {
-  showPageSize: true,
-})
+const props = withDefaults(
+  defineProps<{
+    page: number
+    pageSize: number
+    totalCount: number
+    showPageSize?: boolean
+    pageSizeOptions?: Array<{ label: string; value: number }>
+  }>(),
+  {
+    showPageSize: true,
+  },
+)
 
 const emit = defineEmits<{
   "update:page": [value: number]

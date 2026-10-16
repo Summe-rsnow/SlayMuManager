@@ -47,8 +47,11 @@ export const useModCacheStore = defineStore("mod-cache", () => {
     return conflictGroups.value.get(modId.toLowerCase())
   }
 
-  async function fetchMods() {
-    loading.value = true
+  async function fetchMods(silent = false) {
+    const hasExistingData = enabledMods.value.length > 0 || disabledMods.value.length > 0
+    if (!silent && !hasExistingData) {
+      loading.value = true
+    }
     try {
       const [enabled, disabled] = await Promise.all([
         invoke<InstalledMod[]>("list_installed_mods"),
@@ -77,4 +80,3 @@ export const useModCacheStore = defineStore("mod-cache", () => {
     fetchMods,
   }
 })
-

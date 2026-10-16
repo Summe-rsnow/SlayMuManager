@@ -20,12 +20,20 @@ onMounted(async () => {
 
 async function handleLaunchModeChange(val: string) {
   launchMode.value = val
-  try { await invoke("update_launch_mode", { mode: val }) } catch { /* ignore */ }
+  try {
+    await invoke("update_launch_mode", { mode: val })
+  } catch {
+    /* ignore */
+  }
 }
 
 async function handleLaunchCheckCloudSaveChange(val: boolean) {
   launchCheckCloudSave.value = val
-  try { await invoke("update_launch_check_cloud_save", { check: val }) } catch { /* ignore */ }
+  try {
+    await invoke("update_launch_check_cloud_save", { check: val })
+  } catch {
+    /* ignore */
+  }
 }
 </script>
 

@@ -13,7 +13,6 @@ document.addEventListener("contextmenu", (e) => e.preventDefault())
 // 初始化主题
 initTheme()
 
-
 const app = createApp(App)
 const i18n = setupI18n()
 

@@ -13,6 +13,10 @@ use std::time::Duration;
 use tauri::Emitter as _;
 use tauri::Manager;
 
+pub fn handle_steam_worker(args: &[String]) {
+    integrations::workshop::run_steam_worker(args);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // 全局 panic hook：崩溃时打印诊断信息

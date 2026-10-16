@@ -44,9 +44,7 @@ function applyHtmlClass(dark: boolean) {
 export const effectiveIsDark: Ref<boolean> = computed(() => isDark.value)
 
 // Naive UI 主题
-export const naiveTheme: Ref<GlobalTheme | null> = computed(() =>
-  isDark.value ? darkTheme : null,
-)
+export const naiveTheme: Ref<GlobalTheme | null> = computed(() => (isDark.value ? darkTheme : null))
 
 // 动态 themeOverrides — 随主题色 + 暗色模式变化
 export const naiveThemeOverrides: Ref<GlobalThemeOverrides> = computed(() => {
@@ -68,8 +66,12 @@ export const naiveThemeOverrides: Ref<GlobalThemeOverrides> = computed(() => {
       itemTextColor: isDark.value ? "#d1d5db" : "#4b5563",
       itemTextColorHover: p.DEFAULT,
       itemTextColorActive: p.DEFAULT,
-      itemColorActive: isDark.value ? `color-mix(in srgb, ${p.DEFAULT} 10%, transparent)` : "#eef2ff",
-      itemColorActiveHover: isDark.value ? `color-mix(in srgb, ${p.DEFAULT} 15%, transparent)` : "#e0e7ff",
+      itemColorActive: isDark.value
+        ? `color-mix(in srgb, ${p.DEFAULT} 10%, transparent)`
+        : "#eef2ff",
+      itemColorActiveHover: isDark.value
+        ? `color-mix(in srgb, ${p.DEFAULT} 15%, transparent)`
+        : "#e0e7ff",
       itemIconColor: isDark.value ? "#9ca3af" : "#9ca3af",
       itemIconColorHover: p.DEFAULT,
       itemIconColorActive: p.DEFAULT,

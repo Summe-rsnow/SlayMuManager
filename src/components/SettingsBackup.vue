@@ -22,23 +22,43 @@ onMounted(async () => {
 async function updateBackupCount(val: number | null) {
   if (val == null) return
   backupCount.value = val
-  try { await invoke("update_auto_backup_keep_count", { count: val }) } catch { /* ignore */ }
+  try {
+    await invoke("update_auto_backup_keep_count", { count: val })
+  } catch {
+    /* ignore */
+  }
 }
 
 async function toggleBackupOnPathSwitch(val: boolean) {
   backupOnPathSwitch.value = val
-  try { await invoke("update_backup_on_path_switch", { enabled: val }) } catch { /* ignore */ }
+  try {
+    await invoke("update_backup_on_path_switch", { enabled: val })
+  } catch {
+    /* ignore */
+  }
 }
 </script>
 
 <template>
   <SettingsSection :title="t('settings.backup.title')">
     <SettingsRow :label="t('settings.backup.autoKeepCount')">
-      <NInputNumber :value="backupCount" :min="1" :max="20" size="small" style="width: 120px" @update:value="updateBackupCount" />
+      <NInputNumber
+        :value="backupCount"
+        :min="1"
+        :max="20"
+        size="small"
+        style="width: 120px"
+        @update:value="updateBackupCount"
+      />
     </SettingsRow>
     <SettingsRow>
       <template #label>
-        <FloatingTip :label="t('settings.backup.onPathSwitch')" :text="t('settings.backup.onPathSwitchDesc')" placement="right" :width="240" />
+        <FloatingTip
+          :label="t('settings.backup.onPathSwitch')"
+          :text="t('settings.backup.onPathSwitchDesc')"
+          placement="right"
+          :width="240"
+        />
       </template>
       <NSwitch :value="backupOnPathSwitch" @update:value="toggleBackupOnPathSwitch" />
     </SettingsRow>

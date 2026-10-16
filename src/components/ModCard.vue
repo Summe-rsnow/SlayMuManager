@@ -3,7 +3,15 @@ import { ref, computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { currentLocale } from "@/i18n"
 import {
-  NTag, NButton, NIcon, NSwitch, NPopover, NCheckbox, NSpace, NInput, NTooltip,
+  NTag,
+  NButton,
+  NIcon,
+  NSwitch,
+  NPopover,
+  NCheckbox,
+  NSpace,
+  NInput,
+  NTooltip,
 } from "naive-ui"
 import { FolderOpen, Trash2, Plus, StickyNote, Copy, Check, Layers } from "@lucide/vue"
 import IconBtn from "./IconBtn.vue"
@@ -51,10 +59,11 @@ function saveNote(modId: string) {
 // --- 动态卡片样式（Level 1: Surface 玻璃质感）---
 const cardStyle = computed(() => ({
   backgroundColor: "var(--glass-surface-bg)",
-  backdropFilter: "blur(var(--glass-surface-blur))",
-  WebkitBackdropFilter: "blur(var(--glass-surface-blur))",
+  backdropFilter: "blur(var(--glass-surface-blur)) saturate(var(--blur-saturate))",
+  WebkitBackdropFilter: "blur(var(--glass-surface-blur)) saturate(var(--blur-saturate))",
   borderColor: "var(--glass-surface-border)",
   boxShadow: "var(--shadow-glass-surface)",
+  transform: "translateZ(0)",
 }))
 
 const copied = ref(false)
@@ -64,18 +73,22 @@ async function copyModId() {
     await navigator.clipboard.writeText(props.mod.id)
     copied.value = true
     if (copyTimer) clearTimeout(copyTimer)
-    copyTimer = setTimeout(() => { copied.value = false }, 1500)
-  } catch { /* ignore */ }
+    copyTimer = setTimeout(() => {
+      copied.value = false
+    }, 1500)
+  } catch {
+    /* ignore */
+  }
 }
 </script>
 
 <template>
   <div
-    class="group mod-card flex items-center justify-between p-3.5 rounded-xl border transition-all duration-200 hover:-translate-y-1"
+    class="group mod-card flex items-center justify-between p-3.5 rounded-xl border transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1"
     :style="cardStyle"
     :class="[{ 'pointer-events-none opacity-60': busy }]"
   >
-    <div class="flex-1 min-w-0" style="position:relative;z-index:2">
+    <div class="flex-1 min-w-0" style="position: relative; z-index: 2">
       <!-- 名称 + 版本 + 标签 -->
       <div class="flex items-center gap-1.5 flex-wrap">
         <NTooltip trigger="hover" placement="top">
@@ -86,7 +99,10 @@ async function copyModId() {
           </template>
           {{ mod.name }}
         </NTooltip>
-        <span class="bg-c-secondary/50 px-1.5 py-0.5 rounded-md text-xs text-c-muted font-mono truncate">{{ mod.version ?? "—" }}</span>
+        <span
+          class="bg-c-secondary/50 px-1.5 py-0.5 rounded-md text-xs text-c-muted font-mono truncate"
+          >{{ mod.version ?? "—" }}</span
+        >
         <span
           v-if="hasUpdate && updateInfo?.remoteVersion"
           class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-bold leading-none cursor-pointer transition-transform hover:scale-105 active:scale-95 animate-pulse"
@@ -147,21 +163,29 @@ async function copyModId() {
     </div>
 
     <!-- 操作按钮 -->
-    <div class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
+    <div
+      class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4 opacity-60 group-hover:opacity-100 transition-opacity duration-200"
+    >
       <IconBtn :icon="Plus" :tip="t('library.mod.selectTag')">
         <template #trigger="{ disabled: d }">
           <NPopover trigger="click" placement="bottom-end">
             <template #trigger>
               <NButton text size="tiny" :disabled="d">
-                <template #icon><NIcon :size="14"><Plus /></NIcon></template>
+                <template #icon
+                  ><NIcon :size="14"><Plus /></NIcon
+                ></template>
               </NButton>
             </template>
             <div class="w-52">
               <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.selectTag") }}</div>
               <NSpace vertical :size="4">
-                <NCheckbox v-for="t in PRESET_TAGS" :key="t.id" size="small"
+                <NCheckbox
+                  v-for="t in PRESET_TAGS"
+                  :key="t.id"
+                  size="small"
                   :checked="getTags(mod.id).includes(t.id)"
-                  @update:checked="() => toggleTag(mod.id, t.id)">
+                  @update:checked="() => toggleTag(mod.id, t.id)"
+                >
                   <span class="text-xs">{{ getTagLabel(t.id, currentLocale) }}</span>
                 </NCheckbox>
               </NSpace>
@@ -172,19 +196,29 @@ async function copyModId() {
 
       <IconBtn :icon="StickyNote" :tip="t('library.mod.note')">
         <template #trigger="{ disabled: d }">
-          <NPopover trigger="click" placement="bottom" @update:show="(v: boolean) => v && openNotePopover(mod.id)">
+          <NPopover
+            trigger="click"
+            placement="bottom"
+            @update:show="(v: boolean) => v && openNotePopover(mod.id)"
+          >
             <template #trigger>
               <NButton text size="tiny" :disabled="d">
-                <template #icon><NIcon :size="14"><StickyNote /></NIcon></template>
+                <template #icon
+                  ><NIcon :size="14"><StickyNote /></NIcon
+                ></template>
               </NButton>
             </template>
             <div class="w-56">
               <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.note") }}</div>
-              <NInput :value="noteDraft" type="textarea" size="small"
+              <NInput
+                :value="noteDraft"
+                type="textarea"
+                size="small"
                 :placeholder="t('library.mod.notePlaceholder')"
                 :autosize="{ minRows: 2, maxRows: 6 }"
-                @update:value="(v: string) => noteDraft = v"
-                @blur="saveNote(mod.id)" />
+                @update:value="(v: string) => (noteDraft = v)"
+                @blur="saveNote(mod.id)"
+              />
             </div>
           </NPopover>
         </template>
@@ -197,14 +231,38 @@ async function copyModId() {
         @click="emit('manageVersions', mod)"
       />
 
-      <IconBtn :icon="FolderOpen" :tip="t('library.mod.openFolder')" @click="emit('openFolder', mod)" />
+      <IconBtn
+        :icon="FolderOpen"
+        :tip="t('library.mod.openFolder')"
+        @click="emit('openFolder', mod)"
+      />
 
-      <ConfirmBtn v-if="mod.source !== 'workshop'" :icon="Trash2" :tip="t('library.mod.uninstall')" :confirmText="t('library.mod.confirmUninstall', { name: mod.name })" @confirm="emit('uninstall', mod)" />
+      <ConfirmBtn
+        v-if="mod.source !== 'workshop'"
+        :icon="Trash2"
+        :tip="t('library.mod.uninstall')"
+        :confirmText="t('library.mod.confirmUninstall', { name: mod.name })"
+        @confirm="emit('uninstall', mod)"
+      />
 
-      <ConfirmBtn v-if="mod.source === 'workshop' && mod.workshopId" :icon="Trash2" :tip="t('library.mod.unsubscribe')" :confirmText="t('library.mod.confirmUnsubscribe', { name: mod.name })" @confirm="emit('unsubscribe', mod.workshopId!)" />
-      <IconBtn :icon="copied ? Check : Copy" :tip="copied ? t('library.mod.copied') : t('library.mod.copyId')"
-        @click="copyModId" />
-      <FloatingTip v-if="mod.source === 'workshop'" :text="t('library.mod.workshopHint')" placement="left" :width="200">
+      <ConfirmBtn
+        v-if="mod.source === 'workshop' && mod.workshopId"
+        :icon="Trash2"
+        :tip="t('library.mod.unsubscribe')"
+        :confirmText="t('library.mod.confirmUnsubscribe', { name: mod.name })"
+        @confirm="emit('unsubscribe', mod.workshopId!)"
+      />
+      <IconBtn
+        :icon="copied ? Check : Copy"
+        :tip="copied ? t('library.mod.copied') : t('library.mod.copyId')"
+        @click="copyModId"
+      />
+      <FloatingTip
+        v-if="mod.source === 'workshop'"
+        :text="t('library.mod.workshopHint')"
+        placement="left"
+        :width="200"
+      >
         <template #default>
           <NSwitch :value="enabled" :disabled="true" />
         </template>
@@ -221,11 +279,19 @@ async function copyModId() {
 
 <style scoped>
 .mod-card {
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  transform: translateZ(0);
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 .mod-card:hover {
   background-color: var(--glass-surface-bg-hover) !important;
   box-shadow: var(--shadow-card-hover), var(--shadow-glow) !important;
-  border-color: color-mix(in srgb, var(--primary-color) 35%, var(--glass-surface-border)) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--primary-color) 35%,
+    var(--glass-surface-border)
+  ) !important;
 }
 </style>

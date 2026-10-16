@@ -16,31 +16,37 @@ const emit = defineEmits<{
 
 function getTypeIcon(type: string) {
   switch (type) {
-    case "feat": return Sparkles
-    case "perf": return Zap
-    case "ui": return Palette
-    case "fix": return Wrench
-    default: return CheckCircle2
+    case "feat":
+      return Sparkles
+    case "perf":
+      return Zap
+    case "ui":
+      return Palette
+    case "fix":
+      return Wrench
+    default:
+      return CheckCircle2
   }
 }
 
 function getTypeTag(type: string) {
   switch (type) {
-    case "feat": return { label: t("releaseNotes.tags.feat"), type: "primary" as const }
-    case "perf": return { label: t("releaseNotes.tags.perf"), type: "success" as const }
-    case "ui": return { label: t("releaseNotes.tags.ui"), type: "info" as const }
-    case "fix": return { label: t("releaseNotes.tags.fix"), type: "warning" as const }
-    default: return { label: t("releaseNotes.tags.opt"), type: "default" as const }
+    case "feat":
+      return { label: t("releaseNotes.tags.feat"), type: "primary" as const }
+    case "perf":
+      return { label: t("releaseNotes.tags.perf"), type: "success" as const }
+    case "ui":
+      return { label: t("releaseNotes.tags.ui"), type: "info" as const }
+    case "fix":
+      return { label: t("releaseNotes.tags.fix"), type: "warning" as const }
+    default:
+      return { label: t("releaseNotes.tags.opt"), type: "default" as const }
   }
 }
 </script>
 
 <template>
-  <NModal
-    :show="show"
-    mask-closable
-    @update:show="(v) => emit('update:show', v)"
-  >
+  <NModal :show="show" mask-closable @update:show="(v) => emit('update:show', v)">
     <NCard
       class="glass-modal"
       :style="{
@@ -53,12 +59,18 @@ function getTypeTag(type: string) {
     >
       <template #header>
         <div class="flex items-center gap-3">
-          <div class="w-8 h-8 rounded-xl bg-primary-theme/15 text-primary-theme flex items-center justify-center flex-shrink-0">
+          <div
+            class="w-8 h-8 rounded-xl bg-primary-theme/15 text-primary-theme flex items-center justify-center flex-shrink-0"
+          >
             <NIcon :size="18"><PartyPopper /></NIcon>
           </div>
           <div>
-            <span class="text-base font-semibold text-c-primary block">{{ t("releaseNotes.dialogTitle") }}</span>
-            <span class="text-xs text-c-muted font-normal block mt-0.5">{{ t("releaseNotes.dialogSubtitle") }}</span>
+            <span class="text-base font-semibold text-c-primary block">{{
+              t("releaseNotes.dialogTitle")
+            }}</span>
+            <span class="text-xs text-c-muted font-normal block mt-0.5">{{
+              t("releaseNotes.dialogSubtitle")
+            }}</span>
           </div>
         </div>
       </template>
@@ -68,7 +80,11 @@ function getTypeTag(type: string) {
           v-for="(item, index) in releaseNotesConfig"
           :key="item.version"
           class="flex flex-col gap-2.5 rounded-xl p-3.5 transition-all"
-          :class="index === 0 ? 'bg-primary-theme/5 border border-primary-theme/25' : 'bg-white/3 border border-white/6'"
+          :class="
+            index === 0
+              ? 'bg-primary-theme/5 border border-primary-theme/25'
+              : 'bg-white/3 border border-white/6'
+          "
         >
           <!-- Version header -->
           <div class="flex items-center justify-between gap-3">

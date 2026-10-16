@@ -4,18 +4,43 @@ import { useI18n } from "vue-i18n"
 import { currentLocale } from "@/i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
-  NCard, NButton, NTag, NIcon, NSpace, NPopconfirm, NSwitch,
-  NSelect, NRadioGroup, NRadio, useMessage,
+  NCard,
+  NButton,
+  NTag,
+  NIcon,
+  NSpace,
+  NPopconfirm,
+  NSwitch,
+  NSelect,
+  NRadioGroup,
+  NRadio,
+  useMessage,
 } from "naive-ui"
 import SlotCard from "@/components/SlotCard.vue"
 import CountBadge from "@/components/CountBadge.vue"
 import {
-  HardDrive, ArrowRightLeft, RefreshCw, Database,
-  History, RotateCcw, Trash2, Upload, Download, Cloud, AlertTriangle, User, Check,
+  HardDrive,
+  ArrowRightLeft,
+  RefreshCw,
+  Database,
+  History,
+  RotateCcw,
+  Trash2,
+  Upload,
+  Download,
+  Cloud,
+  AlertTriangle,
+  User,
+  Check,
 } from "@lucide/vue"
 import type {
-  SaveSlot, SaveBackupEntry, SaveSyncPair, SaveSyncResult,
-  CloudSaveStatus, CloudSaveDiffEntry, AppBootstrap,
+  SaveSlot,
+  SaveBackupEntry,
+  SaveSyncPair,
+  SaveSyncResult,
+  CloudSaveStatus,
+  CloudSaveDiffEntry,
+  AppBootstrap,
 } from "../types"
 import { useStorage } from "@/composables/useStorage"
 import { useIsActive } from "@/composables/useIsActive"
@@ -41,7 +66,10 @@ const activeUserId = useStorage<string>("slaymgr:active-steam-user", "")
 // 备份恢复到指定槽位
 const showRestoreToSlotDialog = ref(false)
 const restoreToSlotBackup = ref<SaveBackupEntry | null>(null)
-const restoreToSlotTarget = ref<{ kind: string; slotIndex: number }>({ kind: "vanilla", slotIndex: 1 })
+const restoreToSlotTarget = ref<{ kind: string; slotIndex: number }>({
+  kind: "vanilla",
+  slotIndex: 1,
+})
 
 // 云存档
 const cloudStatus = ref<CloudSaveStatus | null>(null)
@@ -51,12 +79,15 @@ const cloudStatusLoading = ref(false)
 const cloudActionLoading = ref(false)
 
 // 备份计数
-const slotBackupCounts = ref<Record<string, { manual: number; auto: number; keepCount: number }>>({})
+const slotBackupCounts = ref<Record<string, { manual: number; auto: number; keepCount: number }>>(
+  {},
+)
 const autoBackupKeepCount = ref(5)
 
 /** 所有槽位的备份汇总 */
 const totalBackupStats = computed(() => {
-  let manual = 0, auto = 0
+  let manual = 0,
+    auto = 0
   for (const c of Object.values(slotBackupCounts.value)) {
     manual += c.manual
     auto += c.auto
@@ -109,10 +140,14 @@ const safeActiveUserId = computed(() => {
 const currentUserSlots = computed(() => userGroups.value.get(safeActiveUserId.value) || [])
 
 const vanillaSlots = computed(() =>
-  currentUserSlots.value.filter((s) => s.kind === "vanilla").sort((a, b) => a.slotIndex - b.slotIndex),
+  currentUserSlots.value
+    .filter((s) => s.kind === "vanilla")
+    .sort((a, b) => a.slotIndex - b.slotIndex),
 )
 const moddedSlots = computed(() =>
-  currentUserSlots.value.filter((s) => s.kind === "modded").sort((a, b) => a.slotIndex - b.slotIndex),
+  currentUserSlots.value
+    .filter((s) => s.kind === "modded")
+    .sort((a, b) => a.slotIndex - b.slotIndex),
 )
 
 const pairOptions = computed(() => {
@@ -241,7 +276,12 @@ async function doRestoreToSlot() {
       targetSlotIndex: target.slotIndex,
     })
     if (!isActive.value) return
-    message.success(t("saves.success.backupRestoredToSlot", { kind: kindLabel(t,target.kind), i: target.slotIndex }))
+    message.success(
+      t("saves.success.backupRestoredToSlot", {
+        kind: kindLabel(t, target.kind),
+        i: target.slotIndex,
+      }),
+    )
     showRestoreToSlotDialog.value = false
     showBackupsDialog.value = false
     await loadSlots()
@@ -440,7 +480,10 @@ function diffKindLabel(k: string): string {
 
 function diffKindType(k: string): "success" | "warning" | "error" | "info" | "default" {
   const m: Record<string, "success" | "warning" | "error" | "info"> = {
-    in_sync: "success", different: "warning", local_only: "info", cloud_only: "info",
+    in_sync: "success",
+    different: "warning",
+    local_only: "info",
+    cloud_only: "info",
   }
   return m[k] ?? "default"
 }
@@ -462,7 +505,9 @@ onMounted(async () => {
     if (!isActive.value) return
     syncPairs.value = bootstrap.saveSyncPairs ?? []
     autoSync.value = bootstrap.saveAutoSync ?? false
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   await loadBackupCounts()
 })
 </script>
@@ -472,21 +517,32 @@ onMounted(async () => {
     <!-- 头部 -->
     <PageHeader :title="t('saves.title')" :subtitle="t('saves.subtitle')">
       <NButton secondary :loading="loading" @click="loadSlots">
-        <template #icon><NIcon :size="16"><RefreshCw /></NIcon></template>
+        <template #icon
+          ><NIcon :size="16"><RefreshCw /></NIcon
+        ></template>
         {{ t("common.refresh") }}
       </NButton>
       <NButton secondary @click="handleSync">
-        <template #icon><NIcon :size="16"><ArrowRightLeft /></NIcon></template>
+        <template #icon
+          ><NIcon :size="16"><ArrowRightLeft /></NIcon
+        ></template>
         {{ t("saves.sync") }}
       </NButton>
       <NButton secondary @click="openAllBackups">
-        <template #icon><NIcon :size="16"><History /></NIcon></template>
+        <template #icon
+          ><NIcon :size="16"><History /></NIcon
+        ></template>
         {{ t("saves.allHistoryBackups") }}
       </NButton>
     </PageHeader>
 
     <!-- 空状态 -->
-    <EmptyState v-if="slots.length === 0 && !loading" :icon="HardDrive" :title="t('saves.empty.setGamePath')" bordered />
+    <EmptyState
+      v-if="slots.length === 0 && !loading"
+      :icon="HardDrive"
+      :title="t('saves.empty.setGamePath')"
+      bordered
+    />
 
     <template v-else>
       <!-- 多用户切换 -->
@@ -502,7 +558,9 @@ onMounted(async () => {
             :secondary="uid !== safeActiveUserId"
             @click="activeUserId = uid"
           >
-            <template #icon><NIcon :size="12"><User /></NIcon></template>
+            <template #icon
+              ><NIcon :size="12"><User /></NIcon
+            ></template>
             {{ shortUserId(uid) }}
           </NButton>
         </div>
@@ -537,7 +595,9 @@ onMounted(async () => {
         <NCard size="small" class="save-card-glass">
           <template #header>
             <div class="flex items-center gap-2">
-              <NTag type="warning" size="small" :bordered="false">{{ t("saves.kind.modded") }}</NTag>
+              <NTag type="warning" size="small" :bordered="false">{{
+                t("saves.kind.modded")
+              }}</NTag>
               <span class="text-xs text-c-muted">
                 {{ t("saves.slotCount", { n: moddedSlots.length }) }}
               </span>
@@ -563,7 +623,9 @@ onMounted(async () => {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <NIcon :size="18" :color="'var(--primary-color)'"><ArrowRightLeft /></NIcon>
-              <span class="text-base font-semibold text-c-primary">{{ t("saves.pairSync.title") }}</span>
+              <span class="text-base font-semibold text-c-primary">{{
+                t("saves.pairSync.title")
+              }}</span>
               <NTag :type="autoSync ? 'success' : 'default'" size="small" :bordered="false">
                 {{ autoSync ? t("saves.pairSync.autoSyncing") : t("saves.pairSync.manual") }}
               </NTag>
@@ -584,13 +646,12 @@ onMounted(async () => {
             v-for="i in 3"
             :key="`pair-${i}`"
             class="pair-card rounded-xl p-4 border transition-all"
-            :class="getPairedModdedSlot(i) !== null
-              ? 'border-primary-theme'
-              : 'border-c-default'"
+            :class="getPairedModdedSlot(i) !== null ? 'border-primary-theme' : 'border-c-default'"
             :style="{
-              backgroundColor: getPairedModdedSlot(i) !== null
-                ? 'color-mix(in srgb, var(--primary-color) 12%, var(--glass-surface-bg))'
-                : 'var(--glass-surface-bg)',
+              backgroundColor:
+                getPairedModdedSlot(i) !== null
+                  ? 'color-mix(in srgb, var(--primary-color) 12%, var(--glass-surface-bg))'
+                  : 'var(--glass-surface-bg)',
               backdropFilter: 'blur(var(--glass-surface-blur))',
               WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
               boxShadow: 'var(--shadow-glass-surface)',
@@ -598,35 +659,54 @@ onMounted(async () => {
           >
             <div class="flex items-center gap-4">
               <div class="flex items-center gap-3 flex-1">
-                <div class="w-10 h-10 rounded-xl bg-primary-10-theme flex items-center justify-center flex-shrink-0">
+                <div
+                  class="w-10 h-10 rounded-xl bg-primary-10-theme flex items-center justify-center flex-shrink-0"
+                >
                   <span class="text-sm font-bold text-primary-600-theme">V{{ i }}</span>
                 </div>
                 <div class="flex flex-col">
                   <span class="text-xs text-c-muted">{{ t("saves.pairSync.vanillaSlot") }}</span>
-                  <span class="text-sm font-medium text-c-primary">{{ t("saves.pairSync.slotWithNumber", { n: i }) }}</span>
+                  <span class="text-sm font-medium text-c-primary">{{
+                    t("saves.pairSync.slotWithNumber", { n: i })
+                  }}</span>
                 </div>
               </div>
 
               <div class="flex flex-col items-center flex-shrink-0">
-                <NIcon :size="22" :color="getPairedModdedSlot(i) !== null ? 'var(--primary-color)' : 'var(--color-text-muted)'">
+                <NIcon
+                  :size="22"
+                  :color="
+                    getPairedModdedSlot(i) !== null
+                      ? 'var(--primary-color)'
+                      : 'var(--color-text-muted)'
+                  "
+                >
                   <ArrowRightLeft />
                 </NIcon>
                 <span
                   v-if="getPairedModdedSlot(i) !== null"
                   class="text-[10px] text-primary-theme mt-0.5"
-                >{{ t("saves.pairSync.paired") }}</span>
-                <span v-else class="text-[10px] text-c-muted mt-0.5">{{ t("saves.pairSync.unpaired") }}</span>
+                  >{{ t("saves.pairSync.paired") }}</span
+                >
+                <span v-else class="text-[10px] text-c-muted mt-0.5">{{
+                  t("saves.pairSync.unpaired")
+                }}</span>
               </div>
 
               <div class="flex items-center gap-3 flex-1 justify-end">
                 <div
                   class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                  :class="getPairedModdedSlot(i) !== null ? 'bg-primary-20-theme' : 'bg-c-secondary/50'"
+                  :class="
+                    getPairedModdedSlot(i) !== null ? 'bg-primary-20-theme' : 'bg-c-secondary/50'
+                  "
                 >
                   <span
                     class="text-sm font-bold"
                     :class="getPairedModdedSlot(i) !== null ? 'text-primary-theme' : 'text-c-muted'"
-                  >{{ getPairedModdedSlot(i) !== null ? `M${getPairedModdedSlot(i)}` : '?' }}</span>
+                    >{{
+                      getPairedModdedSlot(i) !== null ? `M${getPairedModdedSlot(i)}` : "?"
+                    }}</span
+                  >
                 </div>
                 <div class="flex flex-col items-end gap-1">
                   <span class="text-xs text-c-muted">{{ t("saves.pairSync.moddedSlot") }}</span>
@@ -649,7 +729,9 @@ onMounted(async () => {
             {{ t("saves.pairSync.pairCount", { n: syncPairs.length }) }}
           </span>
           <NButton type="primary" size="small" @click="saveSyncPairs">
-            <template #icon><NIcon :size="14"><ArrowRightLeft /></NIcon></template>
+            <template #icon
+              ><NIcon :size="14"><ArrowRightLeft /></NIcon
+            ></template>
             {{ t("saves.pairSync.savePairs") }}
           </NButton>
         </div>
@@ -661,7 +743,9 @@ onMounted(async () => {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
               <NIcon :size="18" :color="'var(--primary-color)'"><Cloud /></NIcon>
-              <span class="text-base font-semibold text-c-primary">{{ t("saves.cloud.title") }}</span>
+              <span class="text-base font-semibold text-c-primary">{{
+                t("saves.cloud.title")
+              }}</span>
             </div>
           </div>
         </template>
@@ -670,15 +754,21 @@ onMounted(async () => {
         </p>
         <NSpace>
           <NButton secondary size="small" :loading="cloudStatusLoading" @click="openCloudDialog">
-            <template #icon><NIcon :size="14"><Cloud /></NIcon></template>
+            <template #icon
+              ><NIcon :size="14"><Cloud /></NIcon
+            ></template>
             {{ t("saves.cloud.viewStatus") }}
           </NButton>
           <NButton secondary size="small" :loading="cloudActionLoading" @click="ascendFull">
-            <template #icon><NIcon :size="14"><Upload /></NIcon></template>
+            <template #icon
+              ><NIcon :size="14"><Upload /></NIcon
+            ></template>
             {{ t("saves.cloud.uploadAll") }}
           </NButton>
           <NButton secondary size="small" :loading="cloudActionLoading" @click="descendFull">
-            <template #icon><NIcon :size="14"><Download /></NIcon></template>
+            <template #icon
+              ><NIcon :size="14"><Download /></NIcon
+            ></template>
             {{ t("saves.cloud.downloadAll") }}
           </NButton>
         </NSpace>
@@ -691,12 +781,21 @@ onMounted(async () => {
         <span class="text-lg font-semibold">{{ t("saves.allHistoryBackups") }}</span>
       </template>
       <div class="flex items-center gap-3 text-xs text-c-muted mb-4 px-1">
-        <CountBadge :label="t('saves.backups.manualCountLabel')" :count="totalBackupStats.manual" dot-color="bg-blue-500" />
+        <CountBadge
+          :label="t('saves.backups.manualCountLabel')"
+          :count="totalBackupStats.manual"
+          dot-color="bg-blue-500"
+        />
         <CountBadge :label="t('saves.backups.autoCountLabel')" :count="totalBackupStats.auto" />
         <span>· {{ t("saves.backups.limitLabel", { n: totalBackupStats.limit }) }}</span>
       </div>
 
-      <EmptyState v-if="backups.length === 0" :icon="Database" :title="t('saves.backups.empty')" size="sm" />
+      <EmptyState
+        v-if="backups.length === 0"
+        :icon="Database"
+        :title="t('saves.backups.empty')"
+        size="sm"
+      />
 
       <div v-else class="max-h-[500px] overflow-auto space-y-3 pr-1">
         <div
@@ -710,20 +809,10 @@ onMounted(async () => {
               <span class="text-sm font-semibold text-c-primary whitespace-nowrap">
                 {{ new Date(b.createdAt).toLocaleString(currentLocale) }}
               </span>
-              <NTag
-                v-if="b.manual === true"
-                type="success"
-                size="tiny"
-                :bordered="false"
-              >
+              <NTag v-if="b.manual === true" type="success" size="tiny" :bordered="false">
                 {{ t("saves.backups.manualReason") }}
               </NTag>
-              <NTag
-                v-else-if="b.manual === false"
-                type="default"
-                size="tiny"
-                :bordered="false"
-              >
+              <NTag v-else-if="b.manual === false" type="default" size="tiny" :bordered="false">
                 {{ t("saves.backups.autoBackup") }}
               </NTag>
               <template v-else>
@@ -742,7 +831,9 @@ onMounted(async () => {
               </div>
               <div class="flex items-center gap-1">
                 <NIcon :size="12"><Database /></NIcon>
-                <span>{{ kindLabel(t, b.kind) }} {{ t("saves.slotIndex", { i: b.slotIndex }) }}</span>
+                <span
+                  >{{ kindLabel(t, b.kind) }} {{ t("saves.slotIndex", { i: b.slotIndex }) }}</span
+                >
               </div>
             </div>
 
@@ -755,17 +846,26 @@ onMounted(async () => {
 
           <!-- 操作按钮 -->
           <div class="flex items-center gap-2 ml-4 flex-shrink-0">
-            <NButton v-if="b.manual === null" size="tiny" secondary @click="openUpgradeDialog(b.id)">
+            <NButton
+              v-if="b.manual === null"
+              size="tiny"
+              secondary
+              @click="openUpgradeDialog(b.id)"
+            >
               {{ t("saves.backups.upgrade") }}
             </NButton>
             <NButton size="tiny" secondary @click="openRestoreToSlot(b)">
-              <template #icon><NIcon :size="12"><RotateCcw /></NIcon></template>
+              <template #icon
+                ><NIcon :size="12"><RotateCcw /></NIcon
+              ></template>
               {{ t("saves.backups.restoreTo") }}
             </NButton>
             <NPopconfirm @positive-click="() => deleteBackup(b)">
               <template #trigger>
                 <NButton size="tiny" type="error" text>
-                  <template #icon><NIcon :size="12"><Trash2 /></NIcon></template>
+                  <template #icon
+                    ><NIcon :size="12"><Trash2 /></NIcon
+                  ></template>
                 </NButton>
               </template>
               {{ t("saves.backups.confirmDelete") }}
@@ -792,7 +892,7 @@ onMounted(async () => {
           </span>
         </div>
         <div class="text-xs mb-3 text-c-muted">
-          {{ restoreToSlotBackup.reason }} · {{ kindLabel(t,restoreToSlotBackup.kind) }}
+          {{ restoreToSlotBackup.reason }} · {{ kindLabel(t, restoreToSlotBackup.kind) }}
           {{ t("saves.slotIndex", { i: restoreToSlotBackup.slotIndex }) }}
         </div>
 
@@ -810,7 +910,7 @@ onMounted(async () => {
             </NRadioGroup>
             <NSelect
               :value="restoreToSlotTarget.slotIndex"
-              :options="[1, 2, 3].map(i => ({ label: t('saves.slotIndex', { i }), value: i }))"
+              :options="[1, 2, 3].map((i) => ({ label: t('saves.slotIndex', { i }), value: i }))"
               size="small"
               style="width: 120px"
               :placeholder="t('saves.backups.chooseSlot')"
@@ -854,7 +954,9 @@ onMounted(async () => {
       <template #footer>
         <NSpace justify="end">
           <NButton @click="upgradingBackupId = null">{{ t("common.cancel") }}</NButton>
-          <NButton type="primary" @click="confirmUpgrade">{{ t("saves.backups.upgradeConfirm") }}</NButton>
+          <NButton type="primary" @click="confirmUpgrade">{{
+            t("saves.backups.upgradeConfirm")
+          }}</NButton>
         </NSpace>
       </template>
     </AppDialog>
@@ -864,182 +966,203 @@ onMounted(async () => {
       <template #header>
         <div class="flex items-center justify-between">
           <span class="text-lg font-semibold">{{ t("saves.cloud.title") }}</span>
-          <FloatingTip :text="t('saves.cloud.cleanupArtifactsTip')">
-            <NButton size="tiny" secondary @click="cleanupArtifacts">
-              <template #icon><NIcon :size="13"><Trash2 /></NIcon></template>
-              {{ t("saves.cloud.cleanupArtifacts") }}
-            </NButton>
-          </FloatingTip>
+          <NButton size="tiny" secondary @click="cleanupArtifacts">
+            {{ t("saves.cloud.cleanupArtifacts") }}
+            <FloatingTip
+              :text="t('saves.cloud.cleanupArtifactsTip')"
+              :width="240"
+              placement="bottom-end"
+            />
+          </NButton>
         </div>
       </template>
 
-        <div v-if="cloudStatus && cloudStatus.isAvailable" class="grid grid-cols-4 gap-3 mb-5">
-          <!-- 本地文件 -->
-          <div
-            class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border border-c-default"
-            :style="{
-              backgroundColor: 'var(--glass-surface-bg)',
-              backdropFilter: 'blur(var(--glass-surface-blur))',
-              WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
-              boxShadow: 'var(--shadow-glass-surface)',
-            }"
-          >
-            <div class="text-xl font-bold font-mono text-c-primary leading-tight">
-              {{ cloudStatus.localFileCount }}
-            </div>
-            <div class="text-xs text-c-muted mt-1 font-medium">
-              {{ t("saves.cloud.localFiles") }}
-            </div>
-          </div>
-
-          <!-- 云端文件 -->
-          <div
-            class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border border-c-default"
-            :style="{
-              backgroundColor: 'var(--glass-surface-bg)',
-              backdropFilter: 'blur(var(--glass-surface-blur))',
-              WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
-              boxShadow: 'var(--shadow-glass-surface)',
-            }"
-          >
-            <div class="text-xl font-bold font-mono text-c-primary leading-tight">
-              {{ cloudStatus.cloudFileCount }}
-            </div>
-            <div class="text-xs text-c-muted mt-1 font-medium">
-              {{ t("saves.cloud.cloudFiles") }}
-            </div>
-          </div>
-
-          <!-- 差异数量 -->
-          <div
-            class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border"
-            :class="cloudStatus.differentCount > 0 ? 'border-amber-500/40' : 'border-c-default'"
-            :style="{
-              backgroundColor: cloudStatus.differentCount > 0
-                ? 'color-mix(in srgb, #f59e0b 10%, var(--glass-surface-bg))'
-                : 'var(--glass-surface-bg)',
-              backdropFilter: 'blur(var(--glass-surface-blur))',
-              WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
-              boxShadow: 'var(--shadow-glass-surface)',
-            }"
-          >
-            <div
-              class="text-xl font-bold font-mono leading-tight"
-              :class="cloudStatus.differentCount > 0 ? 'text-amber-500' : 'text-c-primary'"
-            >
-              {{ cloudStatus.differentCount }}
-            </div>
-            <div class="text-xs text-c-muted mt-1 font-medium">
-              {{ t("saves.cloud.differences") }}
-            </div>
-          </div>
-
-          <!-- 同步状态 -->
-          <div
-            class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border"
-            :class="cloudStatus.hasMismatch ? 'border-amber-500/40' : 'border-emerald-500/40'"
-            :style="{
-              backgroundColor: cloudStatus.hasMismatch
-                ? 'color-mix(in srgb, #f59e0b 10%, var(--glass-surface-bg))'
-                : 'color-mix(in srgb, #10b981 10%, var(--glass-surface-bg))',
-              backdropFilter: 'blur(var(--glass-surface-blur))',
-              WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
-              boxShadow: 'var(--shadow-glass-surface)',
-            }"
-          >
-            <div class="flex items-center gap-1.5 leading-tight">
-              <NIcon :size="18" :color="cloudStatus.hasMismatch ? '#f59e0b' : '#10b981'">
-                <AlertTriangle v-if="cloudStatus.hasMismatch" />
-                <Check v-else />
-              </NIcon>
-              <span
-                class="text-sm font-bold truncate max-w-[80px]"
-                :class="cloudStatus.hasMismatch ? 'text-amber-500' : 'text-emerald-500'"
-              >
-                {{ mismatchLabel(cloudStatus) }}
-              </span>
-            </div>
-            <div class="text-xs text-c-muted mt-1 font-medium">
-              {{ t("saves.cloud.title") }}
-            </div>
-          </div>
-        </div>
-
+      <div v-if="cloudStatus && cloudStatus.isAvailable" class="grid grid-cols-4 gap-3 mb-5">
+        <!-- 本地文件 -->
         <div
-          v-if="cloudStatus && !cloudStatus.isAvailable"
-          class="p-4 rounded-xl bg-c-warning/10 border border-c-warning/40 mb-4"
-        >
-          <div class="flex items-start gap-2.5">
-            <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
-            <div>
-              <div class="text-sm font-medium text-c-warning mb-1">{{ t("saves.cloud.unavailable") }}</div>
-              <div class="text-xs text-c-warning">{{ cloudStatus.diagnostic }}</div>
-              <div v-if="cloudStatus.cloudPath" class="text-xs mt-1 font-mono text-c-muted">
-                {{ t("saves.cloud.cloudLabel") }}: {{ cloudStatus.cloudPath }}
-              </div>
-              <div v-if="cloudStatus.localPath" class="text-xs mt-0.5 font-mono text-c-muted">
-                {{ t("saves.cloud.localLabel") }}: {{ cloudStatus.localPath }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2 mb-4">
-          <NButton size="small" secondary :disabled="!cloudStatus?.isAvailable" :loading="cloudActionLoading" @click="ascendFull">
-            <template #icon><NIcon :size="14"><Upload /></NIcon></template>
-            {{ t("saves.cloud.ascend") }}
-          </NButton>
-          <NButton size="small" secondary :disabled="!cloudStatus?.isAvailable" :loading="cloudActionLoading" @click="descendFull">
-            <template #icon><NIcon :size="14"><Download /></NIcon></template>
-            {{ t("saves.cloud.descend") }}
-          </NButton>
-        </div>
-
-        <div
-          v-if="cloudDiffs.length > 0"
-          class="rounded-xl border border-c-default overflow-hidden"
+          class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border border-c-default"
           :style="{
             backgroundColor: 'var(--glass-surface-bg)',
             backdropFilter: 'blur(var(--glass-surface-blur))',
             WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+            boxShadow: 'var(--shadow-glass-surface)',
           }"
         >
-          <div class="max-h-64 overflow-y-auto divide-y divide-c-default">
-            <div
-              v-for="d in cloudDiffs"
-              :key="d.relativePath"
-              class="flex items-center justify-between p-2.5 text-sm transition-colors hover:bg-c-secondary/40"
+          <div class="text-xl font-bold font-mono text-c-primary leading-tight">
+            {{ cloudStatus.localFileCount }}
+          </div>
+          <div class="text-xs text-c-muted mt-1 font-medium">
+            {{ t("saves.cloud.localFiles") }}
+          </div>
+        </div>
+
+        <!-- 云端文件 -->
+        <div
+          class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border border-c-default"
+          :style="{
+            backgroundColor: 'var(--glass-surface-bg)',
+            backdropFilter: 'blur(var(--glass-surface-blur))',
+            WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+            boxShadow: 'var(--shadow-glass-surface)',
+          }"
+        >
+          <div class="text-xl font-bold font-mono text-c-primary leading-tight">
+            {{ cloudStatus.cloudFileCount }}
+          </div>
+          <div class="text-xs text-c-muted mt-1 font-medium">
+            {{ t("saves.cloud.cloudFiles") }}
+          </div>
+        </div>
+
+        <!-- 差异数量 -->
+        <div
+          class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border"
+          :class="cloudStatus.differentCount > 0 ? 'border-amber-500/40' : 'border-c-default'"
+          :style="{
+            backgroundColor:
+              cloudStatus.differentCount > 0
+                ? 'color-mix(in srgb, #f59e0b 10%, var(--glass-surface-bg))'
+                : 'var(--glass-surface-bg)',
+            backdropFilter: 'blur(var(--glass-surface-blur))',
+            WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+            boxShadow: 'var(--shadow-glass-surface)',
+          }"
+        >
+          <div
+            class="text-xl font-bold font-mono leading-tight"
+            :class="cloudStatus.differentCount > 0 ? 'text-amber-500' : 'text-c-primary'"
+          >
+            {{ cloudStatus.differentCount }}
+          </div>
+          <div class="text-xs text-c-muted mt-1 font-medium">
+            {{ t("saves.cloud.differences") }}
+          </div>
+        </div>
+
+        <!-- 同步状态 -->
+        <div
+          class="p-3.5 rounded-xl flex flex-col items-center justify-center transition-all duration-200 hover:-translate-y-0.5 border"
+          :class="cloudStatus.hasMismatch ? 'border-amber-500/40' : 'border-emerald-500/40'"
+          :style="{
+            backgroundColor: cloudStatus.hasMismatch
+              ? 'color-mix(in srgb, #f59e0b 10%, var(--glass-surface-bg))'
+              : 'color-mix(in srgb, #10b981 10%, var(--glass-surface-bg))',
+            backdropFilter: 'blur(var(--glass-surface-blur))',
+            WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+            boxShadow: 'var(--shadow-glass-surface)',
+          }"
+        >
+          <div class="flex items-center gap-1.5 leading-tight">
+            <NIcon :size="18" :color="cloudStatus.hasMismatch ? '#f59e0b' : '#10b981'">
+              <AlertTriangle v-if="cloudStatus.hasMismatch" />
+              <Check v-else />
+            </NIcon>
+            <span
+              class="text-sm font-bold truncate max-w-[80px]"
+              :class="cloudStatus.hasMismatch ? 'text-amber-500' : 'text-emerald-500'"
             >
-              <div class="flex-1 min-w-0 flex items-center gap-2">
-                <NTag :type="diffKindType(d.kind)" size="tiny" :bordered="false">
-                  {{ diffKindLabel(d.kind) }}
-                </NTag>
-                <span class="truncate font-mono text-xs text-c-primary">{{ d.relativePath }}</span>
-              </div>
-              <NSpace :size="4" class="flex-shrink-0 ml-3">
-                <NButton
-                  v-if="d.kind === 'local_only'"
-                  size="tiny"
-                  secondary
-                  @click="copyCloudSide(d.relativePath, 'local_to_cloud')"
-                >
-                  {{ t("saves.cloud.toCloud") }}
-                </NButton>
-                <NButton
-                  v-if="d.kind === 'cloud_only'"
-                  size="tiny"
-                  secondary
-                  @click="copyCloudSide(d.relativePath, 'cloud_to_local')"
-                >
-                  {{ t("saves.cloud.toLocal") }}
-                </NButton>
-              </NSpace>
+              {{ mismatchLabel(cloudStatus) }}
+            </span>
+          </div>
+          <div class="text-xs text-c-muted mt-1 font-medium">
+            {{ t("saves.cloud.title") }}
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="cloudStatus && !cloudStatus.isAvailable"
+        class="p-4 rounded-xl bg-c-warning/10 border border-c-warning/40 mb-4"
+      >
+        <div class="flex items-start gap-2.5">
+          <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
+          <div>
+            <div class="text-sm font-medium text-c-warning mb-1">
+              {{ t("saves.cloud.unavailable") }}
+            </div>
+            <div class="text-xs text-c-warning">{{ cloudStatus.diagnostic }}</div>
+            <div v-if="cloudStatus.cloudPath" class="text-xs mt-1 font-mono text-c-muted">
+              {{ t("saves.cloud.cloudLabel") }}: {{ cloudStatus.cloudPath }}
+            </div>
+            <div v-if="cloudStatus.localPath" class="text-xs mt-0.5 font-mono text-c-muted">
+              {{ t("saves.cloud.localLabel") }}: {{ cloudStatus.localPath }}
             </div>
           </div>
         </div>
-        <div v-else class="text-center py-6 text-sm text-c-muted">
-          {{ t("saves.cloud.inSync") }}
+      </div>
+
+      <div class="flex items-center gap-2 mb-4">
+        <NButton
+          size="small"
+          secondary
+          :disabled="!cloudStatus?.isAvailable"
+          :loading="cloudActionLoading"
+          @click="ascendFull"
+        >
+          <template #icon
+            ><NIcon :size="14"><Upload /></NIcon
+          ></template>
+          {{ t("saves.cloud.ascend") }}
+        </NButton>
+        <NButton
+          size="small"
+          secondary
+          :disabled="!cloudStatus?.isAvailable"
+          :loading="cloudActionLoading"
+          @click="descendFull"
+        >
+          <template #icon
+            ><NIcon :size="14"><Download /></NIcon
+          ></template>
+          {{ t("saves.cloud.descend") }}
+        </NButton>
+      </div>
+
+      <div
+        v-if="cloudDiffs.length > 0"
+        class="rounded-xl border border-c-default overflow-hidden"
+        :style="{
+          backgroundColor: 'var(--glass-surface-bg)',
+          backdropFilter: 'blur(var(--glass-surface-blur))',
+          WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
+        }"
+      >
+        <div class="max-h-64 overflow-y-auto divide-y divide-c-default">
+          <div
+            v-for="d in cloudDiffs"
+            :key="d.relativePath"
+            class="flex items-center justify-between p-2.5 text-sm transition-colors hover:bg-c-secondary/40"
+          >
+            <div class="flex-1 min-w-0 flex items-center gap-2">
+              <NTag :type="diffKindType(d.kind)" size="tiny" :bordered="false">
+                {{ diffKindLabel(d.kind) }}
+              </NTag>
+              <span class="truncate font-mono text-xs text-c-primary">{{ d.relativePath }}</span>
+            </div>
+            <NSpace :size="4" class="flex-shrink-0 ml-3">
+              <NButton
+                v-if="d.kind === 'local_only'"
+                size="tiny"
+                secondary
+                @click="copyCloudSide(d.relativePath, 'local_to_cloud')"
+              >
+                {{ t("saves.cloud.toCloud") }}
+              </NButton>
+              <NButton
+                v-if="d.kind === 'cloud_only'"
+                size="tiny"
+                secondary
+                @click="copyCloudSide(d.relativePath, 'cloud_to_local')"
+              >
+                {{ t("saves.cloud.toLocal") }}
+              </NButton>
+            </NSpace>
+          </div>
         </div>
+      </div>
+      <div v-else class="text-center py-6 text-sm text-c-muted">
+        {{ t("saves.cloud.inSync") }}
+      </div>
     </AppDialog>
   </div>
 </template>

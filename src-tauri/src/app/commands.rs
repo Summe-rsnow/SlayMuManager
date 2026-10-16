@@ -1561,12 +1561,15 @@ pub fn search_remote_mods(
     query: String,
     page: Option<u32>,
     page_size: Option<u32>,
+    #[allow(non_snake_case)]
+    pageSize: Option<u32>,
     sort_by: Option<String>,
 ) -> Result<RemoteModSearchResult, String> {
+    let size = page_size.or(pageSize).unwrap_or(12);
     discover_service::search_remote_mods(
         &query,
         page.unwrap_or(1),
-        page_size.unwrap_or(18),
+        size,
         &sort_by.unwrap_or_else(|| "latest_added".to_string()),
     )
     .map_err(|e| e.to_string())
@@ -1582,10 +1585,17 @@ pub fn check_steam_status() -> bool {
 }
 
 #[tauri::command]
-pub fn search_workshop(query: String, page: u32, page_size: u32, sort_by: String) -> Result<crate::domain::workshop_mod::WorkshopSearchResult, String> {
-    crate::integrations::workshop::search_workshop(&query, page, page_size, &sort_by)
+pub fn search_workshop(
+    query: String,
+    page: u32,
+    page_size: Option<u32>,
+    #[allow(non_snake_case)]
+    pageSize: Option<u32>,
+    sort_by: String,
+) -> Result<crate::domain::workshop_mod::WorkshopSearchResult, String> {
+    let size = page_size.or(pageSize).unwrap_or(12);
+    crate::integrations::workshop::search_workshop(&query, page, size, &sort_by)
 }
-
 #[tauri::command]
 pub fn subscribe_workshop_mod(published_file_id: u64) -> Result<(), String> {
     crate::integrations::workshop::subscribe_mod(published_file_id)

@@ -40,7 +40,9 @@ export const useSidebarStore = defineStore("sidebar", () => {
             showLaunchMismatchDialog.value = true
             return { ok: false, mismatch: cloudStatus }
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
 
       const running = await invoke<boolean>("is_game_running")
@@ -79,7 +81,11 @@ export const useSidebarStore = defineStore("sidebar", () => {
 
   async function handleToggleVanillaLaunch(val: boolean) {
     vanillaLaunch.value = val
-    try { await invoke("update_vanilla_launch", { enabled: val }) } catch { /* ignore */ }
+    try {
+      await invoke("update_vanilla_launch", { enabled: val })
+    } catch {
+      /* ignore */
+    }
   }
 
   async function loadQuickPresets() {
@@ -89,11 +95,15 @@ export const useSidebarStore = defineStore("sidebar", () => {
       const profiles = await invoke<ModProfile[]>("list_profiles")
       quickPresetOptions.value = profiles.map((p) => ({ label: p.name, value: p.id }))
       if (!quickPresetId.value && profiles.length > 0) quickPresetId.value = profiles[0].id
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   /** 快速切换预设。返回结构化结果，由组件层处理 UI 反馈 */
-  async function handleQuickPreset(presetId: string): Promise<{ ok: boolean; error?: string; label?: string }> {
+  async function handleQuickPreset(
+    presetId: string,
+  ): Promise<{ ok: boolean; error?: string; label?: string }> {
     if (!presetId) return { ok: false, error: "No preset selected" }
     try {
       const label = quickPresetOptions.value.find((p) => p.value === presetId)?.label ?? presetId
@@ -110,11 +120,22 @@ export const useSidebarStore = defineStore("sidebar", () => {
   }
 
   return {
-    launchingGame, showLaunchMismatchDialog, launchMismatchStatus,
-    vanillaLaunch, quickPresetId, quickPresetOptions,
-    activePresetName, activePresetId, presetSnapshot, presetAppliedTick,
+    launchingGame,
+    showLaunchMismatchDialog,
+    launchMismatchStatus,
+    vanillaLaunch,
+    quickPresetId,
+    quickPresetOptions,
+    activePresetName,
+    activePresetId,
+    presetSnapshot,
+    presetAppliedTick,
     sidebarCollapsed,
-    handleLaunchGame, handleGoToSaves, handleLaunchAnyway,
-    handleToggleVanillaLaunch, loadQuickPresets, handleQuickPreset,
+    handleLaunchGame,
+    handleGoToSaves,
+    handleLaunchAnyway,
+    handleToggleVanillaLaunch,
+    loadQuickPresets,
+    handleQuickPreset,
   }
 })

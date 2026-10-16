@@ -3,8 +3,26 @@ import { h, computed, ref, onMounted, onUnmounted } from "vue"
 import { storeToRefs } from "pinia"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
-import { useMessage, useDialog, NMenu, NIcon, NSelect, NButton, NSpace, type MenuOption } from "naive-ui"
-import { Library, Compass, Save, Settings, Play, LoaderCircle, AlertTriangle, Menu } from "@lucide/vue"
+import {
+  useMessage,
+  useDialog,
+  NMenu,
+  NIcon,
+  NSelect,
+  NButton,
+  NSpace,
+  type MenuOption,
+} from "naive-ui"
+import {
+  Library,
+  Compass,
+  Save,
+  Settings,
+  Play,
+  LoaderCircle,
+  AlertTriangle,
+  Menu,
+} from "@lucide/vue"
 import { useSidebarStore } from "@/stores/useSidebarStore"
 import { useHighlightStore } from "@/stores/useHighlightStore"
 import AppDialog from "@/components/AppDialog.vue"
@@ -184,22 +202,24 @@ onUnmounted(() => {
       @click="sidebarCollapsed = !sidebarCollapsed"
     >
       <!-- 闭合态 -->
-      <div class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75">
+      <div
+        class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75"
+      >
         <NIcon :size="24" color="#fff"><Menu /></NIcon>
       </div>
       <!-- 展开态 -->
-      <div class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100">
+      <div
+        class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100"
+      >
         <NIcon :size="24" color="#fff" class="flex-shrink-0"><Menu /></NIcon>
-        <span class="text-[17px] font-medium whitespace-nowrap text-white">{{ t("nav.menu") }}</span>
+        <span class="text-[17px] font-medium whitespace-nowrap text-white">{{
+          t("nav.menu")
+        }}</span>
       </div>
     </button>
 
     <!-- 「启动游戏」按钮 + 预设选择悬停面板 -->
-    <div
-      class="relative"
-      @mouseenter="onPresetEnter"
-      @mouseleave="onPresetLeave"
-    >
+    <div class="relative" @mouseenter="onPresetEnter" @mouseleave="onPresetLeave">
       <!-- 预设选择面板（悬停时在按钮上方展开，Level 3: Floating 质感） -->
       <Transition name="preset">
         <div
@@ -219,7 +239,11 @@ onUnmounted(() => {
               :disabled="quickPresetOptions.length === 0"
               placement="top"
               @update:value="onPresetSelect"
-              @update:show="(show: boolean) => { presetMenuOpen = show }"
+              @update:show="
+                (show: boolean) => {
+                  presetMenuOpen = show
+                }
+              "
             />
           </div>
         </div>
@@ -239,14 +263,18 @@ onUnmounted(() => {
         @click="onLaunchGame"
       >
         <!-- 闭合态 -->
-        <div class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75">
+        <div
+          class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75"
+        >
           <NIcon :size="24" :color="'var(--primary-color)'">
             <Play v-if="!launchingGame" />
             <LoaderCircle v-else class="animate-spin" />
           </NIcon>
         </div>
         <!-- 展开态 -->
-        <div class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100">
+        <div
+          class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100"
+        >
           <NIcon :size="24" :color="'var(--primary-color)'" class="flex-shrink-0">
             <Play v-if="!launchingGame" />
             <LoaderCircle v-else class="animate-spin" />
@@ -260,7 +288,14 @@ onUnmounted(() => {
   <!-- ============ 云存档差异确认弹窗 ============ -->
   <AppDialog
     :show="showLaunchMismatchDialog"
-    @update:show="(v: boolean) => { if (!v) { showLaunchMismatchDialog = false; launchingGame = false } }"
+    @update:show="
+      (v: boolean) => {
+        if (!v) {
+          showLaunchMismatchDialog = false
+          launchingGame = false
+        }
+      }
+    "
     width="440px"
   >
     <template #header>
@@ -273,13 +308,19 @@ onUnmounted(() => {
       <p class="text-sm text-c-secondary">{{ t("library.launchMismatch.warning") }}</p>
       <div class="text-xs text-c-secondary bg-c-warning rounded p-2 space-y-1">
         <div class="flex justify-between" v-if="launchMismatchStatus.differentCount > 0">
-          <span>{{ t("saves.cloud.mismatch.different", { n: launchMismatchStatus.differentCount }) }}</span>
+          <span>{{
+            t("saves.cloud.mismatch.different", { n: launchMismatchStatus.differentCount })
+          }}</span>
         </div>
         <div class="flex justify-between" v-if="launchMismatchStatus.localOnlyCount > 0">
-          <span>{{ t("saves.cloud.mismatch.localOnly", { n: launchMismatchStatus.localOnlyCount }) }}</span>
+          <span>{{
+            t("saves.cloud.mismatch.localOnly", { n: launchMismatchStatus.localOnlyCount })
+          }}</span>
         </div>
         <div class="flex justify-between" v-if="launchMismatchStatus.cloudOnlyCount > 0">
-          <span>{{ t("saves.cloud.mismatch.cloudOnly", { n: launchMismatchStatus.cloudOnlyCount }) }}</span>
+          <span>{{
+            t("saves.cloud.mismatch.cloudOnly", { n: launchMismatchStatus.cloudOnlyCount })
+          }}</span>
         </div>
       </div>
       <div class="flex justify-between mt-2 gap-2">

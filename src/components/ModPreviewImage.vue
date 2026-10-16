@@ -3,10 +3,16 @@ import { ref } from "vue"
 import { NIcon, NModal } from "naive-ui"
 import { PackageOpen } from "@lucide/vue"
 
-const props = defineProps<{
-  src: string | null | undefined
-  alt: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    src: string | null | undefined
+    alt: string
+    previewable?: boolean
+  }>(),
+  {
+    previewable: true,
+  },
+)
 
 const loadFailed = ref(false)
 const showPreview = ref(false)
@@ -16,14 +22,14 @@ function onError() {
 }
 
 function openPreview() {
-  if (props.src) showPreview.value = true
+  if (props.src && props.previewable) showPreview.value = true
 }
 </script>
 
 <template>
   <div
     class="w-28 h-28 rounded-lg flex-shrink-0 overflow-hidden bg-c-secondary"
-    :class="{ 'cursor-pointer': !!src }"
+    :class="{ 'cursor-pointer': !!src && previewable }"
   >
     <img
       v-if="src && !loadFailed"
@@ -50,14 +56,14 @@ function openPreview() {
   >
     <div
       class="flex items-center justify-center"
-      style="max-width: 90vw; max-height: 90vh;"
+      style="max-width: 90vw; max-height: 90vh"
       @click="showPreview = false"
     >
       <img
         v-if="src"
         :src="src"
         class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain"
-        style="max-width: 85vw;"
+        style="max-width: 85vw"
       />
     </div>
   </NModal>

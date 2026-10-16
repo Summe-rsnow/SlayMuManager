@@ -4,11 +4,27 @@ import { storeToRefs } from "pinia"
 import { useRouter, useRoute } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
+import { NButton, NInput, NIcon, NSelect, NPopconfirm, useMessage, useDialog } from "naive-ui"
 import {
-  NButton, NInput, NIcon, NSelect, NPopconfirm, useMessage, useDialog,
-} from "naive-ui"
-import { Search, ExternalLink, ThumbsUp, ArrowDown, PackageOpen, RefreshCw, Plus, X, Download, LayoutGrid, Columns2 } from "@lucide/vue"
-import type { RemoteMod, RemoteModSearchResult, AppBootstrap, WorkshopMod, WorkshopSearchResult } from "../types"
+  Search,
+  ExternalLink,
+  ThumbsUp,
+  ArrowDown,
+  PackageOpen,
+  RefreshCw,
+  Plus,
+  X,
+  Download,
+  LayoutGrid,
+  Columns2,
+} from "@lucide/vue"
+import type {
+  RemoteMod,
+  RemoteModSearchResult,
+  AppBootstrap,
+  WorkshopMod,
+  WorkshopSearchResult,
+} from "../types"
 import { useIsActive } from "@/composables/useIsActive"
 import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
 import { useSearchPrefetch } from "@/composables/useSearchPrefetch"
@@ -18,10 +34,10 @@ import EmptyState from "@/components/EmptyState.vue"
 import DiscoverPagination from "@/components/DiscoverPagination.vue"
 import DiscoverCard from "@/components/DiscoverCard.vue"
 import SkeletonDiscoverCard from "@/components/SkeletonDiscoverCard.vue"
+import SkeletonDiscoverSplitView from "@/components/SkeletonDiscoverSplitView.vue"
 import PageHeader from "@/components/PageHeader.vue"
 import NexusDownloadModal from "@/components/NexusDownloadModal.vue"
 import DiscoverSplitView from "@/components/DiscoverSplitView.vue"
-
 defineOptions({ name: "DiscoverPage" })
 
 const { t } = useI18n()
@@ -33,12 +49,11 @@ const highlightStore = useHighlightStore()
 const { isActive } = useIsActive()
 const { fetchMods } = useModCacheStore()
 const prefStore = useDiscoverPrefStore()
-const { discoverColumns, prefetchEnabled, discoverViewMode } = storeToRefs(prefStore)
-const { setDiscoverViewMode } = prefStore
-
+const { discoverColumns, prefetchEnabled, discoverViewMode, discoverSourceTab, discoverPageSize } =
+  storeToRefs(prefStore)
+const { setDiscoverViewMode, setDiscoverSourceTab, setDiscoverPageSize } = prefStore
 const selectedNexusId = ref<string | null>(null)
 const selectedWorkshopId = ref<number | null>(null)
-
 
 // --- 预取缓存（Nexus + Workshop 共用泛型 composable）---
 const nexusCache = useSearchPrefetch<RemoteMod>("nx")
@@ -60,19 +75,10 @@ function openNexusDownload(mod: RemoteMod) {
 // --- 发现页列数映射 ---
 const gridColsClass = computed(() => {
   const map: Record<number, string> = {
-    1: "columns-1 gap-4 mb-6",
-    2: "columns-2 gap-4 mb-6",
-    3: "columns-3 gap-4 mb-6",
-    4: "columns-4 gap-4 mb-6",
-  }
-  return map[discoverColumns.value] || map[3]
-})
-const skeletonColsClass = computed(() => {
-  const map: Record<number, string> = {
-    1: "columns-1 gap-4",
-    2: "columns-2 gap-4",
-    3: "columns-3 gap-4",
-    4: "columns-4 gap-4",
+    1: "grid grid-cols-1 gap-4 items-start",
+    2: "grid grid-cols-2 gap-4 items-start",
+    3: "grid grid-cols-3 gap-4 items-start",
+    4: "grid grid-cols-4 gap-4 items-start",
   }
   return map[discoverColumns.value] || map[3]
 })
@@ -86,7 +92,11 @@ const sortOptions = computed(() => [
 ])
 
 // --- 状态 ---
-const tab = ref(route.query.tab === "workshop" ? "workshop" : "nexus")
+const tab = ref<"nexus" | "workshop">(
+  route.query.tab === "workshop" || route.query.tab === "nexus"
+    ? (route.query.tab as "nexus" | "workshop")
+    : discoverSourceTab.value || "nexus",
+)
 const isNexus = computed(() => tab.value === "nexus")
 const query = ref("")
 const sortBy = ref("latest_added")
@@ -96,7 +106,10 @@ const nexusLoading = ref(false)
 const nexusInitialLoading = ref(true)
 const nexusSearched = ref(false)
 const nexusPage = ref(1)
-const nexusPageSize = ref(12)
+const nexusPageSize = computed({
+  get: () => discoverPageSize.value,
+  set: (val: number) => setDiscoverPageSize(val),
+})
 
 // --- 创意工坊状态 ---
 const workshopQuery = ref("")
@@ -105,33 +118,45 @@ const workshopResults = ref<WorkshopMod[]>([])
 const workshopLoading = ref(false)
 const workshopSearched = ref(false)
 const workshopPage = ref(1)
-const workshopPageSize = ref(12)
+const workshopPageSize = computed({
+  get: () => discoverPageSize.value,
+  set: (val: number) => setDiscoverPageSize(val),
+})
 const workshopTotalCount = ref(0)
 const subscribingWorkshop = ref(new Set<number>())
 const unsubscribingWorkshop = ref(new Set<number>())
 
-watch(nexusResults, (list) => {
-  if (list && list.length > 0) {
-    if (!selectedNexusId.value || !list.some(m => m.remoteId === selectedNexusId.value)) {
-      selectedNexusId.value = list[0].remoteId
+watch(
+  nexusResults,
+  (list) => {
+    if (list && list.length > 0) {
+      if (!selectedNexusId.value || !list.some((m) => m.remoteId === selectedNexusId.value)) {
+        selectedNexusId.value = list[0].remoteId
+      }
+    } else {
+      selectedNexusId.value = null
     }
-  } else {
-    selectedNexusId.value = null
-  }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 
-watch(workshopResults, (list) => {
-  if (list && list.length > 0) {
-    if (!selectedWorkshopId.value || !list.some(m => m.id === selectedWorkshopId.value)) {
-      selectedWorkshopId.value = list[0].id
+watch(
+  workshopResults,
+  (list) => {
+    if (list && list.length > 0) {
+      if (!selectedWorkshopId.value || !list.some((m) => m.id === selectedWorkshopId.value)) {
+        selectedWorkshopId.value = list[0].id
+      }
+    } else {
+      selectedWorkshopId.value = null
     }
-  } else {
-    selectedWorkshopId.value = null
-  }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 
 function switchNexusTab() {
   tab.value = "nexus"
+  setDiscoverSourceTab("nexus")
   const q = { ...route.query }
   delete q.tab
   router.replace({ query: q })
@@ -139,32 +164,42 @@ function switchNexusTab() {
 
 function switchWorkshopTab() {
   tab.value = "workshop"
+  setDiscoverSourceTab("workshop")
   router.replace({ query: { ...route.query, tab: "workshop" } })
   if (!workshopSearched.value) {
-    invoke<boolean>("check_steam_status").then((running) => {
-      if (!isActive.value) return
-      if (!running) {
-        dialog.warning({
-          title: t("discover.workshop.tab"),
-          content: t("discover.workshop.needSteam"),
-          positiveText: t("common.ok"),
-          maskClosable: true,
-        })
-        return
-      }
-      searchWorkshop()
-    }).catch(() => {
-      if (isActive.value) searchWorkshop()
-    })
+    invoke<boolean>("check_steam_status")
+      .then((running) => {
+        if (!isActive.value) return
+        if (!running) {
+          dialog.warning({
+            title: t("discover.workshop.tab"),
+            content: t("discover.workshop.needSteam"),
+            positiveText: t("common.ok"),
+            maskClosable: true,
+          })
+          return
+        }
+        searchWorkshop()
+      })
+      .catch(() => {
+        if (isActive.value) searchWorkshop()
+      })
   }
 }
 
 /** 静默获取一页（仅写入缓存，不更新 UI） */
 async function workshopFetchSilent(query: string, sortBy: string, page: number, pageSize: number) {
   try {
-    const result = await invoke<WorkshopSearchResult>("search_workshop", { query, page, pageSize, sortBy })
+    const result = await invoke<WorkshopSearchResult>("search_workshop", {
+      query,
+      page,
+      pageSize,
+      sortBy,
+    })
     workshopCache.setCache(query, sortBy, page, pageSize, result.items, result.totalCount)
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
 }
 
 /** 后台预取 Workshop 相邻页 */
@@ -177,7 +212,7 @@ async function subscribeToWorkshop(id: number) {
   try {
     await invoke("subscribe_workshop_mod", { publishedFileId: id })
     if (!isActive.value) return
-    const mod = workshopResults.value.find(m => m.id === id)
+    const mod = workshopResults.value.find((m) => m.id === id)
     if (mod) {
       mod.subscribed = true
       mod.subscribers++
@@ -210,7 +245,7 @@ async function unsubscribeFromWorkshop(id: number) {
   try {
     await invoke("unsubscribe_workshop_mod", { publishedFileId: id })
     if (!isActive.value) return
-    const mod = workshopResults.value.find(m => m.id === id)
+    const mod = workshopResults.value.find((m) => m.id === id)
     if (mod) {
       mod.subscribed = false
       mod.subscribers = Math.max(0, mod.subscribers - 1)
@@ -230,19 +265,23 @@ async function unsubscribeFromWorkshop(id: number) {
   }
 }
 
-// --- 每页条数选项（基于列数 n: 4n, 6n, 10n, 20n）---
+// --- 每页条数选项（基于列数 n: 4n, 6n, 10n, 20n，确保每行填满）---
 const PAGE_SIZE_MULTIPLIERS = [4, 6, 10, 20] as const
 const pageSizeOptions = computed(() => {
-  const n = discoverColumns.value
-  return PAGE_SIZE_MULTIPLIERS.map(s => ({ label: `${s * n}`, value: s * n }))
+  const n = discoverColumns.value || 3
+  return PAGE_SIZE_MULTIPLIERS.map((s) => ({ label: `${s * n}`, value: s * n }))
 })
-// 列数变化时复位 nexusPageSize 到第一个合法值（immediate 确保跨页面切换后也生效）
-watch(discoverColumns, (n) => {
-  const valid = PAGE_SIZE_MULTIPLIERS.map(s => s * n)
-  if (!valid.includes(nexusPageSize.value)) {
-    nexusPageSize.value = valid[0]
-  }
-}, { immediate: true })
+// 列数变化时复位 discoverPageSize 到当前列数首个合法倍数，并触发搜索
+watch(
+  discoverColumns,
+  (n) => {
+    const valid = PAGE_SIZE_MULTIPLIERS.map((s) => s * n)
+    if (!valid.includes(discoverPageSize.value)) {
+      discoverPageSize.value = valid[0]
+    }
+  },
+  { immediate: false },
+)
 const hasApiKey = ref(true)
 
 async function searchNexus(pg?: number, ignoreCache?: boolean) {
@@ -297,9 +336,16 @@ async function searchNexus(pg?: number, ignoreCache?: boolean) {
 /** 静默获取一页（仅写入缓存，不更新 UI） */
 async function nexusFetchSilent(query: string, sortBy: string, page: number, pageSize: number) {
   try {
-    const result = await invoke<RemoteModSearchResult>("search_remote_mods", { query, page, pageSize, sortBy })
+    const result = await invoke<RemoteModSearchResult>("search_remote_mods", {
+      query,
+      page,
+      pageSize,
+      sortBy,
+    })
     nexusCache.setCache(query, sortBy, page, pageSize, result.items, result.totalCount)
-  } catch { /* silent */ }
+  } catch {
+    /* silent */
+  }
 }
 
 function nexusPrefetchAdjacent(q: string, sb: string, currentPage: number, ps: number) {
@@ -317,7 +363,7 @@ function onPageChange(p: number) {
 }
 
 function onPageSizeChange(val: number) {
-  nexusPageSize.value = val
+  setDiscoverPageSize(val)
   searchNexus(1)
 }
 
@@ -327,7 +373,7 @@ function onWorkshopPageChange(p: number) {
 }
 
 function onWorkshopPageSizeChange(val: number) {
-  workshopPageSize.value = val
+  setDiscoverPageSize(val)
   workshopPage.value = 1
   searchWorkshop(1)
 }
@@ -388,7 +434,11 @@ async function searchWorkshop(pg?: number, ignoreCache?: boolean) {
 
 const showPagination = computed(() => {
   if (isNexus.value) {
-    return !nexusInitialLoading.value && nexusResults.value.length > 0 && nexusTotalCount.value > nexusPageSize.value
+    return (
+      !nexusInitialLoading.value &&
+      nexusResults.value.length > 0 &&
+      nexusTotalCount.value > nexusPageSize.value
+    )
   }
   return workshopResults.value.length > 0 && workshopTotalCount.value > workshopResults.value.length
 })
@@ -406,14 +456,20 @@ function formatCount(n: number): string {
 
 onMounted(() => {
   // 获取 bootstrap（API key 信息，不阻塞搜索）
-  invoke<AppBootstrap>("get_app_bootstrap").then((bootstrap) => {
-    if (isActive.value) {
-      hasApiKey.value = !!bootstrap.nexusApiKey
-    }
-  }).catch(() => {})
+  invoke<AppBootstrap>("get_app_bootstrap")
+    .then((bootstrap) => {
+      if (isActive.value) {
+        hasApiKey.value = !!bootstrap.nexusApiKey
+      }
+    })
+    .catch(() => {})
 
-  // 立即触发搜索
-  searchNexus()
+  // 初始加载：如果保存的标签是 workshop，启动工坊检查与搜索；否则搜索 Nexus
+  if (tab.value === "workshop") {
+    switchWorkshopTab()
+  } else {
+    searchNexus()
+  }
 })
 
 // --- 用户操作入口：未配置 API Key 时弹窗引导 ---
@@ -449,10 +505,14 @@ function handleUserRefresh() {
 </script>
 
 <template>
-  <div class="flex flex-col h-full">
-    <PageHeader :title="t('discover.title')" :subtitle="t('discover.subtitle')">
+  <div class="relative flex flex-col h-full overflow-hidden max-h-full">
+    <PageHeader
+      class="flex-shrink-0"
+      :title="t('discover.title')"
+      :subtitle="t('discover.subtitle')"
+    >
       <div class="flex items-center gap-2">
-        <div class="glass-surface inline-flex gap-0.5 p-0.5 rounded-lg border border-c-default">
+        <div class="glass-surface inline-flex gap-1 p-1 rounded-lg border border-c-default">
           <NButton
             size="tiny"
             :secondary="discoverViewMode !== 'grid'"
@@ -460,7 +520,9 @@ function handleUserRefresh() {
             :title="t('settings.discover.viewModeGrid')"
             @click="setDiscoverViewMode('grid')"
           >
-            <template #icon><NIcon :size="13"><LayoutGrid /></NIcon></template>
+            <template #icon
+              ><NIcon :size="13"><LayoutGrid /></NIcon
+            ></template>
           </NButton>
           <NButton
             size="tiny"
@@ -469,12 +531,23 @@ function handleUserRefresh() {
             :title="t('settings.discover.viewModeSplit')"
             @click="setDiscoverViewMode('split')"
           >
-            <template #icon><NIcon :size="13"><Columns2 /></NIcon></template>
+            <template #icon
+              ><NIcon :size="13"><Columns2 /></NIcon
+            ></template>
           </NButton>
         </div>
         <div class="glass-surface inline-flex gap-1 p-1">
-          <NButton size="small" :type="tab === 'nexus' ? 'primary' : 'default'" @click="switchNexusTab">Nexus</NButton>
-          <NButton size="small" :type="tab === 'workshop' ? 'primary' : 'default'" @click="switchWorkshopTab">
+          <NButton
+            size="small"
+            :type="tab === 'nexus' ? 'primary' : 'default'"
+            @click="switchNexusTab"
+            >Nexus</NButton
+          >
+          <NButton
+            size="small"
+            :type="tab === 'workshop' ? 'primary' : 'default'"
+            @click="switchWorkshopTab"
+          >
             {{ t("discover.workshop.tab") }}
           </NButton>
         </div>
@@ -483,104 +556,151 @@ function handleUserRefresh() {
 
     <!-- Nexus 搜索 -->
     <template v-if="isNexus">
-    <!-- 搜索栏 + 排序 + 刷新 -->
-    <div class="flex gap-2 mb-4">
-      <NInput
-        v-model:value="query"
-        size="large"
-        :placeholder="t('discover.searchPlaceholder')"
-        clearable
-        @keyup.enter="handleUserSearch()"
-      >
-        <template #prefix>
-          <NIcon :size="18"><Search /></NIcon>
-        </template>
-      </NInput>
-      <NSelect
-        :value="sortBy"
-        :options="sortOptions"
-        style="width: 140px"
-        size="large"
-        @update:value="onSortChange"
-      />
-      <NButton size="large" type="primary" :loading="nexusLoading" @click="handleUserSearch()">
-        {{ t("common.search") }}
-      </NButton>
-      <NButton size="large" secondary :loading="nexusLoading" @click="handleUserRefresh">
-        <template #icon><NIcon :size="18"><RefreshCw /></NIcon></template>
-        {{ t("common.refresh") }}
-      </NButton>
-    </div>
-
-    <div class="flex-1">
-
-    <!-- 初始加载骨架屏 -->
-    <div v-if="nexusInitialLoading" :class="skeletonColsClass">
-      <SkeletonDiscoverCard v-for="i in nexusPageSize" :key="'skel-init-'+i" />
-    </div>
-
-    <!-- 结果列表 -->
-    <div v-else-if="nexusResults.length > 0">
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-sm text-c-muted">
-          {{ t("discover.resultCount", { total: nexusTotalCount }) }}
-        </span>
-        <span />
-      </div>
-
-      <div v-if="nexusLoading && nexusResults.length === 0" :class="gridColsClass">
-        <SkeletonDiscoverCard v-for="i in 6" :key="'skel-nx-'+i" />
-      </div>
-      <div v-if="discoverViewMode === 'grid'" :class="gridColsClass">
-        <DiscoverCard
-          v-for="mod in nexusResults"
-          :key="mod.remoteId"
-          :name="mod.name"
-          :image-url="mod.pictureUrl"
-          :description="mod.summary"
-          :author="mod.author ?? t('discover.unknownAuthor')"
-          :version="mod.latestVersion"
-          :stats="[
-            { icon: ThumbsUp, value: formatCount(mod.endorsementCount) },
-            { icon: ArrowDown, value: formatCount(mod.downloadCount) },
-          ]"
+      <!-- 搜索栏 + 排序 + 刷新 -->
+      <div class="flex gap-2 mb-3 flex-shrink-0">
+        <NInput
+          v-model:value="query"
+          size="large"
+          :placeholder="t('discover.searchPlaceholder')"
+          clearable
+          @keyup.enter="handleUserSearch()"
         >
-          <template #actions>
-            <div class="flex items-center gap-2 flex-shrink-0">
-              <NButton size="small" type="primary" secondary @click="openNexusDownload(mod)">
-                <template #icon><NIcon :size="13"><Download /></NIcon></template>
-                {{ t("discover.download") }}
-              </NButton>
-              <NButton size="small" secondary @click="openModPage(mod.detailUrl)">
-                <template #icon><NIcon :size="13"><ExternalLink /></NIcon></template>
-                {{ t("discover.details") }}
-              </NButton>
-            </div>
+          <template #prefix>
+            <NIcon :size="18"><Search /></NIcon>
           </template>
-        </DiscoverCard>
+        </NInput>
+        <NSelect
+          :value="sortBy"
+          :options="sortOptions"
+          style="width: 140px"
+          size="large"
+          @update:value="onSortChange"
+        />
+        <NButton size="large" type="primary" :loading="nexusLoading" @click="handleUserSearch()">
+          {{ t("common.search") }}
+        </NButton>
+        <NButton size="large" secondary :loading="nexusLoading" @click="handleUserRefresh">
+          <template #icon
+            ><NIcon :size="18"><RefreshCw /></NIcon
+          ></template>
+          {{ t("common.refresh") }}
+        </NButton>
       </div>
-      <DiscoverSplitView
-        v-else
-        type="nexus"
-        :nexus-items="nexusResults"
-        :selected-id="selectedNexusId"
-        @select-nexus="(m) => selectedNexusId = m.remoteId"
-        @download-nexus="openNexusDownload"
-        @open-details="openModPage"
-      />
-    </div>
 
-    <EmptyState v-else-if="nexusSearched && !nexusLoading" :icon="Search" :title="t('discover.empty.notFound')" :description="hasApiKey ? undefined : t('discover.empty.needsApiKey')" bordered />
+      <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <!-- 初始加载骨架屏 -->
+        <div v-if="nexusInitialLoading" class="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div class="flex items-center justify-between mb-3 flex-shrink-0">
+            <div class="h-5 w-28 rounded bg-c-secondary/40 animate-pulse" />
+          </div>
+          <SkeletonDiscoverSplitView v-if="discoverViewMode === 'split'" />
+          <div
+            v-else
+            :class="gridColsClass"
+            class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
+          >
+            <SkeletonDiscoverCard v-for="i in nexusPageSize" :key="'skel-init-' + i" />
+          </div>
+        </div>
+        <!-- 结果列表 -->
+        <div
+          v-else-if="nexusResults.length > 0"
+          class="flex-1 min-h-0 flex flex-col overflow-hidden"
+        >
+          <div class="flex items-center justify-between mb-3 flex-shrink-0">
+            <span class="text-sm text-c-muted">
+              {{ t("discover.resultCount", { total: nexusTotalCount }) }}
+            </span>
+          </div>
 
-    <EmptyState v-else :icon="PackageOpen" :title="t('discover.empty.startSearch')" :description="hasApiKey ? undefined : t('discover.empty.needsApiKey')" bordered />
-    </div>
+          <div
+            v-if="nexusLoading && nexusResults.length === 0"
+            class="flex-1 min-h-0 flex flex-col overflow-hidden"
+          >
+            <SkeletonDiscoverSplitView v-if="discoverViewMode === 'split'" />
+            <div
+              v-else
+              :class="gridColsClass"
+              class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
+            >
+              <SkeletonDiscoverCard v-for="i in nexusPageSize" :key="'skel-nx-' + i" />
+            </div>
+          </div>
+          <div
+            v-if="discoverViewMode === 'grid'"
+            :class="gridColsClass"
+            class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
+          >
+            <DiscoverCard
+              v-for="mod in nexusResults"
+              :key="mod.remoteId"
+              :name="mod.name"
+              :image-url="mod.pictureUrl"
+              :description="mod.summary"
+              :author="mod.author ?? t('discover.unknownAuthor')"
+              :version="mod.latestVersion"
+              :stats="[
+                { icon: ThumbsUp, value: formatCount(mod.endorsementCount) },
+                { icon: ArrowDown, value: formatCount(mod.downloadCount) },
+              ]"
+            >
+              <template #actions>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <NButton size="small" type="primary" secondary @click="openNexusDownload(mod)">
+                    <template #icon
+                      ><NIcon :size="13"><Download /></NIcon
+                    ></template>
+                    {{ t("discover.download") }}
+                  </NButton>
+                  <NButton size="small" secondary @click="openModPage(mod.detailUrl)">
+                    <template #icon
+                      ><NIcon :size="13"><ExternalLink /></NIcon
+                    ></template>
+                    {{ t("discover.details") }}
+                  </NButton>
+                </div>
+              </template>
+            </DiscoverCard>
+          </div>
+          <DiscoverSplitView
+            v-else
+            type="nexus"
+            :nexus-items="nexusResults"
+            :selected-id="selectedNexusId"
+            @select-nexus="(m) => (selectedNexusId = m.remoteId)"
+            @download-nexus="openNexusDownload"
+            @open-details="openModPage"
+          />
+        </div>
+
+        <EmptyState
+          v-else-if="nexusSearched && !nexusLoading"
+          :icon="Search"
+          :title="t('discover.empty.notFound')"
+          :description="hasApiKey ? undefined : t('discover.empty.needsApiKey')"
+          bordered
+        />
+
+        <EmptyState
+          v-else
+          :icon="PackageOpen"
+          :title="t('discover.empty.startSearch')"
+          :description="hasApiKey ? undefined : t('discover.empty.needsApiKey')"
+          bordered
+        />
+      </div>
     </template>
 
     <!-- Steam 创意工坊 -->
-    <div v-show="tab === 'workshop'">
-      <div class="flex gap-2 mb-4">
-        <NInput v-model:value="workshopQuery" size="large" :placeholder="t('discover.searchPlaceholder')"
-          clearable @keyup.enter="searchWorkshop()">
+    <div v-show="tab === 'workshop'" class="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div class="flex gap-2 mb-3 flex-shrink-0">
+        <NInput
+          v-model:value="workshopQuery"
+          size="large"
+          :placeholder="t('discover.searchPlaceholder')"
+          clearable
+          @keyup.enter="searchWorkshop()"
+        >
           <template #prefix>
             <NIcon :size="18"><Search /></NIcon>
           </template>
@@ -596,18 +716,42 @@ function handleUserRefresh() {
           {{ t("common.search") }}
         </NButton>
         <NButton size="large" secondary :loading="workshopLoading" @click="refreshWorkshop">
-          <template #icon><NIcon :size="18"><RefreshCw /></NIcon></template>
+          <template #icon
+            ><NIcon :size="18"><RefreshCw /></NIcon
+          ></template>
           {{ t("common.refresh") }}
         </NButton>
       </div>
-      <div v-if="workshopLoading && workshopResults.length === 0" :class="gridColsClass">
-        <SkeletonDiscoverCard v-for="i in 6" :key="'skel-ws-'+i" />
-      </div>
-      <div v-else-if="workshopResults.length > 0">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-sm text-c-muted">{{ t("discover.resultCount", { total: workshopTotalCount }) }}</span>
+      <div
+        v-if="workshopLoading && workshopResults.length === 0"
+        class="flex-1 min-h-0 flex flex-col overflow-hidden"
+      >
+        <div class="flex items-center justify-between mb-3 flex-shrink-0">
+          <div class="h-5 w-28 rounded bg-c-secondary/40 animate-pulse" />
         </div>
-        <div v-if="discoverViewMode === 'grid'" :class="gridColsClass">
+        <SkeletonDiscoverSplitView v-if="discoverViewMode === 'split'" />
+        <div
+          v-else
+          :class="gridColsClass"
+          class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
+        >
+          <SkeletonDiscoverCard v-for="i in workshopPageSize" :key="'skel-ws-' + i" />
+        </div>
+      </div>
+      <div
+        v-else-if="workshopResults.length > 0"
+        class="flex-1 min-h-0 flex flex-col overflow-hidden"
+      >
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-sm text-c-muted">{{
+            t("discover.resultCount", { total: workshopTotalCount })
+          }}</span>
+        </div>
+        <div
+          v-if="discoverViewMode === 'grid'"
+          :class="gridColsClass"
+          class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
+        >
           <DiscoverCard
             v-for="mod in workshopResults"
             :key="mod.id"
@@ -622,21 +766,43 @@ function handleUserRefresh() {
           >
             <template #actions>
               <div class="flex items-center gap-2 flex-shrink-0">
-                <NPopconfirm v-if="mod.subscribed" @positive-click="unsubscribeFromWorkshop(mod.id)">
+                <NPopconfirm
+                  v-if="mod.subscribed"
+                  @positive-click="unsubscribeFromWorkshop(mod.id)"
+                >
                   <template #trigger>
                     <NButton size="small" secondary :loading="unsubscribingWorkshop.has(mod.id)">
-                      <template #icon><NIcon :size="13"><X /></NIcon></template>
+                      <template #icon
+                        ><NIcon :size="13"><X /></NIcon
+                      ></template>
                       {{ t("discover.workshop.unsubscribe") }}
                     </NButton>
                   </template>
                   {{ t("library.mod.confirmUnsubscribe", { name: mod.name }) }}
                 </NPopconfirm>
-                <NButton v-else size="small" secondary :loading="subscribingWorkshop.has(mod.id)" @click="subscribeToWorkshop(mod.id)">
-                  <template #icon><NIcon :size="13"><Plus /></NIcon></template>
+                <NButton
+                  v-else
+                  size="small"
+                  secondary
+                  :loading="subscribingWorkshop.has(mod.id)"
+                  @click="subscribeToWorkshop(mod.id)"
+                >
+                  <template #icon
+                    ><NIcon :size="13"><Plus /></NIcon
+                  ></template>
                   {{ t("discover.workshop.subscribe") }}
                 </NButton>
-                <NButton size="small" secondary class="flex-shrink-0" @click="openModPage(`https://steamcommunity.com/sharedfiles/filedetails/?id=${mod.id}`)">
-                  <template #icon><NIcon :size="13"><ExternalLink /></NIcon></template>
+                <NButton
+                  size="small"
+                  secondary
+                  class="flex-shrink-0"
+                  @click="
+                    openModPage(`https://steamcommunity.com/sharedfiles/filedetails/?id=${mod.id}`)
+                  "
+                >
+                  <template #icon
+                    ><NIcon :size="13"><ExternalLink /></NIcon
+                  ></template>
                   {{ t("discover.details") }}
                 </NButton>
               </div>
@@ -650,37 +816,46 @@ function handleUserRefresh() {
           :selected-id="selectedWorkshopId"
           :subscribing-ids="subscribingWorkshop"
           :unsubscribing-ids="unsubscribingWorkshop"
-          @select-workshop="(m) => selectedWorkshopId = m.id"
+          @select-workshop="(m) => (selectedWorkshopId = m.id)"
           @subscribe-workshop="subscribeToWorkshop"
           @unsubscribe-workshop="unsubscribeFromWorkshop"
           @open-details="openModPage"
         />
       </div>
-      <EmptyState v-else-if="workshopSearched && !workshopLoading" :icon="Search" :title="t('discover.empty.notFound')" bordered />
-    </div>
-
-    <!-- 分页栏（浮动药丸） -->
-    <div v-if="showPagination" class="flex justify-center sticky bottom-0 z-10 py-4">
-      <DiscoverPagination
-        v-if="isNexus"
-        :page="nexusPage"
-        :page-size="nexusPageSize"
-        :total-count="nexusTotalCount"
-        :page-size-options="pageSizeOptions"
-        @update:page="onPageChange"
-        @update:page-size="onPageSizeChange"
-      />
-      <DiscoverPagination
-        v-else
-        :page="workshopPage"
-        :page-size="workshopPageSize"
-        :total-count="workshopTotalCount"
-        :page-size-options="pageSizeOptions"
-        @update:page="onWorkshopPageChange"
-        @update:page-size="onWorkshopPageSizeChange"
+      <EmptyState
+        v-else-if="workshopSearched && !workshopLoading"
+        :icon="Search"
+        :title="t('discover.empty.notFound')"
+        bordered
       />
     </div>
 
+    <!-- 分页栏（浮动在发现页上方且位置固定，不占文档流空间） -->
+    <div
+      v-if="showPagination"
+      class="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 pointer-events-none"
+    >
+      <div class="pointer-events-auto">
+        <DiscoverPagination
+          v-if="isNexus"
+          :page="nexusPage"
+          :page-size="nexusPageSize"
+          :total-count="nexusTotalCount"
+          :page-size-options="pageSizeOptions"
+          @update:page="onPageChange"
+          @update:page-size="onPageSizeChange"
+        />
+        <DiscoverPagination
+          v-else
+          :page="workshopPage"
+          :page-size="workshopPageSize"
+          :total-count="workshopTotalCount"
+          :page-size-options="pageSizeOptions"
+          @update:page="onWorkshopPageChange"
+          @update:page-size="onWorkshopPageSizeChange"
+        />
+      </div>
+    </div>
     <!-- Nexus 模组下载弹窗 -->
     <NexusDownloadModal
       v-model:show="showDownloadModal"

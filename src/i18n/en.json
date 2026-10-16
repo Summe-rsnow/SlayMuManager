@@ -286,6 +286,24 @@
       "chooseBackground": "Select Image",
       "changeBackground": "Change Wallpaper",
       "clearBackground": "Reset Default",
+      "cropBackground": "Crop Wallpaper",
+      "cropModalTitle": "Crop & Adjust Wallpaper",
+      "cropModalHint": "Drag to move image, scroll wheel or slider to zoom; blank/exceeded areas will be filled with the selected color",
+      "cropRatio": "Aspect Ratio",
+      "cropRatio16_9": "16:9",
+      "cropRatio16_10": "16:10",
+      "cropRatio4_3": "4:3",
+      "cropRatioWindow": "Fit Window",
+      "cropFillColor": "Exceeded Area Fill Color",
+      "cropDarkFill": "Dark Fill",
+      "cropLightFill": "Light Fill",
+      "cropCustomFill": "Custom",
+      "cropZoom": "Zoom",
+      "cropFit": "Fit Inside",
+      "cropFill": "Fill Frame",
+      "cropCenter": "Center",
+      "cropApply": "Apply & Save",
+      "cropSuccess": "Wallpaper cropped and applied successfully",
       "backgroundBlur": "Wallpaper Blur",
       "backgroundDim": "Wallpaper Dim"
     },
@@ -342,7 +360,9 @@
       "columnCount": "Mod Card Columns",
       "prefetch": "Prefetch Adjacent Pages",
       "prefetchDesc": "Cache adjacent pages in background for faster navigation",
-      "translateQuotaTip": "Translate Quota Tip"
+      "translateQuotaTip": "Translate Quota Tip",
+      "parseBBCode": "Parse Workshop Rich Text (BBCode)",
+      "parseBBCodeDesc": "Parse formatting tags like [h1], [b] in workshop descriptions. Displays formatted text when enabled, raw text when disabled"
     },
     "prompt": {
       "apiKeyRequired": "Nexus API Key Required",
@@ -390,7 +410,7 @@
       "searchFailed": "Search failed: {e}"
     },
     "workshop": {
-      "tab": "Steam Workshop",
+      "tab": "Steam",
       "needSteam": "Steam must be running and logged in to use this",
       "subscribe": "Subscribe",
       "unsubscribe": "Unsubscribe",
@@ -586,6 +606,7 @@
     "manageTitle": "Preset Management",
     "applyBtn": "Apply",
     "importBundle": "Import Preset",
+    "exportBundle": "Export Preset",
     "create": "New Preset",
     "builtin": "Built-in",
     "active": "Active",
@@ -666,16 +687,19 @@
       "opt": "Optimized"
     },
     "v1_9_1": {
-      "title": "Preset Visual Polish & Discover Split View",
+      "title": "Preset Card Library Alignment & Discover Floating Pagination & Skeletons",
       "highlights": [
-        "Redesigned Preset Management modal and cards using standardized native frosted glass surfaces and polished action controls",
-        "Added Master-Detail Split View on Discover page, toggleable on the page header and configurable in Settings"
+        "Completely rebuilt preset management cards to fully align with Library ModCard design, frosted glass styling, and switch controls",
+        "Refactored Discover page pagination into a floating bottom pill that takes zero layout flow space, with bottom safe padding",
+        "Discover cards now naturally expand with content; unified grid and split view skeleton screens with 1:1 pixel precision"
       ],
       "changes": [
-        "Unified preset management styling to align seamlessly with Library and application design language",
-        "Added Split View layout on Discover page featuring a left scrollable list and right full detail view",
-        "Fixed cloud save diffs list scrollbar overflow issue and added helpful tooltip for artifact cleanup",
-        "Enhanced Steam Workshop subscription handling with one-click web browser fallback"
+        "Rebuilt preset cards into dedicated PresetCard component, matching ModCard frosted surfaces, typography, and NSwitch toggle",
+        "Converted Discover pagination bar into a floating overlay pill without taking up vertical layout space",
+        "Removed fixed height from discover cards; grid rows now naturally expand based on description and translation text",
+        "Unified skeleton loading screens for both grid and split views, adding result count placeholders to eliminate layout shift",
+        "Removed unwanted discolored ambient glow overlay from AppDialog, restoring pure frosted glass modal backgrounds",
+        "Fixed i18n key resolution error for preset export bundle button tooltip"
       ]
     },
     "v1_9_0": {

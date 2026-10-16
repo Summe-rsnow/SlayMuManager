@@ -38,7 +38,9 @@ async function browseGamePath() {
 async function detectGame() {
   detecting.value = true
   try {
-    const result = await invoke<{ rootDir: string; foundFrom: string } | null>("detect_game_install")
+    const result = await invoke<{ rootDir: string; foundFrom: string } | null>(
+      "detect_game_install",
+    )
     if (result) {
       gamePath.value = result.rootDir
       gameValid.value = true
@@ -66,10 +68,16 @@ async function saveGamePath() {
 </script>
 
 <template>
-  <SettingsSection id="setting-game-path" :title="t('settings.gamePath.title')" :highlighted="highlightedSetting === 'game-path'">
+  <SettingsSection
+    id="setting-game-path"
+    :title="t('settings.gamePath.title')"
+    :highlighted="highlightedSetting === 'game-path'"
+  >
     <div class="flex gap-2">
       <NInput v-model:value="gamePath" :placeholder="t('settings.gamePath.placeholder')" clearable>
-        <template #prefix><NIcon :size="16"><FolderSearch /></NIcon></template>
+        <template #prefix
+          ><NIcon :size="16"><FolderSearch /></NIcon
+        ></template>
       </NInput>
       <NButton secondary @click="browseGamePath">{{ t("settings.gamePath.browse") }}</NButton>
       <NButton secondary :loading="saving" @click="saveGamePath">{{ t("common.save") }}</NButton>

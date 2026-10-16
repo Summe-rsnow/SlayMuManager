@@ -10,11 +10,7 @@
 //   确保「蓝色按钮显示蓝色」、「绿色按钮显示绿色」。
 // ============================================================
 
-import {
-  argbFromHex,
-  Hct,
-  themeFromSourceColor,
-} from "@poupe/material-color-utilities"
+import { argbFromHex, Hct, themeFromSourceColor } from "@poupe/material-color-utilities"
 
 export interface ColorPalette {
   DEFAULT: string
@@ -108,8 +104,10 @@ function generatePalette(seedHex: string): ColorPalette {
 }
 
 // --- 运行时生成 7 套色板（模块加载时计算一次） ---
-export const colorPalettes: Record<ThemeColorKey, ColorPalette> =
-  {} as Record<ThemeColorKey, ColorPalette>
+export const colorPalettes: Record<ThemeColorKey, ColorPalette> = {} as Record<
+  ThemeColorKey,
+  ColorPalette
+>
 
 const keys: ThemeColorKey[] = [
   "indigo",

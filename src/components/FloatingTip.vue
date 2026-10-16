@@ -3,20 +3,25 @@ import { useSlots } from "vue"
 import { NIcon, NTooltip } from "naive-ui"
 import { HelpCircle } from "@lucide/vue"
 
-const props = withDefaults(defineProps<{
-  text: string
-  width?: number
-  label?: string
-  placement?: string
-  iconSize?: number
-  truncated?: boolean
-  maxLines?: number
-}>(), {
-  placement: "top",
-  iconSize: 13,
-  truncated: false,
-  maxLines: 6,
-})
+const props = withDefaults(
+  defineProps<{
+    text: string
+    width?: number
+    label?: string
+    placement?: string
+    iconSize?: number
+    truncated?: boolean
+    maxLines?: number
+    to?: string | boolean | HTMLElement
+  }>(),
+  {
+    placement: "top",
+    iconSize: 13,
+    truncated: false,
+    maxLines: 6,
+    to: "body",
+  },
+)
 
 const slots = useSlots()
 </script>
@@ -28,6 +33,7 @@ const slots = useSlots()
     class="glass-floating"
     trigger="hover"
     :placement="placement as any"
+    :to="to as any"
     :style="width ? { maxWidth: `${width}px` } : undefined"
   >
     <template #trigger>
@@ -44,10 +50,16 @@ const slots = useSlots()
       class="glass-floating"
       trigger="hover"
       :placement="placement as any"
+      :to="to as any"
       :style="width ? { maxWidth: `${width}px` } : undefined"
     >
       <template #trigger>
-        <p class="text-xs text-c-muted truncated-content cursor-help" :style="{ '-webkit-line-clamp': maxLines }">{{ text }}</p>
+        <p
+          class="text-xs text-c-muted truncated-content cursor-help"
+          :style="{ '-webkit-line-clamp': maxLines }"
+        >
+          {{ text }}
+        </p>
       </template>
       <span>{{ text }}</span>
     </NTooltip>
@@ -59,6 +71,7 @@ const slots = useSlots()
     class="glass-floating"
     trigger="hover"
     :placement="placement as any"
+    :to="to as any"
     :style="width ? { maxWidth: `${width}px` } : undefined"
   >
     <template #trigger>
@@ -66,7 +79,7 @@ const slots = useSlots()
         <span>{{ label }}</span>
         <NIcon :size="iconSize" class="text-c-muted"><HelpCircle /></NIcon>
       </span>
-      <span v-else class="floating-tip-icon">
+      <span v-else class="floating-tip-icon" @click.stop>
         <NIcon :size="iconSize" class="text-c-muted cursor-help"><HelpCircle /></NIcon>
       </span>
     </template>
@@ -82,7 +95,6 @@ const slots = useSlots()
   max-height: 7.5rem;
   line-height: 1.25;
 }
-
 .floating-tip-label {
   display: flex;
   align-items: center;
