@@ -336,6 +336,9 @@
     },
     "discover": {
       "title": "发现",
+      "viewMode": "页面布局视图",
+      "viewModeGrid": "卡片网格",
+      "viewModeSplit": "列表双栏",
       "columnCount": "模组卡片列数",
       "prefetch": "预取相邻页",
       "prefetchDesc": "翻页时后台缓存前后页数据，提升切换速度",
@@ -372,6 +375,7 @@
     "unknownAuthor": "未知",
     "details": "详情",
     "download": "下载",
+    "noModSelected": "请在左侧列表中选择模组查看详情",
     "empty": {
       "notFound": "未找到相关 Mod",
       "needsApiKey": "提示：需要先在设置中配置 Nexus Mods API Key",
@@ -392,7 +396,10 @@
       "unsubscribe": "取消订阅",
       "subscribed": "已订阅",
       "subscribing": "订阅中...",
-      "resultCount": "共 {total} 个结果"
+      "resultCount": "共 {total} 个结果",
+      "subscribedSuccess": "订阅成功",
+      "subscribeFailedTitle": "创意工坊订阅提示",
+      "openInWeb": "前往 Steam 网页订阅"
     }
   },
 
@@ -487,6 +494,7 @@
       "uploadAll": "上传全部",
       "downloadAll": "下载全部",
       "cleanupArtifacts": "清理制品",
+      "cleanupArtifactsTip": "清理云端同步操作生成的本地与云端备份制品，释放存储空间",
       "localFiles": "本地文件",
       "cloudFiles": "云端文件",
       "differences": "差异",
@@ -656,6 +664,19 @@
       "ui": "界面",
       "fix": "修复",
       "opt": "优化"
+    },
+    "v1_9_1": {
+      "title": "预设管理视觉重构 & 发现页双栏视图",
+      "highlights": [
+        "预设管理视觉全面重构：采用单列全宽磨砂玻璃卡片布局与精致操作按钮，与模组库视觉完全对齐",
+        "发现页新增列表双栏布局视图，可在设置或页面顶部随心切换，左侧浏览列表、右侧即时查看详情"
+      ],
+      "changes": [
+        "重构预设管理弹窗与卡片样式，修复卡片与弹窗视觉割裂问题",
+        "发现页支持「卡片网格」与「列表双栏」两种布局模式，支持在设置页与页面快捷切换",
+        "修复云存档弹窗内部差异文件滚动条超出圆角容器的问题，并为「清理制品」按钮增加功能提示",
+        "优化 Steam 创意工坊订阅异常提示，支持在权限受限时一键前往 Steam 社区网页完成订阅"
+      ]
     },
     "v1_9_0": {
       "title": "Nexus 模组下载与预设交互重构",

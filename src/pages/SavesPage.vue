@@ -864,7 +864,12 @@ onMounted(async () => {
       <template #header>
         <div class="flex items-center justify-between">
           <span class="text-lg font-semibold">{{ t("saves.cloud.title") }}</span>
-          <NButton size="tiny" @click="cleanupArtifacts">{{ t("saves.cloud.cleanupArtifacts") }}</NButton>
+          <FloatingTip :text="t('saves.cloud.cleanupArtifactsTip')">
+            <NButton size="tiny" secondary @click="cleanupArtifacts">
+              <template #icon><NIcon :size="13"><Trash2 /></NIcon></template>
+              {{ t("saves.cloud.cleanupArtifacts") }}
+            </NButton>
+          </FloatingTip>
         </div>
       </template>
 
@@ -992,42 +997,44 @@ onMounted(async () => {
 
         <div
           v-if="cloudDiffs.length > 0"
-          class="max-h-64 overflow-auto rounded-xl border border-c-default divide-y divide-c-default"
+          class="rounded-xl border border-c-default overflow-hidden"
           :style="{
             backgroundColor: 'var(--glass-surface-bg)',
             backdropFilter: 'blur(var(--glass-surface-blur))',
             WebkitBackdropFilter: 'blur(var(--glass-surface-blur))',
           }"
         >
-          <div
-            v-for="d in cloudDiffs"
-            :key="d.relativePath"
-            class="flex items-center justify-between p-2.5 text-sm transition-colors hover:bg-c-secondary/40"
-          >
-            <div class="flex-1 min-w-0 flex items-center gap-2">
-              <NTag :type="diffKindType(d.kind)" size="tiny" :bordered="false">
-                {{ diffKindLabel(d.kind) }}
-              </NTag>
-              <span class="truncate font-mono text-xs text-c-primary">{{ d.relativePath }}</span>
+          <div class="max-h-64 overflow-y-auto divide-y divide-c-default">
+            <div
+              v-for="d in cloudDiffs"
+              :key="d.relativePath"
+              class="flex items-center justify-between p-2.5 text-sm transition-colors hover:bg-c-secondary/40"
+            >
+              <div class="flex-1 min-w-0 flex items-center gap-2">
+                <NTag :type="diffKindType(d.kind)" size="tiny" :bordered="false">
+                  {{ diffKindLabel(d.kind) }}
+                </NTag>
+                <span class="truncate font-mono text-xs text-c-primary">{{ d.relativePath }}</span>
+              </div>
+              <NSpace :size="4" class="flex-shrink-0 ml-3">
+                <NButton
+                  v-if="d.kind === 'local_only'"
+                  size="tiny"
+                  secondary
+                  @click="copyCloudSide(d.relativePath, 'local_to_cloud')"
+                >
+                  {{ t("saves.cloud.toCloud") }}
+                </NButton>
+                <NButton
+                  v-if="d.kind === 'cloud_only'"
+                  size="tiny"
+                  secondary
+                  @click="copyCloudSide(d.relativePath, 'cloud_to_local')"
+                >
+                  {{ t("saves.cloud.toLocal") }}
+                </NButton>
+              </NSpace>
             </div>
-            <NSpace :size="4" class="flex-shrink-0 ml-3">
-              <NButton
-                v-if="d.kind === 'local_only'"
-                size="tiny"
-                secondary
-                @click="copyCloudSide(d.relativePath, 'local_to_cloud')"
-              >
-                {{ t("saves.cloud.toCloud") }}
-              </NButton>
-              <NButton
-                v-if="d.kind === 'cloud_only'"
-                size="tiny"
-                secondary
-                @click="copyCloudSide(d.relativePath, 'cloud_to_local')"
-              >
-                {{ t("saves.cloud.toLocal") }}
-              </NButton>
-            </NSpace>
           </div>
         </div>
         <div v-else class="text-center py-6 text-sm text-c-muted">

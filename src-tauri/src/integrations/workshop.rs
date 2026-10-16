@@ -131,6 +131,20 @@ pub fn search_workshop(query: &str, page: u32, page_size: u32, sort_by: &str) ->
     })
 }
 
+fn format_workshop_error(e: &str) -> String {
+    if e.contains("AccessDenied") {
+        "订阅失败 (权限不足)：Steam 限制客户端直接调用接口订阅该模组（通常因账号未拥有该游戏测试资格或未在 Steam 同意工坊协议）。请点击「前往网页订阅」在 Steam 社区页面一键订阅。".to_string()
+    } else if e.contains("NoSteamClient") || e.contains("ConnectToGlobalUser") {
+        "Steam 客户端未启动或未登录，请先启动 Steam 客户端并登录账号后重试。".to_string()
+    } else if e.contains("NotLoggedOn") {
+        "Steam 当前处于离线模式或网络未连接，请确保 Steam 在线后重试。".to_string()
+    } else if e.contains("Timeout") || e.contains("操作超时") {
+        "Steam 响应超时，请检查网络连接，或点击「前往网页订阅」在浏览器中直接订阅。".to_string()
+    } else {
+        format!("创意工坊操作失败: {}。您可点击「前往网页订阅」在 Steam 社区页面手动订阅。", e)
+    }
+}
+
 pub fn subscribe_mod(published_file_id: u64) -> Result<(), String> {
     ensure_steam_ready()?;
     init_client()?;
@@ -140,13 +154,13 @@ pub fn subscribe_mod(published_file_id: u64) -> Result<(), String> {
         let shared_c = shared.clone();
 
         ugc.subscribe_item(PublishedFileId(published_file_id), move |result| {
-            let r = result.map_err(|e| format!("{:?}", e));
+            let r = result.map_err(|e| format_workshop_error(&format!("{:?}", e)));
             if let Ok(mut g) = shared_c.lock() {
                 *g = Some(r);
             }
         });
 
-        poll_callback(client, &shared, 15)
+        poll_callback(client, &shared, 15).map_err(|e| format_workshop_error(&e))
     })
 }
 
@@ -159,12 +173,12 @@ pub fn unsubscribe_mod(published_file_id: u64) -> Result<(), String> {
         let shared_c = shared.clone();
 
         ugc.unsubscribe_item(PublishedFileId(published_file_id), move |result| {
-            let r = result.map_err(|e| format!("{:?}", e));
+            let r = result.map_err(|e| format_workshop_error(&format!("{:?}", e)));
             if let Ok(mut g) = shared_c.lock() {
                 *g = Some(r);
             }
         });
 
-        poll_callback(client, &shared, 15)
+        poll_callback(client, &shared, 15).map_err(|e| format_workshop_error(&e))
     })
 }

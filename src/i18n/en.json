@@ -336,6 +336,9 @@
     },
     "discover": {
       "title": "Discover",
+      "viewMode": "Page Layout View",
+      "viewModeGrid": "Card Grid",
+      "viewModeSplit": "Split View",
       "columnCount": "Mod Card Columns",
       "prefetch": "Prefetch Adjacent Pages",
       "prefetchDesc": "Cache adjacent pages in background for faster navigation",
@@ -372,6 +375,7 @@
     "unknownAuthor": "Unknown",
     "details": "Details",
     "download": "Download",
+    "noModSelected": "Select a mod from the list to view details",
     "empty": {
       "notFound": "No mods found",
       "needsApiKey": "Tip: Configure your Nexus Mods API Key in Settings first",
@@ -392,7 +396,10 @@
       "unsubscribe": "Unsubscribe",
       "subscribed": "Subscribed",
       "subscribing": "Subscribing...",
-      "resultCount": "{total} result(s)"
+      "resultCount": "{total} result(s)",
+      "subscribedSuccess": "Subscribed successfully",
+      "subscribeFailedTitle": "Workshop Subscription Notice",
+      "openInWeb": "Subscribe on Steam Web"
     }
   },
 
@@ -487,6 +494,7 @@
       "uploadAll": "Upload All",
       "downloadAll": "Download All",
       "cleanupArtifacts": "Clean Up Artifacts",
+      "cleanupArtifactsTip": "Clean up local and cloud backup artifacts created during cloud sync to free space",
       "localFiles": "Local Files",
       "cloudFiles": "Cloud Files",
       "differences": "Differences",
@@ -656,6 +664,19 @@
       "ui": "UI",
       "fix": "Fix",
       "opt": "Optimized"
+    },
+    "v1_9_1": {
+      "title": "Preset Visual Polish & Discover Split View",
+      "highlights": [
+        "Redesigned Preset Management modal and cards using standardized native frosted glass surfaces and polished action controls",
+        "Added Master-Detail Split View on Discover page, toggleable on the page header and configurable in Settings"
+      ],
+      "changes": [
+        "Unified preset management styling to align seamlessly with Library and application design language",
+        "Added Split View layout on Discover page featuring a left scrollable list and right full detail view",
+        "Fixed cloud save diffs list scrollbar overflow issue and added helpful tooltip for artifact cleanup",
+        "Enhanced Steam Workshop subscription handling with one-click web browser fallback"
+      ]
     },
     "v1_9_0": {
       "title": "Nexus Mods Downloader & In-Library Preset Management",

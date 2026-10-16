@@ -4,7 +4,7 @@ import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
-  NCard, NButton, NTag, NIcon, NSpace, NInput,
+  NButton, NTag, NIcon, NSpace, NInput,
   NCheckbox, useMessage,
 } from "naive-ui"
 import {
@@ -22,6 +22,7 @@ import { useExportStore } from "@/stores/useExportStore"
 import EmptyState from "@/components/EmptyState.vue"
 import AppDialog from "@/components/AppDialog.vue"
 import ConfirmBtn from "@/components/ConfirmBtn.vue"
+import IconBtn from "@/components/IconBtn.vue"
 import LoadingOverlay from "@/components/LoadingOverlay.vue"
 import FloatingTip from "@/components/FloatingTip.vue"
 
@@ -59,6 +60,14 @@ const selectedModIds = ref<string[]>([])
 const installedMods = ref<InstalledMod[]>([])
 const modSearchQuery = ref("")
 const loadingMods = ref(false)
+
+const cardStyle = computed(() => ({
+  backgroundColor: "var(--glass-surface-bg)",
+  backdropFilter: "blur(var(--glass-surface-blur))",
+  WebkitBackdropFilter: "blur(var(--glass-surface-blur))",
+  borderColor: "var(--glass-surface-border)",
+  boxShadow: "var(--shadow-glass-surface)",
+}))
 
 const filteredModsForPicker = computed(() => {
   let list = installedMods.value
@@ -296,11 +305,11 @@ onMounted(() => {
 <template>
   <AppDialog
     :show="show"
-    width="760px"
+    width="660px"
     @update:show="(v: boolean) => emit('update:show', v)"
   >
     <template #header>
-      <div class="flex items-center justify-between w-full pr-6">
+      <div class="flex items-center justify-between w-full pr-4">
         <div class="flex items-center gap-2">
           <NIcon :size="20" class="text-primary-theme"><FolderHeart /></NIcon>
           <span class="text-base font-bold text-c-primary">{{ t("profiles.manageTitle") }}</span>
@@ -318,79 +327,76 @@ onMounted(() => {
       </div>
     </template>
 
-    <div class="max-h-[68vh] overflow-y-auto pr-1">
-      <div v-if="profiles.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-        <NCard
+    <div class="max-h-[64vh] overflow-y-auto pr-1">
+      <div v-if="profiles.length > 0" class="flex flex-col gap-2.5">
+        <div
           v-for="p in profiles"
           :key="p.id"
-          size="small"
-          class="preset-item-card transition-all duration-200"
-          :class="p.name === activePresetName ? 'border-primary-theme/50 bg-primary-theme/5' : ''"
+          class="group preset-card flex items-center justify-between p-3.5 rounded-xl border transition-all duration-200 hover:-translate-y-0.5"
+          :style="cardStyle"
+          :class="p.name === activePresetName ? 'border-primary-theme/50 bg-primary-theme/6 shadow-glow' : ''"
         >
-          <div class="flex items-start justify-between gap-2">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <NIcon :size="16" :class="p.builtin ? 'text-primary-theme' : 'text-primary-theme'"><FolderHeart /></NIcon>
-                <span class="font-semibold text-sm text-c-primary truncate">{{ p.name }}</span>
-                <NTag v-if="p.builtin" type="success" size="tiny" :bordered="false">
-                  {{ t("profiles.builtin") }}
-                </NTag>
-                <NTag v-if="p.name === activePresetName" type="info" size="tiny" :bordered="false">
-                  <template #icon><NIcon :size="10"><Sparkles /></NIcon></template>
-                  {{ t("profiles.active") }}
-                </NTag>
-              </div>
-
-              <div class="mt-1 mb-1 text-xs min-h-[1.5rem]">
-                <FloatingTip v-if="p.description" :text="p.description" truncated :max-lines="2" />
-                <span v-else class="text-c-muted">{{ t("profiles.noDescription") }}</span>
-              </div>
-
-              <div class="flex items-center gap-2">
-                <NTag size="tiny" :bordered="false">
-                  {{ t("profiles.modCount", { n: p.modIds.length }) }}
-                </NTag>
-              </div>
+          <!-- 左侧信息 -->
+          <div class="flex-1 min-w-0 pr-4">
+            <div class="flex items-center gap-2 flex-wrap">
+              <NIcon :size="16" :class="p.name === activePresetName ? 'text-primary-theme' : 'text-c-muted'"><FolderHeart /></NIcon>
+              <span class="font-semibold text-[15px] text-c-primary truncate">{{ p.name }}</span>
+              <NTag v-if="p.builtin" type="success" size="tiny" :bordered="false">
+                {{ t("profiles.builtin") }}
+              </NTag>
+              <NTag v-if="p.name === activePresetName" type="info" size="tiny" :bordered="false" class="font-medium">
+                <template #icon><NIcon :size="10"><Sparkles /></NIcon></template>
+                {{ t("profiles.active") }}
+              </NTag>
+              <span class="bg-c-secondary/50 px-2 py-0.5 rounded-md text-xs text-c-muted font-mono">
+                {{ t("profiles.modCount", { n: p.modIds.length }) }}
+              </span>
             </div>
 
-            <NSpace :size="2" class="flex-shrink-0">
-              <NButton
-                secondary
-                size="tiny"
-                :type="p.name === activePresetName ? 'default' : 'primary'"
-                @click="() => handleApply(p)"
-              >
-                <template #icon><NIcon :size="12"><Play /></NIcon></template>
-                {{ t("profiles.applyBtn") }}
-              </NButton>
-              <NButton
-                v-if="!p.builtin"
-                secondary
-                size="tiny"
-                :loading="exportingId === p.id"
-                @click="() => handleExport(p)"
-              >
-                <template #icon><NIcon :size="12"><Download /></NIcon></template>
-              </NButton>
-              <NButton
-                v-if="!p.builtin"
-                secondary
-                size="tiny"
-                @click="() => openEdit(p)"
-              >
-                <template #icon><NIcon :size="12"><Edit3 /></NIcon></template>
-              </NButton>
-              <ConfirmBtn
-                v-if="!p.builtin"
-                size="tiny"
-                secondary
-                :icon="Trash2"
-                :confirmText="t('profiles.confirmDelete', { name: p.name })"
-                @confirm="handleDelete(p)"
-              />
-            </NSpace>
+            <div class="text-xs text-c-muted mt-1 leading-relaxed truncate">
+              <FloatingTip v-if="p.description" :text="p.description" truncated :max-lines="1" />
+              <span v-else class="opacity-50 italic">{{ t("profiles.noDescription") }}</span>
+            </div>
           </div>
-        </NCard>
+
+          <!-- 右侧操作 -->
+          <div class="preset-actions flex items-center gap-2 flex-shrink-0">
+            <NButton
+              size="small"
+              secondary
+              :type="p.name === activePresetName ? 'default' : 'primary'"
+              :disabled="p.name === activePresetName"
+              class="px-2.5"
+              @click="handleApply(p)"
+            >
+              <template #icon><NIcon :size="13"><Play /></NIcon></template>
+              {{ p.name === activePresetName ? t("profiles.active") : t("profiles.applyBtn") }}
+            </NButton>
+
+            <IconBtn
+              v-if="!p.builtin"
+              :icon="Download"
+              :tip="t('profiles.exportBundle')"
+              :disabled="exportingId === p.id"
+              @click="handleExport(p)"
+            />
+
+            <IconBtn
+              v-if="!p.builtin"
+              :icon="Edit3"
+              :tip="t('profiles.form.editTitle')"
+              @click="openEdit(p)"
+            />
+
+            <ConfirmBtn
+              v-if="!p.builtin"
+              :icon="Trash2"
+              :confirmText="t('profiles.confirmDelete', { name: p.name })"
+              :tip="t('common.delete')"
+              @confirm="handleDelete(p)"
+            />
+          </div>
+        </div>
       </div>
 
       <EmptyState
@@ -403,7 +409,7 @@ onMounted(() => {
     </div>
 
     <!-- 创建/编辑预设对话框 -->
-    <AppDialog v-model:show="showCreateDialog" :title="formTitle" width="520px">
+    <AppDialog v-model:show="showCreateDialog" :title="formTitle" width="500px">
       <NSpace vertical :size="12">
         <div>
           <label class="text-sm text-c-secondary mb-1 block">{{ t("profiles.form.name") }}</label>
@@ -485,7 +491,7 @@ onMounted(() => {
     </AppDialog>
 
     <!-- 应用结果对话框 -->
-    <AppDialog v-if="applyResult" v-model:show="showApplyDialog" width="460px">
+    <AppDialog v-if="applyResult" v-model:show="showApplyDialog" width="440px">
       <template #header>
         <span class="text-base font-semibold">
           {{ t("profiles.apply.applied", { name: applyResult.profile.name }) }}
@@ -515,7 +521,7 @@ onMounted(() => {
     </AppDialog>
 
     <!-- 导入预设对话框 -->
-    <AppDialog v-if="bundlePreview" v-model:show="showImportDialog" width="560px">
+    <AppDialog v-if="bundlePreview" v-model:show="showImportDialog" width="540px">
       <template #header>
         <span class="text-base font-semibold">
           {{ t("profiles.importDialog.title", { name: bundlePreview.manifest.profile.name }) }}
@@ -570,12 +576,12 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.preset-item-card {
-  background-color: var(--glass-surface-bg) !important;
-  border-color: var(--glass-surface-border) !important;
+.preset-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 }
-.preset-item-card:hover {
+.preset-card:hover {
   background-color: var(--glass-surface-bg-hover) !important;
-  box-shadow: var(--shadow-glow) !important;
+  box-shadow: var(--shadow-card-hover), var(--shadow-glow) !important;
+  border-color: color-mix(in srgb, var(--primary-color) 35%, var(--glass-surface-border)) !important;
 }
 </style>

@@ -12,6 +12,21 @@ export interface ReleaseNoteConfig {
 
 export const releaseNotesConfig: ReleaseNoteConfig[] = [
   {
+    version: "1.9.1",
+    date: "2026-10-16",
+    titleKey: "releaseNotes.v1_9_1.title",
+    highlightsKeys: [
+      "releaseNotes.v1_9_1.highlights.0",
+      "releaseNotes.v1_9_1.highlights.1",
+    ],
+    changes: [
+      { type: "ui", textKey: "releaseNotes.v1_9_1.changes.0" },
+      { type: "feat", textKey: "releaseNotes.v1_9_1.changes.1" },
+      { type: "ui", textKey: "releaseNotes.v1_9_1.changes.2" },
+      { type: "fix", textKey: "releaseNotes.v1_9_1.changes.3" },
+    ],
+  },
+  {
     version: "1.9.0",
     date: "2026-10-16",
     titleKey: "releaseNotes.v1_9_0.title",

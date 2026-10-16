@@ -7,7 +7,7 @@ import { invoke } from "@tauri-apps/api/core"
 import {
   NButton, NInput, NIcon, NSelect, NPopconfirm, useMessage, useDialog,
 } from "naive-ui"
-import { Search, ExternalLink, ThumbsUp, ArrowDown, PackageOpen, RefreshCw, Plus, X, Download } from "@lucide/vue"
+import { Search, ExternalLink, ThumbsUp, ArrowDown, PackageOpen, RefreshCw, Plus, X, Download, LayoutGrid, Columns2 } from "@lucide/vue"
 import type { RemoteMod, RemoteModSearchResult, AppBootstrap, WorkshopMod, WorkshopSearchResult } from "../types"
 import { useIsActive } from "@/composables/useIsActive"
 import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
@@ -20,6 +20,7 @@ import DiscoverCard from "@/components/DiscoverCard.vue"
 import SkeletonDiscoverCard from "@/components/SkeletonDiscoverCard.vue"
 import PageHeader from "@/components/PageHeader.vue"
 import NexusDownloadModal from "@/components/NexusDownloadModal.vue"
+import DiscoverSplitView from "@/components/DiscoverSplitView.vue"
 
 defineOptions({ name: "DiscoverPage" })
 
@@ -32,7 +33,12 @@ const highlightStore = useHighlightStore()
 const { isActive } = useIsActive()
 const { fetchMods } = useModCacheStore()
 const prefStore = useDiscoverPrefStore()
-const { discoverColumns, prefetchEnabled } = storeToRefs(prefStore)
+const { discoverColumns, prefetchEnabled, discoverViewMode } = storeToRefs(prefStore)
+const { setDiscoverViewMode } = prefStore
+
+const selectedNexusId = ref<string | null>(null)
+const selectedWorkshopId = ref<number | null>(null)
+
 
 // --- 预取缓存（Nexus + Workshop 共用泛型 composable）---
 const nexusCache = useSearchPrefetch<RemoteMod>("nx")
@@ -104,6 +110,26 @@ const workshopTotalCount = ref(0)
 const subscribingWorkshop = ref(new Set<number>())
 const unsubscribingWorkshop = ref(new Set<number>())
 
+watch(nexusResults, (list) => {
+  if (list && list.length > 0) {
+    if (!selectedNexusId.value || !list.some(m => m.remoteId === selectedNexusId.value)) {
+      selectedNexusId.value = list[0].remoteId
+    }
+  } else {
+    selectedNexusId.value = null
+  }
+}, { immediate: true })
+
+watch(workshopResults, (list) => {
+  if (list && list.length > 0) {
+    if (!selectedWorkshopId.value || !list.some(m => m.id === selectedWorkshopId.value)) {
+      selectedWorkshopId.value = list[0].id
+    }
+  } else {
+    selectedWorkshopId.value = null
+  }
+}, { immediate: true })
+
 function switchNexusTab() {
   tab.value = "nexus"
   const q = { ...route.query }
@@ -156,10 +182,20 @@ async function subscribeToWorkshop(id: number) {
       mod.subscribed = true
       mod.subscribers++
     }
+    message.success(t("discover.workshop.subscribedSuccess"))
   } catch (e: unknown) {
     if (!isActive.value) return
     console.error("Workshop subscribe error:", e)
-    message.error(String(e))
+    dialog.warning({
+      title: t("discover.workshop.subscribeFailedTitle"),
+      content: String(e),
+      positiveText: t("discover.workshop.openInWeb"),
+      negativeText: t("common.cancel"),
+      onPositiveClick: () => {
+        openModPage(`https://steamcommunity.com/sharedfiles/filedetails/?id=${id}`)
+      },
+      maskClosable: true,
+    })
   } finally {
     if (isActive.value) {
       const next = new Set(subscribingWorkshop.value)
@@ -415,11 +451,33 @@ function handleUserRefresh() {
 <template>
   <div class="flex flex-col h-full">
     <PageHeader :title="t('discover.title')" :subtitle="t('discover.subtitle')">
-      <div class="glass-surface inline-flex gap-1 p-1">
-        <NButton size="small" :type="tab === 'nexus' ? 'primary' : 'default'" @click="switchNexusTab">Nexus</NButton>
-        <NButton size="small" :type="tab === 'workshop' ? 'primary' : 'default'" @click="switchWorkshopTab">
-          {{ t("discover.workshop.tab") }}
-        </NButton>
+      <div class="flex items-center gap-2">
+        <div class="glass-surface inline-flex gap-0.5 p-0.5 rounded-lg border border-c-default">
+          <NButton
+            size="tiny"
+            :secondary="discoverViewMode !== 'grid'"
+            :type="discoverViewMode === 'grid' ? 'primary' : 'default'"
+            :title="t('settings.discover.viewModeGrid')"
+            @click="setDiscoverViewMode('grid')"
+          >
+            <template #icon><NIcon :size="13"><LayoutGrid /></NIcon></template>
+          </NButton>
+          <NButton
+            size="tiny"
+            :secondary="discoverViewMode !== 'split'"
+            :type="discoverViewMode === 'split' ? 'primary' : 'default'"
+            :title="t('settings.discover.viewModeSplit')"
+            @click="setDiscoverViewMode('split')"
+          >
+            <template #icon><NIcon :size="13"><Columns2 /></NIcon></template>
+          </NButton>
+        </div>
+        <div class="glass-surface inline-flex gap-1 p-1">
+          <NButton size="small" :type="tab === 'nexus' ? 'primary' : 'default'" @click="switchNexusTab">Nexus</NButton>
+          <NButton size="small" :type="tab === 'workshop' ? 'primary' : 'default'" @click="switchWorkshopTab">
+            {{ t("discover.workshop.tab") }}
+          </NButton>
+        </div>
       </div>
     </PageHeader>
 
@@ -473,7 +531,7 @@ function handleUserRefresh() {
       <div v-if="nexusLoading && nexusResults.length === 0" :class="gridColsClass">
         <SkeletonDiscoverCard v-for="i in 6" :key="'skel-nx-'+i" />
       </div>
-      <div v-else :class="gridColsClass">
+      <div v-if="discoverViewMode === 'grid'" :class="gridColsClass">
         <DiscoverCard
           v-for="mod in nexusResults"
           :key="mod.remoteId"
@@ -501,6 +559,15 @@ function handleUserRefresh() {
           </template>
         </DiscoverCard>
       </div>
+      <DiscoverSplitView
+        v-else
+        type="nexus"
+        :nexus-items="nexusResults"
+        :selected-id="selectedNexusId"
+        @select-nexus="(m) => selectedNexusId = m.remoteId"
+        @download-nexus="openNexusDownload"
+        @open-details="openModPage"
+      />
     </div>
 
     <EmptyState v-else-if="nexusSearched && !nexusLoading" :icon="Search" :title="t('discover.empty.notFound')" :description="hasApiKey ? undefined : t('discover.empty.needsApiKey')" bordered />
@@ -540,7 +607,7 @@ function handleUserRefresh() {
         <div class="flex items-center justify-between mb-3">
           <span class="text-sm text-c-muted">{{ t("discover.resultCount", { total: workshopTotalCount }) }}</span>
         </div>
-        <div :class="gridColsClass">
+        <div v-if="discoverViewMode === 'grid'" :class="gridColsClass">
           <DiscoverCard
             v-for="mod in workshopResults"
             :key="mod.id"
@@ -576,6 +643,18 @@ function handleUserRefresh() {
             </template>
           </DiscoverCard>
         </div>
+        <DiscoverSplitView
+          v-else
+          type="workshop"
+          :workshop-items="workshopResults"
+          :selected-id="selectedWorkshopId"
+          :subscribing-ids="subscribingWorkshop"
+          :unsubscribing-ids="unsubscribingWorkshop"
+          @select-workshop="(m) => selectedWorkshopId = m.id"
+          @subscribe-workshop="subscribeToWorkshop"
+          @unsubscribe-workshop="unsubscribeFromWorkshop"
+          @open-details="openModPage"
+        />
       </div>
       <EmptyState v-else-if="workshopSearched && !workshopLoading" :icon="Search" :title="t('discover.empty.notFound')" bordered />
     </div>

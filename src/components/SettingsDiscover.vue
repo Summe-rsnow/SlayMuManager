@@ -9,13 +9,19 @@ import FloatingTip from "./FloatingTip.vue"
 
 const { t } = useI18n()
 const discoverPrefStore = useDiscoverPrefStore()
-const { discoverColumns, prefetchEnabled, showTranslateQuotaTip } = storeToRefs(discoverPrefStore)
-const { setDiscoverColumns, setPrefetchEnabled, setShowTranslateQuotaTip } = discoverPrefStore
+const { discoverColumns, prefetchEnabled, showTranslateQuotaTip, discoverViewMode } = storeToRefs(discoverPrefStore)
+const { setDiscoverColumns, setPrefetchEnabled, setShowTranslateQuotaTip, setDiscoverViewMode } = discoverPrefStore
 </script>
 
 <template>
   <SettingsSection :title="t('settings.discover.title')">
-    <SettingsRow :label="t('settings.discover.columnCount')">
+    <SettingsRow :label="t('settings.discover.viewMode')">
+      <NRadioGroup :value="discoverViewMode" size="small" @update:value="setDiscoverViewMode">
+        <NRadio value="grid">{{ t("settings.discover.viewModeGrid") }}</NRadio>
+        <NRadio value="split">{{ t("settings.discover.viewModeSplit") }}</NRadio>
+      </NRadioGroup>
+    </SettingsRow>
+    <SettingsRow v-if="discoverViewMode === 'grid'" :label="t('settings.discover.columnCount')">
       <NRadioGroup :value="discoverColumns" size="small" @update:value="setDiscoverColumns">
         <NRadio :value="1">1</NRadio>
         <NRadio :value="2">2</NRadio>
