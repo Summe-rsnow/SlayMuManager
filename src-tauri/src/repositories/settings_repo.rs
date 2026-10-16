@@ -1,9 +1,9 @@
 use crate::app::state::AppSettings;
 use std::path::PathBuf;
 
-/// 设置文件路径（跨平台）：dirs_next::data_dir()/slaymumanager/settings.json
+/// 设置文件路径（跨平台）：dirs::data_dir()/slaymumanager/settings.json
 fn settings_path() -> PathBuf {
-    let base = dirs_next::data_dir()
+    let base = dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("slaymumanager");
     std::fs::create_dir_all(&base).ok();

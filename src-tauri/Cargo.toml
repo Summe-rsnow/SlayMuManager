@@ -1,6 +1,6 @@
 [package]
 name = "slaymumanager"
-version = "1.8.6"
+version = "1.8.7"
 description = "Slay the Spire 2 Mod Manager"
 authors = []
 edition = "2024"
@@ -21,13 +21,21 @@ chrono = { version = "0.4.44", features = ["serde"] }
 thiserror = "2.0.18"
 uuid = { version = "1.23.1", features = ["serde", "v4"] }
 rfd = "0.17.2"
-zip = "8.6.0"
+zip = "9.0.3"
 sevenz-rust = "0.6.1"
 reqwest = { version = "0.13.3", features = ["blocking", "json", "socks"] }
-dirs-next = "2.0.0"
+dirs = "6.0"
 winreg = "0.56.0"
 sha1 = "0.11.0"
 notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
 lru = "0.18.0"
 rars = "0.1.0"
-steamworks = { version = "0.13.1", features = ["serde"] }
+steamworks = { version = "0.13.1" }
+
+[profile.release]
+codegen-units = 16
+lto = "thin"
+opt-level = 3
+debug = false
+strip = true
+panic = "abort"

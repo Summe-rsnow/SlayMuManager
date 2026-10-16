@@ -1876,7 +1876,7 @@ pub fn translate_text(text: String) -> Result<String, String> {
 // --- 自定义背景壁纸管理 ---
 
 fn bg_dir() -> std::path::PathBuf {
-    dirs_next::data_dir()
+    dirs::data_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("slaymumanager")
 }

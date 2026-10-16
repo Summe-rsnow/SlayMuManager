@@ -5,12 +5,27 @@ export interface ReleaseNoteConfig {
   titleKey: string
   highlightsKeys?: string[]
   changes: {
-    type: "feat" | "perf" | "ui" | "fix"
+    type: "feat" | "perf" | "ui" | "fix" | "opt"
     textKey: string
   }[]
 }
 
 export const releaseNotesConfig: ReleaseNoteConfig[] = [
+  {
+    version: "1.8.7",
+    date: "2026-10-16",
+    titleKey: "releaseNotes.v1_8_7.title",
+    highlightsKeys: [
+      "releaseNotes.v1_8_7.highlights.0",
+      "releaseNotes.v1_8_7.highlights.1",
+    ],
+    changes: [
+      { type: "feat", textKey: "releaseNotes.v1_8_7.changes.0" },
+      { type: "perf", textKey: "releaseNotes.v1_8_7.changes.1" },
+      { type: "perf", textKey: "releaseNotes.v1_8_7.changes.2" },
+      { type: "opt", textKey: "releaseNotes.v1_8_7.changes.3" },
+    ],
+  },
   {
     version: "1.8.6",
     date: "2026-10-06",

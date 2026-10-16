@@ -10,7 +10,7 @@ pub struct ModHashesStore {
 }
 
 fn data_dir() -> PathBuf {
-    let base = dirs_next::data_dir().unwrap_or_else(|| PathBuf::from("."));
+    let base = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
     base.join("slaymumanager")
 }
 

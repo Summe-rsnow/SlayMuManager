@@ -36,7 +36,7 @@ function compareVersions(a: string, b: string): number {
 async function checkForUpdate() {
   updateStatus.value = "checking"
   try {
-    const res = await fetch("https://api.github.com/repos/Summe-rsnow/SlayMuManager/releases/latest")
+    const res = await fetch("https://api.github.com/repos/xcmm1543/SlayMuManager/releases/latest")
     if (!res.ok) throw new Error(`GitHub API: ${res.status}`)
     const data = await res.json()
     const tag: string = data.tag_name
@@ -91,7 +91,7 @@ async function checkForUpdate() {
           {{ t("settings.about.github") }}
         </span>
       </template>
-      <NButton text size="tiny" class="text-primary-theme" @click="openUrl('https://github.com/Summe-rsnow/SlayMuManager')">
+      <NButton text size="tiny" class="text-primary-theme" @click="openUrl('https://github.com/xcmm1543/SlayMuManager')">
         {{ t("settings.about.open") }}
       </NButton>
     </SettingsRow>

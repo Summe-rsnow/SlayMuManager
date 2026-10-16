@@ -457,11 +457,10 @@ pub fn keep_mod_version_and_clean_others(game_root: &Path, install_dir: &str, mo
                     if p_can == target_canonical {
                         continue;
                     }
-                    if let Some((_, manifest)) = ModManifest::find_in_dir(&p) {
-                        if manifest.id.as_deref() == Some(mod_id) {
+                    if let Some((_, manifest)) = ModManifest::find_in_dir(&p)
+                        && manifest.id.as_deref() == Some(mod_id) {
                             let _ = std::fs::remove_dir_all(&p);
                             deleted_count += 1;
-                        }
                     }
                 }
             }
@@ -499,22 +498,20 @@ pub fn switch_active_mod_version(game_root: &Path, install_dir: &str, mod_id: &s
     std::fs::create_dir_all(&disabled_dir).map_err(AppError::Io)?;
 
     // 将 mods/ 下所有具有相同 mod_id 的其他启用实例移至 mods_disabled/
-    if plugins_dir.exists() {
-        if let Ok(entries) = std::fs::read_dir(&plugins_dir) {
+    if plugins_dir.exists()
+        && let Ok(entries) = std::fs::read_dir(&plugins_dir) {
             for entry in entries.filter_map(|e| e.ok()) {
                 let p = entry.path();
                 if !p.is_dir() {
                     continue;
                 }
-                if let Some((_, manifest)) = ModManifest::find_in_dir(&p) {
-                    if manifest.id.as_deref() == Some(mod_id) {
+                if let Some((_, manifest)) = ModManifest::find_in_dir(&p)
+                    && manifest.id.as_deref() == Some(mod_id) {
                         let name = p.file_name().unwrap_or_default();
                         let dest = unique_target_path(&disabled_dir, name);
                         move_dir_safely(&p, &dest)?;
-                    }
                 }
             }
-        }
     }
 
     // 将 target 从 mods_disabled/ 移至 mods/
@@ -631,18 +628,13 @@ fn compute_hashes_recursive(
                 && let Ok(rel) = path.strip_prefix(base) {
                     let rel_str = rel.to_string_lossy().to_string();
                     if !rel_str.is_empty() && !rel_str.starts_with('.')
-                        && let Ok(hash) = sha1_of_file(&path) { out.insert(rel_str, hash); }
+                        && let Ok(hash) = crate::utils::hash::sha1_file(&path).map_err(AppError::Io) {
+                            out.insert(rel_str, hash);
+                        }
                 }
         }
     }
     Ok(())
-}
-
-fn sha1_of_file(path: &Path) -> Result<String, AppError> {
-    use sha1::{Digest, Sha1};
-    let data = std::fs::read(path)?;
-    let hash = Sha1::digest(&data);
-    Ok(hash.iter().map(|b| format!("{:02x}", b)).collect())
 }
 
 /// 比较新 mod 的文件与已安装 mod 的文件哈希

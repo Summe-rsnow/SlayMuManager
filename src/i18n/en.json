@@ -601,6 +601,19 @@
       "fix": "Fix",
       "opt": "Optimized"
     },
+    "v1_8_7": {
+      "title": "Installer Experience Upgrade & Performance Improvements",
+      "highlights": [
+        "Upgraded installer experience: defaults to direct in-place update when an older version is detected, preserving all personal configurations and mods",
+        "Greatly reduced memory consumption during mod processing and verification for smoother management of large mods"
+      ],
+      "changes": [
+        "Optimized Windows installer logic to default to direct overwrite update without uninstalling existing user data",
+        "Optimized mod file verification pipeline, significantly cutting memory usage and boosting performance",
+        "Improved asset bundling and code splitting for faster startup and smoother page navigation",
+        "Updated core runtime libraries to enhance overall app stability and performance"
+      ]
+    },
     "v1_8_6": {
       "title": "Multi-Version Mod Conflict Management & Precise Instance Targeting",
       "highlights": [

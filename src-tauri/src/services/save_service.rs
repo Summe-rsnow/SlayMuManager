@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 /// macOS:   ~/Library/Application Support/SlayTheSpire2/steam/
 /// Linux:   ~/.local/share/SlayTheSpire2/steam/
 pub fn vanilla_saves_root() -> PathBuf {
-    dirs_next::data_dir()
+    dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("SlayTheSpire2")
         .join("steam")

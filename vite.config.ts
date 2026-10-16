@@ -25,7 +25,7 @@ export default defineConfig(async () => ({
         codeSplitting: {
           groups: [
             { name: "naive", test: /naive-ui/, priority: 20 },
-            { name: "icons", test: /lucide-vue-next/, priority: 15 },
+            { name: "icons", test: /@lucide[\\/]vue/, priority: 15 },
             { name: "vendor", test: /node_modules[\\/](vue|vue-router|vue-i18n)/, priority: 10 },
           ],
         },

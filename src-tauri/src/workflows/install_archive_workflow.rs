@@ -101,8 +101,10 @@ fn extract_zip(archive_path: &Path, output_dir: &Path) -> Result<(), AppError> {
         let mut entry = archive
             .by_index(i)
             .map_err(|e| AppError::Other(format!("ZIP 条目读取失败: {}", e)))?;
-
-        let name = entry.name().to_string();
+        let name = entry
+            .name()
+            .map_err(|e| AppError::Other(format!("ZIP 条目名称解析失败: {}", e)))?
+            .to_string();
         let out_path = output_dir.join(&name);
 
         if entry.is_dir() {

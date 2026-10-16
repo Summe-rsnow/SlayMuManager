@@ -8,7 +8,7 @@ struct ProfileStore {
 }
 
 fn profiles_path() -> PathBuf {
-    let base = dirs_next::data_dir()
+    let base = dirs::data_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("slaymumanager");
     std::fs::create_dir_all(&base).ok();
