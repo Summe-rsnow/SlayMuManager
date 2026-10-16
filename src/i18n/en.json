@@ -5,6 +5,7 @@
 
   "update": {
     "title": "New Version Available",
+    "available": "New Version Available",
     "latestVersion": "Latest Version",
     "currentVersion": "Current Version",
     "github": "GitHub",

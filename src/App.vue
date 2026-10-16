@@ -244,7 +244,7 @@ const close = closeWindow
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="font-semibold text-base text-c-primary">
-                      {{ t("update.available") }}
+                      {{ t("update.title") }}
                     </div>
                     <div class="text-xs text-c-muted mt-0.5">
                       {{ t("update.currentVersion", { v: APP_VERSION }) }} →
