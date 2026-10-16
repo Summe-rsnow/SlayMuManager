@@ -274,3 +274,46 @@ export interface WorkshopMod {
   votesDown: number
   subscribed: boolean
 }
+
+export type DownloadStatus = "pending" | "downloading" | "paused" | "completed" | "failed" | "cancelled"
+
+export interface DownloadTask {
+  id: string
+  modId: number
+  fileId: number
+  modName: string
+  fileName: string
+  downloadUrl: string
+  savePath: string
+  totalBytes: number
+  downloadedBytes: number
+  speedBytesPerSec: number
+  status: DownloadStatus
+  errorMessage?: string | null
+  createdAt: string
+  completedAt?: string | null
+  installed: boolean
+  installError?: string | null
+}
+
+export interface NexusUserInfo {
+  user_id: number
+  name: string
+  is_premium: boolean
+  is_supporter: boolean
+  email?: string | null
+}
+
+export interface NexusModFile {
+  file_id: number
+  name: string
+  version?: string | null
+  category_id?: number | null
+  category_name?: string | null
+  is_primary?: boolean | null
+  size_in_bytes?: number | null
+  file_name?: string | null
+  uploaded_timestamp?: number | null
+  uploaded_time?: string | null
+  description?: string | null
+}

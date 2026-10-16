@@ -1,7 +1,7 @@
 use crate::domain::remote_mod::{RemoteMod, RemoteModSearchResult};
 use crate::utils::error::AppError;
 use lru::LruCache;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::num::NonZeroUsize;
 use std::sync::Mutex;
 use std::sync::LazyLock;
@@ -346,4 +346,138 @@ struct GraphQLNode {
     thumbnail_large_url: Option<String>,
     endorsements: Option<u64>,
     downloads: Option<u64>,
+}
+
+// ---------------------------------------------------------------------------
+// Nexus REST API v1 数据类型与接口
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NexusUserInfo {
+    pub user_id: u64,
+    pub name: String,
+    pub is_premium: bool,
+    #[serde(default)]
+    pub is_supporter: bool,
+    pub email: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NexusModFile {
+    pub file_id: u64,
+    pub name: String,
+    pub version: Option<String>,
+    pub category_id: Option<i32>,
+    pub category_name: Option<String>,
+    pub is_primary: Option<bool>,
+    pub size_in_bytes: Option<u64>,
+    pub file_name: Option<String>,
+    pub uploaded_timestamp: Option<i64>,
+    pub uploaded_time: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NexusModFilesResponse {
+    #[serde(default)]
+    pub files: Vec<NexusModFile>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NexusDownloadLink {
+    pub name: String,
+    pub short_name: Option<String>,
+    #[serde(rename = "URI")]
+    pub uri: String,
+}
+
+/// 校验 Nexus API Key 并获取会员信息
+pub fn validate_user(api_key: &str, proxy_url: Option<&str>) -> Result<NexusUserInfo, AppError> {
+    let client = get_or_create_client(api_key, proxy_url)?;
+    let resp = client
+        .get("https://api.nexusmods.com/v1/users/validate.json")
+        .send()
+        .map_err(|e| AppError::Other(format!("网络请求失败: {}", e)))?;
+
+    if resp.status().as_u16() == 401 {
+        return Err(AppError::Other("Nexus Mods API Key 无效或已过期".to_string()));
+    }
+    if !resp.status().is_success() {
+        return Err(AppError::Other(format!("Nexus API 校验错误: HTTP {}", resp.status())));
+    }
+
+    let user = resp
+        .json::<NexusUserInfo>()
+        .map_err(|e| AppError::Other(format!("解析用户信息失败: {}", e)))?;
+    Ok(user)
+}
+
+/// 获取 Nexus 模组的文件列表
+pub fn get_mod_files(
+    api_key: &str,
+    proxy_url: Option<&str>,
+    game_slug: &str,
+    mod_id: u32,
+) -> Result<Vec<NexusModFile>, AppError> {
+    let client = get_or_create_client(api_key, proxy_url)?;
+    let url = format!(
+        "https://api.nexusmods.com/v1/games/{}/mods/{}/files.json",
+        game_slug, mod_id
+    );
+    let resp = client
+        .get(&url)
+        .send()
+        .map_err(|e| AppError::Other(format!("获取模组文件列表失败: {}", e)))?;
+
+    if !resp.status().is_success() {
+        return Err(AppError::Other(format!(
+            "获取文件列表失败: HTTP {}",
+            resp.status()
+        )));
+    }
+
+    let files_resp = resp
+        .json::<NexusModFilesResponse>()
+        .map_err(|e| AppError::Other(format!("解析文件列表失败: {}", e)))?;
+    Ok(files_resp.files)
+}
+
+/// 获取模组文件的下载直链（仅限 Nexus Mods 会员）
+pub fn get_download_link(
+    api_key: &str,
+    proxy_url: Option<&str>,
+    game_slug: &str,
+    mod_id: u32,
+    file_id: u64,
+) -> Result<String, AppError> {
+    let client = get_or_create_client(api_key, proxy_url)?;
+    let url = format!(
+        "https://api.nexusmods.com/v1/games/{}/mods/{}/files/{}/download_link.json",
+        game_slug, mod_id, file_id
+    );
+    let resp = client
+        .get(&url)
+        .send()
+        .map_err(|e| AppError::Other(format!("获取下载直链失败: {}", e)))?;
+
+    if resp.status().as_u16() == 403 {
+        return Err(AppError::Other(
+            "Nexus Mods 规定只有 Premium 会员支持直链下载。非会员请点击详情前往网页手动下载。".to_string(),
+        ));
+    }
+    if !resp.status().is_success() {
+        return Err(AppError::Other(format!(
+            "获取下载链接失败: HTTP {}",
+            resp.status()
+        )));
+    }
+
+    let links = resp
+        .json::<Vec<NexusDownloadLink>>()
+        .map_err(|e| AppError::Other(format!("解析下载链接失败: {}", e)))?;
+
+    let link = links
+        .first()
+        .ok_or_else(|| AppError::Other("未找到有效的下载节点".to_string()))?;
+    Ok(link.uri.clone())
 }

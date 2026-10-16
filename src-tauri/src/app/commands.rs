@@ -12,7 +12,7 @@ use crate::domain::task::ActivityLogEntry;
 use crate::repositories::settings_repo;
 use crate::repositories::updates_cache_repo;
 use crate::services::{
-    backup_service, discover_service, game_service, mod_service, profile_service, save_service,
+    backup_service, discover_service, download_service, game_service, mod_service, profile_service, save_service,
 };
 use crate::utils::error::AppError;
 use crate::workflows::{install_archive_workflow, update_check};
@@ -1726,11 +1726,178 @@ pub fn start_mod_update_check(
 // =========================================================================
 
 #[tauri::command]
-pub fn update_nexus_api_key(api_key: String, state: State<AppState>) -> Result<(), String> {
-    let mut settings = state.settings.write().unwrap();
-    settings.nexus_api_key = Some(api_key);
-    let _ = settings_repo::save_settings(&settings);
-    Ok(())
+pub fn update_nexus_api_key(
+    api_key: String,
+    state: State<AppState>,
+) -> Result<crate::integrations::nexus_client::NexusUserInfo, String> {
+    let clean_key = api_key.trim();
+    if clean_key.is_empty() {
+        let mut settings = state.settings.write().unwrap();
+        settings.nexus_api_key = None;
+        settings.nexus_is_premium = false;
+        settings.nexus_user_name = None;
+        let _ = settings_repo::save_settings(&settings);
+        return Err("API Key 不能为空".to_string());
+    }
+
+    let proxy = {
+        let s = state.settings.read().unwrap();
+        s.proxy_url.clone()
+    };
+
+    let user_info = crate::integrations::nexus_client::validate_user(clean_key, proxy.as_deref())
+        .map_err(|e| e.to_string())?;
+
+    {
+        let mut settings = state.settings.write().unwrap();
+        settings.nexus_api_key = Some(clean_key.to_string());
+        settings.nexus_is_premium = user_info.is_premium;
+        settings.nexus_user_name = Some(user_info.name.clone());
+        let _ = settings_repo::save_settings(&settings);
+    }
+
+    Ok(user_info)
+}
+
+#[tauri::command]
+pub fn validate_nexus_api_key(
+    state: State<AppState>,
+) -> Result<crate::integrations::nexus_client::NexusUserInfo, String> {
+    let (key, proxy) = {
+        let s = state.settings.read().unwrap();
+        (s.nexus_api_key.clone(), s.proxy_url.clone())
+    };
+
+    let key = key.ok_or_else(|| "未配置 Nexus API Key".to_string())?;
+    let user_info = crate::integrations::nexus_client::validate_user(&key, proxy.as_deref())
+        .map_err(|e| e.to_string())?;
+
+    {
+        let mut settings = state.settings.write().unwrap();
+        settings.nexus_is_premium = user_info.is_premium;
+        settings.nexus_user_name = Some(user_info.name.clone());
+        let _ = settings_repo::save_settings(&settings);
+    }
+
+    Ok(user_info)
+}
+
+#[tauri::command]
+pub fn get_nexus_mod_files(
+    mod_id: u32,
+    state: State<AppState>,
+) -> Result<Vec<crate::integrations::nexus_client::NexusModFile>, String> {
+    let (key, proxy) = {
+        let s = state.settings.read().unwrap();
+        (s.nexus_api_key.clone(), s.proxy_url.clone())
+    };
+
+    let key = key.ok_or_else(|| "请先在「设置」中配置 Nexus API Key".to_string())?;
+    crate::integrations::nexus_client::get_mod_files(
+        &key,
+        proxy.as_deref(),
+        "slaythespire2",
+        mod_id,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_nexus_download_link(
+    mod_id: u32,
+    file_id: u64,
+    state: State<AppState>,
+) -> Result<String, String> {
+    let (key, proxy) = {
+        let s = state.settings.read().unwrap();
+        (s.nexus_api_key.clone(), s.proxy_url.clone())
+    };
+
+    let key = key.ok_or_else(|| "请先在「设置」中配置 Nexus API Key".to_string())?;
+    crate::integrations::nexus_client::get_download_link(
+        &key,
+        proxy.as_deref(),
+        "slaythespire2",
+        mod_id,
+        file_id,
+    )
+    .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn start_nexus_download(
+    app_handle: tauri::AppHandle,
+    mod_id: u32,
+    file_id: u64,
+    mod_name: String,
+    file_name: String,
+    state: State<AppState>,
+) -> Result<download_service::DownloadTask, String> {
+    let (key, proxy) = {
+        let s = state.settings.read().unwrap();
+        (s.nexus_api_key.clone(), s.proxy_url.clone())
+    };
+
+    let key = key.ok_or_else(|| "请先在「设置」中配置 Nexus API Key".to_string())?;
+    let download_url = crate::integrations::nexus_client::get_download_link(
+        &key,
+        proxy.as_deref(),
+        "slaythespire2",
+        mod_id,
+        file_id,
+    )
+    .map_err(|e| e.to_string())?;
+
+    let task = download_service::start_download(
+        app_handle,
+        mod_id,
+        file_id,
+        mod_name.clone(),
+        file_name.clone(),
+        download_url,
+    )
+    .map_err(|e| e.to_string())?;
+
+    state.push_activity(ActivityLogEntry {
+        id: uuid::Uuid::new_v4().to_string(),
+        category: "mod".to_string(),
+        title: format!("下载 Nexus 模组: {} ({})", mod_name, file_name),
+        detail: Some(format!("mod_id: {}, file_id: {}", mod_id, file_id)),
+        created_at: chrono::Local::now().to_rfc3339(),
+    });
+
+    Ok(task)
+}
+
+#[tauri::command]
+pub fn pause_download(task_id: String) -> Result<(), String> {
+    download_service::pause_download(&task_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn resume_download(app_handle: tauri::AppHandle, task_id: String) -> Result<(), String> {
+    download_service::resume_download(app_handle, &task_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn cancel_download(task_id: String) -> Result<(), String> {
+    download_service::cancel_download(&task_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_download_tasks() -> Result<Vec<download_service::DownloadTask>, String> {
+    Ok(download_service::get_download_tasks())
+}
+
+#[tauri::command]
+pub fn clear_completed_downloads() -> Result<(), String> {
+    download_service::clear_completed_tasks().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn open_downloads_folder() -> Result<(), String> {
+    let dir = download_service::get_download_dir();
+    crate::services::game_service::open_folder(&dir).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

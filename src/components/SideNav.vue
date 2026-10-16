@@ -4,7 +4,7 @@ import { storeToRefs } from "pinia"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { useMessage, useDialog, NMenu, NIcon, NSelect, NButton, NSpace, type MenuOption } from "naive-ui"
-import { Library, Compass, FolderHeart, Save, Settings, Play, LoaderCircle, AlertTriangle, Menu } from "@lucide/vue"
+import { Library, Compass, Save, Settings, Play, LoaderCircle, AlertTriangle, Menu } from "@lucide/vue"
 import { useSidebarStore } from "@/stores/useSidebarStore"
 import { useHighlightStore } from "@/stores/useHighlightStore"
 import AppDialog from "@/components/AppDialog.vue"
@@ -106,11 +106,6 @@ const menuOptions = computed<MenuOption[]>(() => [
     label: t("nav.discover"),
     key: "/discover",
     icon: () => h(NIcon, null, { default: () => h(Compass, { size: 18 }) }),
-  },
-  {
-    label: t("nav.profiles"),
-    key: "/profiles",
-    icon: () => h(NIcon, null, { default: () => h(FolderHeart, { size: 18 }) }),
   },
   {
     label: t("nav.saves"),

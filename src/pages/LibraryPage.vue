@@ -11,7 +11,7 @@ import {
   NCheckbox, NSwitch, useMessage, useDialog,
 } from "naive-ui"
 import {
-  Search, Download, RefreshCw, FolderOpen, Bookmark,
+  Search, Download, RefreshCw, FolderOpen, Bookmark, BookmarkPlus, FolderHeart,
   AlertTriangle, Filter, X, PackageOpen, ArrowUp, HardDrive,
   CheckCircle, AlertCircle,
 } from "@lucide/vue"
@@ -25,6 +25,7 @@ import DragOverlay from "@/components/DragOverlay.vue"
 import FloatingTip from "@/components/FloatingTip.vue"
 import ModCard from "@/components/ModCard.vue"
 import ModVersionConflictModal from "@/components/ModVersionConflictModal.vue"
+import PresetManageModal from "@/components/PresetManageModal.vue"
 import AppDialog from "@/components/AppDialog.vue"
 import EmptyState from "@/components/EmptyState.vue"
 import PageHeader from "@/components/PageHeader.vue"
@@ -277,31 +278,31 @@ onMounted(() => {
   }
 })
 
-// --- 新增/保存预设 ---
-const showNewPresetDialog = ref(false)
-const newPresetName = ref("")
-const creatingNewPreset = ref(false)
-/** 非空时表示"保存当前配置为新预设"，存的是要写入预设的 modId 列表 */
-const saveAsPresetModIds = ref<string[] | null>(null)
+// --- 存为预设与预设管理 ---
+const showSaveAsPresetDialog = ref(false)
+const saveAsPresetName = ref("")
+const saveAsPresetDescription = ref("")
+const savingAsPreset = ref(false)
+const showPresetManageModal = ref(false)
 
-function openNewPreset() {
-  saveAsPresetModIds.value = null
-  newPresetName.value = ""
-  showNewPresetDialog.value = true
+function openSaveAsPreset() {
+  saveAsPresetName.value = ""
+  saveAsPresetDescription.value = ""
+  showSaveAsPresetDialog.value = true
 }
 
-async function handleCreateNewPreset() {
-  const name = newPresetName.value.trim()
+async function handleSaveAsPreset() {
+  const name = saveAsPresetName.value.trim()
   if (!name) {
     message.warning(t("library.warning.enterPresetName"))
     return
   }
-  creatingNewPreset.value = true
+  savingAsPreset.value = true
   try {
-    const modIds = saveAsPresetModIds.value ?? []
+    const modIds = enabledMods.value.map(m => m.id)
     await invoke("create_profile", {
       name,
-      description: null,
+      description: saveAsPresetDescription.value.trim() || null,
       modIds,
     })
     const profiles = await invoke<ModProfile[]>("list_profiles")
@@ -313,23 +314,22 @@ async function handleCreateNewPreset() {
       activePresetName.value = created.name
       quickPresetId.value = created.id
       presetSnapshot.value = new Set(modIds)
-      let msg = t("library.success.presetApplied", { name })
-      if (saveAsPresetModIds.value) {
-        // 保存当前配置后禁用原版预设的 mod
-        await disableAllMods()
-        msg = t("profiles.success.created")
-      }
-      message.success(msg)
+      message.success(t("library.success.savedAsPreset", { name }))
       await fetchMods()
       loadQuickPresets()
     }
-    showNewPresetDialog.value = false
+    showSaveAsPresetDialog.value = false
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(`${t("profiles.error.applyFailed")}: ${String(e)}`)
+    message.error(`${t("profiles.error.saveFailed")}: ${String(e)}`)
   } finally {
-    creatingNewPreset.value = false
+    savingAsPreset.value = false
   }
+}
+
+function onPresetApplied() {
+  fetchMods()
+  loadQuickPresets()
 }
 
 // --- 创意工坊取消订阅 ---
@@ -569,9 +569,13 @@ watch(presetAppliedTick, () => {
           <template #icon><NIcon :size="14"><FolderOpen /></NIcon></template>
           {{ t("library.openModsDir") }}
         </NButton>
-        <NButton size="small" secondary @click="openNewPreset">
-          <template #icon><NIcon :size="14"><Bookmark /></NIcon></template>
-          {{ t("library.newPreset") }}
+        <NButton size="small" secondary @click="openSaveAsPreset">
+          <template #icon><NIcon :size="14"><BookmarkPlus /></NIcon></template>
+          {{ t("library.saveAsPreset") }}
+        </NButton>
+        <NButton size="small" secondary @click="showPresetManageModal = true">
+          <template #icon><NIcon :size="14"><FolderHeart /></NIcon></template>
+          {{ t("library.managePresets") }}
         </NButton>
         <NButton size="small" secondary :loading="localChecking" @click="checkUpdates">
           <template #icon><NIcon :size="14"><ArrowUp /></NIcon></template>
@@ -838,24 +842,43 @@ watch(presetAppliedTick, () => {
       </NSpace>
     </AppDialog>
 
-    <!-- 新增预设对话框 -->
-    <AppDialog v-model:show="showNewPresetDialog" :title="saveAsPresetModIds ? t('library.saveAsPreset') : t('library.newPreset')" width="420px">
+    <!-- 预设管理弹窗 -->
+    <PresetManageModal
+      v-model:show="showPresetManageModal"
+      @applied="onPresetApplied"
+    />
+
+    <!-- 存为预设对话框 -->
+    <AppDialog
+      v-model:show="showSaveAsPresetDialog"
+      :title="t('library.saveAsPreset')"
+      width="420px"
+    >
       <NSpace vertical :size="12">
         <div>
           <label class="text-sm text-c-secondary mb-1 block">{{ t("library.savePreset.nameLabel") }}</label>
           <NInput
-            v-model:value="newPresetName"
+            v-model:value="saveAsPresetName"
             :placeholder="t('library.savePreset.namePlaceholder')"
-            @keyup.enter="handleCreateNewPreset"
+            @keyup.enter="handleSaveAsPreset"
+          />
+        </div>
+        <div>
+          <label class="text-sm text-c-secondary mb-1 block">{{ t("profiles.form.description") }}</label>
+          <NInput
+            v-model:value="saveAsPresetDescription"
+            type="textarea"
+            :placeholder="t('profiles.form.descriptionPlaceholder')"
+            :rows="2"
           />
         </div>
         <div class="text-xs text-c-muted">
-          {{ saveAsPresetModIds ? t("library.saveAsPresetHint", { n: saveAsPresetModIds.length }) : t("library.newPresetHint") }}
+          {{ t("library.saveAsPresetHint", { n: enabledMods.length }) }}
         </div>
         <div class="flex justify-end gap-2">
-          <NButton @click="showNewPresetDialog = false">{{ t("common.cancel") }}</NButton>
-          <NButton type="primary" :loading="creatingNewPreset" @click="handleCreateNewPreset">
-            {{ saveAsPresetModIds ? t("common.save") : t("common.confirm") }}
+          <NButton @click="showSaveAsPresetDialog = false">{{ t("common.cancel") }}</NButton>
+          <NButton type="primary" :loading="savingAsPreset" @click="handleSaveAsPreset">
+            {{ t("common.save") }}
           </NButton>
         </div>
       </NSpace>

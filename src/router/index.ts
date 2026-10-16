@@ -14,11 +14,6 @@ const router = createRouter({
       component: () => import("../pages/DiscoverPage.vue"),
     },
     {
-      path: "/profiles",
-      name: "profiles",
-      component: () => import("../pages/ProfilesPage.vue"),
-    },
-    {
       path: "/saves",
       name: "saves",
       component: () => import("../pages/SavesPage.vue"),

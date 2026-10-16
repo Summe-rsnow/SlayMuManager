@@ -1,6 +1,6 @@
 [package]
 name = "slaymumanager"
-version = "1.8.7"
+version = "1.9.0"
 description = "Slay the Spire 2 Mod Manager"
 authors = []
 edition = "2024"
@@ -31,6 +31,7 @@ notify = { version = "8.2.0", default-features = false, features = ["macos_fseve
 lru = "0.18.0"
 rars = "0.1.0"
 steamworks = { version = "0.13.1" }
+parking_lot = "0.12"
 
 [profile.release]
 codegen-units = 16

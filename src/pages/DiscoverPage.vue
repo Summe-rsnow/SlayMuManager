@@ -7,7 +7,7 @@ import { invoke } from "@tauri-apps/api/core"
 import {
   NButton, NInput, NIcon, NSelect, NPopconfirm, useMessage, useDialog,
 } from "naive-ui"
-import { Search, ExternalLink, ThumbsUp, ArrowDown, PackageOpen, RefreshCw, Plus, X } from "@lucide/vue"
+import { Search, ExternalLink, ThumbsUp, ArrowDown, PackageOpen, RefreshCw, Plus, X, Download } from "@lucide/vue"
 import type { RemoteMod, RemoteModSearchResult, AppBootstrap, WorkshopMod, WorkshopSearchResult } from "../types"
 import { useIsActive } from "@/composables/useIsActive"
 import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
@@ -19,6 +19,7 @@ import DiscoverPagination from "@/components/DiscoverPagination.vue"
 import DiscoverCard from "@/components/DiscoverCard.vue"
 import SkeletonDiscoverCard from "@/components/SkeletonDiscoverCard.vue"
 import PageHeader from "@/components/PageHeader.vue"
+import NexusDownloadModal from "@/components/NexusDownloadModal.vue"
 
 defineOptions({ name: "DiscoverPage" })
 
@@ -36,6 +37,19 @@ const { discoverColumns, prefetchEnabled } = storeToRefs(prefStore)
 // --- 预取缓存（Nexus + Workshop 共用泛型 composable）---
 const nexusCache = useSearchPrefetch<RemoteMod>("nx")
 const workshopCache = useSearchPrefetch<WorkshopMod>("ws")
+
+// --- Nexus 模组下载弹窗 ---
+const showDownloadModal = ref(false)
+const downloadModId = ref<number | null>(null)
+const downloadModName = ref("")
+
+function openNexusDownload(mod: RemoteMod) {
+  const idNum = parseInt(mod.remoteId, 10)
+  if (isNaN(idNum)) return
+  downloadModId.value = idNum
+  downloadModName.value = mod.name
+  showDownloadModal.value = true
+}
 
 // --- 发现页列数映射 ---
 const gridColsClass = computed(() => {
@@ -474,10 +488,16 @@ function handleUserRefresh() {
           ]"
         >
           <template #actions>
-            <NButton size="small" secondary class="flex-shrink-0" @click="openModPage(mod.detailUrl)">
-              <template #icon><NIcon :size="13"><ExternalLink /></NIcon></template>
-              {{ t("discover.details") }}
-            </NButton>
+            <div class="flex items-center gap-2 flex-shrink-0">
+              <NButton size="small" type="primary" secondary @click="openNexusDownload(mod)">
+                <template #icon><NIcon :size="13"><Download /></NIcon></template>
+                {{ t("discover.download") }}
+              </NButton>
+              <NButton size="small" secondary @click="openModPage(mod.detailUrl)">
+                <template #icon><NIcon :size="13"><ExternalLink /></NIcon></template>
+                {{ t("discover.details") }}
+              </NButton>
+            </div>
           </template>
         </DiscoverCard>
       </div>
@@ -581,5 +601,12 @@ function handleUserRefresh() {
         @update:page-size="onWorkshopPageSizeChange"
       />
     </div>
+
+    <!-- Nexus 模组下载弹窗 -->
+    <NexusDownloadModal
+      v-model:show="showDownloadModal"
+      :mod-id="downloadModId"
+      :mod-name="downloadModName"
+    />
   </div>
 </template>

@@ -55,8 +55,9 @@
     "openModsDir": "模组目录",
     "newPreset": "新增预设",
     "newPresetHint": "将创建一个空的预设并切换到该预设",
-    "saveAsPreset": "保存为新预设",
-    "saveAsPresetHint": "将保存 {n} 个已启用 Mod 到新预设",
+    "saveAsPreset": "存为预设",
+    "saveAsPresetHint": "将把当前 {n} 个已启用的模组保存为新预设",
+    "managePresets": "预设管理",
     "enableAll": "全部启用",
     "disableAll": "全部禁用",
     "importMod": "导入模组",
@@ -130,6 +131,7 @@
       "toggle": "已{action}「{name}」",
       "uninstalled": "已卸载「{name}」",
       "presetSaved": "预设「{name}」已保存",
+      "savedAsPreset": "已将当前配置存为预设「{name}」并生效",
       "presetApplied": "已应用预设「{name}」",
       "gameLaunched": "游戏已启动",
       "batchEnabled": "已启用 {n} 个 Mod",
@@ -237,6 +239,15 @@
       "title": "Nexus API Key",
       "apiKeyPlaceholder": "输入 Nexus Mods API Key",
       "howToGet": "如何获取？",
+      "user": "账号",
+      "premium": "👑 Premium 会员",
+      "nonPremium": "普通用户",
+      "premiumHint": "已识别 Nexus Premium 会员，已解锁模组一键直链高速下载与自动安装",
+      "nonPremiumHint": "Nexus Mods 官方限制：直链下载需 Premium 会员，非会员支持一键跳转网页下载",
+      "verify": "验证账号",
+      "verifying": "验证中...",
+      "saveSuccess": "已连接 Nexus 账号：{user}",
+      "saveSuccessPremium": "已连接 Nexus Premium 会员账号：{user}，已解锁直链高速下载",
       "help": {
         "step1": "打开 Nexus Mods 官网",
         "step2": "登录你的 Nexus 账号",
@@ -359,6 +370,7 @@
     "jumpToBtn": "前往",
     "unknownAuthor": "未知",
     "details": "详情",
+    "download": "下载",
     "empty": {
       "notFound": "未找到相关 Mod",
       "needsApiKey": "提示：需要先在设置中配置 Nexus Mods API Key",
@@ -380,6 +392,47 @@
       "subscribed": "已订阅",
       "subscribing": "订阅中...",
       "resultCount": "共 {total} 个结果"
+    }
+  },
+
+  "download": {
+    "title": "下载管理",
+    "openFolder": "打开下载目录",
+    "clearCompleted": "清除已完成",
+    "cancelled": "已取消下载",
+    "clearedCompleted": "已清除已完成的任务",
+    "selectFileTitle": "下载模组 - {name}",
+    "nonPremiumNotice": "当前账号为普通用户。根据 Nexus Mods 官方限制，API 直链下载仅对 Premium 会员开放。点击下方文件将自动为您跳转网页快速下载。",
+    "premiumNotice": "👑 Premium 会员加速通道已就绪，点击即可加入后台下载队列并在完成后自动安装至游戏！",
+    "mainFile": "主文件",
+    "directDownload": "直接下载",
+    "webDownload": "网页下载",
+    "tabs": {
+      "active": "正在下载",
+      "completed": "已完成"
+    },
+    "status": {
+      "paused": "已暂停",
+      "downloading": "下载中",
+      "installed": "已自动安装",
+      "notInstalled": "未自动安装",
+      "completed": "已下载"
+    },
+    "empty": {
+      "noActive": "暂无正在下载的任务",
+      "noActiveHint": "前往「发现」页面搜索并下载感兴趣的 Nexus 模组",
+      "noCompleted": "暂无下载历史",
+      "noFiles": "暂无可下载的文件"
+    },
+    "error": {
+      "fetchFilesFailed": "获取模组文件列表失败",
+      "startFailed": "启动下载失败",
+      "pauseFailed": "暂停失败",
+      "resumeFailed": "恢复下载失败",
+      "cancelFailed": "取消失败"
+    },
+    "success": {
+      "addedToQueue": "已加入下载队列"
     }
   },
 
@@ -521,6 +574,8 @@
   "profiles": {
     "title": "预设",
     "subtitle": "Mod 组合预设，一键切换",
+    "manageTitle": "预设管理",
+    "applyBtn": "应用",
     "importBundle": "导入预设",
     "create": "新建预设",
     "builtin": "内置",
@@ -600,6 +655,19 @@
       "ui": "界面",
       "fix": "修复",
       "opt": "优化"
+    },
+    "v1_9_0": {
+      "title": "Nexus 模组下载与预设交互重构",
+      "highlights": [
+        "全新接入 Nexus Mods 会员直链高速下载引擎，并支持下载进度管理与下载后自动解压部署",
+        "预设交互全面升级：彻底移除独立预设页，在模组页直接「存为预设」并在弹窗中统一管理、导入与导出"
+      ],
+      "changes": [
+        "新增 Nexus Mods 模组下载与下载管理面板，支持实时网速显示、暂停、恢复与下载完成后自动安装",
+        "设置页支持 Nexus 账号会员状态智能校验，识别 Premium 会员专属高速下载通道",
+        "预设系统重构：精简左侧主导航，在模组页新增「存为预设」一键保存当前已启用的模组组合",
+        "在模组页新增「预设管理」弹窗，集中提供预设列表切换、编辑、删除以及 7z 整合包导入导出功能"
+      ]
     },
     "v1_8_7": {
       "title": "安装升级体验升级 & 性能优化",

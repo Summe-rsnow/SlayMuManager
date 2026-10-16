@@ -52,3 +52,29 @@ pub fn auto_detect_game_install() -> Vec<(PathBuf, String)> {
 pub fn mods_dir(root: &Path) -> PathBuf {
     root.join("mods")
 }
+
+/// 打开操作系统文件浏览器
+pub fn open_folder(path: &Path) -> Result<(), crate::utils::error::AppError> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(path)
+            .spawn()
+            .map_err(|e| crate::utils::error::AppError::Other(format!("打开文件夹失败: {}", e)))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(path)
+            .spawn()
+            .map_err(|e| crate::utils::error::AppError::Other(format!("打开文件夹失败: {}", e)))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(path)
+            .spawn()
+            .map_err(|e| crate::utils::error::AppError::Other(format!("打开文件夹失败: {}", e)))?;
+    }
+    Ok(())
+}

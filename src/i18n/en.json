@@ -55,8 +55,9 @@
     "openModsDir": "Mods Folder",
     "newPreset": "New Preset",
     "newPresetHint": "Create an empty preset and switch to it",
-    "saveAsPreset": "Save as New Preset",
-    "saveAsPresetHint": "Save {n} enabled mod(s) to a new preset",
+    "saveAsPreset": "Save as Preset",
+    "saveAsPresetHint": "Save {n} currently enabled mod(s) as a new preset",
+    "managePresets": "Manage Presets",
     "enableAll": "Enable All",
     "disableAll": "Disable All",
     "importMod": "Import Mod",
@@ -130,6 +131,7 @@
       "toggle": "{action} \"{name}\"",
       "uninstalled": "Uninstalled \"{name}\"",
       "presetSaved": "Preset \"{name}\" saved",
+      "savedAsPreset": "Saved current setup as preset \"{name}\"",
       "presetApplied": "Applied preset \"{name}\"",
       "gameLaunched": "Game launched",
       "batchEnabled": "Enabled {n} mod(s)",
@@ -237,6 +239,15 @@
       "title": "Nexus API Key",
       "apiKeyPlaceholder": "Enter Nexus Mods API Key",
       "howToGet": "How to get?",
+      "user": "Account",
+      "premium": "👑 Premium Member",
+      "nonPremium": "Free User",
+      "premiumHint": "Nexus Premium detected. In-app direct high-speed download & auto-install unlocked.",
+      "nonPremiumHint": "Nexus Mods policy: Direct API download is restricted to Premium members. Free users can open web download with one click.",
+      "verify": "Verify Account",
+      "verifying": "Verifying...",
+      "saveSuccess": "Connected Nexus account: {user}",
+      "saveSuccessPremium": "Connected Nexus Premium account: {user}. Direct download unlocked!",
       "help": {
         "step1": "Open Nexus Mods website",
         "step2": "Log into your Nexus account",
@@ -359,6 +370,7 @@
     "jumpToBtn": "Go",
     "unknownAuthor": "Unknown",
     "details": "Details",
+    "download": "Download",
     "empty": {
       "notFound": "No mods found",
       "needsApiKey": "Tip: Configure your Nexus Mods API Key in Settings first",
@@ -380,6 +392,47 @@
       "subscribed": "Subscribed",
       "subscribing": "Subscribing...",
       "resultCount": "{total} result(s)"
+    }
+  },
+
+  "download": {
+    "title": "Download Manager",
+    "openFolder": "Open Downloads Folder",
+    "clearCompleted": "Clear Completed",
+    "cancelled": "Download cancelled",
+    "clearedCompleted": "Cleared completed downloads",
+    "selectFileTitle": "Download Mod - {name}",
+    "nonPremiumNotice": "Free user account detected. According to Nexus Mods policy, direct API downloads are only available to Premium members. Click below to open web download.",
+    "premiumNotice": "👑 Premium member high-speed channel ready. Click to queue download and auto-install into game!",
+    "mainFile": "Main File",
+    "directDownload": "Direct Download",
+    "webDownload": "Web Download",
+    "tabs": {
+      "active": "Downloading",
+      "completed": "Completed"
+    },
+    "status": {
+      "paused": "Paused",
+      "downloading": "Downloading",
+      "installed": "Auto-installed",
+      "notInstalled": "Not Installed",
+      "completed": "Downloaded"
+    },
+    "empty": {
+      "noActive": "No active downloads",
+      "noActiveHint": "Explore and download mods from the Discover page",
+      "noCompleted": "No download history",
+      "noFiles": "No downloadable files found"
+    },
+    "error": {
+      "fetchFilesFailed": "Failed to fetch mod files",
+      "startFailed": "Failed to start download",
+      "pauseFailed": "Failed to pause download",
+      "resumeFailed": "Failed to resume download",
+      "cancelFailed": "Failed to cancel download"
+    },
+    "success": {
+      "addedToQueue": "Added to download queue"
     }
   },
 
@@ -521,6 +574,8 @@
   "profiles": {
     "title": "Profiles",
     "subtitle": "Switch mod combinations with one click",
+    "manageTitle": "Preset Management",
+    "applyBtn": "Apply",
     "importBundle": "Import Preset",
     "create": "New Preset",
     "builtin": "Built-in",
@@ -600,6 +655,19 @@
       "ui": "UI",
       "fix": "Fix",
       "opt": "Optimized"
+    },
+    "v1_9_0": {
+      "title": "Nexus Mods Downloader & In-Library Preset Management",
+      "highlights": [
+        "Integrated high-speed Nexus Mods downloader with download manager and automatic post-download installation",
+        "Streamlined preset workflow: removed dedicated preset page; manage, save, import and export presets directly inside Library"
+      ],
+      "changes": [
+        "Added Nexus Mods download and download manager with progress tracking, speed calculation, pause/resume, and auto-installation",
+        "Added Nexus account and Premium status verification in Settings to unlock direct high-speed downloads",
+        "Refactored presets: streamlined side navigation and added \"Save as Preset\" in Library to snapshot enabled mods",
+        "Added \"Preset Management\" modal in Library for switching, editing, deleting, and importing/exporting preset bundles"
+      ]
     },
     "v1_8_7": {
       "title": "Installer Experience Upgrade & Performance Improvements",

@@ -8,12 +8,13 @@ import {
   NButton,
   NIcon,
   NCheckbox,
+  NBadge,
   zhCN,
   dateZhCN,
   enUS,
   dateEnUS,
 } from "naive-ui"
-import { Minus, Square, X, PackageOpen } from "@lucide/vue"
+import { Minus, Square, X, PackageOpen, Download } from "@lucide/vue"
 import { currentLocale } from "./i18n"
 import { naiveTheme, naiveThemeOverrides, effectiveIsDark } from "./theme"
 import { minimizeWindow, toggleMaximizeWindow, closeWindow } from "./utils/window"
@@ -24,7 +25,9 @@ import { version as APP_VERSION } from "@/../package.json"
 import SideNav from "./components/SideNav.vue"
 import AppDialog from "./components/AppDialog.vue"
 import ReleaseNotesDialog from "./components/ReleaseNotesDialog.vue"
+import DownloadDrawer from "./components/DownloadDrawer.vue"
 import { useReleaseNotes } from "./composables/useReleaseNotes"
+import { useDownloadStore } from "@/stores/useDownloadStore"
 import { useRoute, useRouter } from "vue-router"
 import { useBackgroundStore } from "@/stores/useBackgroundStore"
 import { storeToRefs } from "pinia"
@@ -36,6 +39,7 @@ const router = useRouter()
 const defaultPage = useStorage<string>("slaymgr:default-page", "")
 
 const bgStore = useBackgroundStore()
+const downloadStore = useDownloadStore()
 const { customBgUrl, customBgBlur, customBgDim } = storeToRefs(bgStore)
 
 const {
@@ -46,6 +50,7 @@ const {
 onMounted(() => {
   bgStore.loadCustomBackground()
   checkReleaseNotesOnStartup()
+  downloadStore.initListeners()
 })
 
 // 自动更新检查
@@ -198,6 +203,20 @@ const close = closeWindow
                 </div>
               </div>
               <div class="flex items-center -mr-2 h-full">
+                <NButton
+                  text
+                  class="titlebar-btn h-full! px-2.5 rounded-none! text-c-muted relative"
+                  :title="t('download.title')"
+                  @click="downloadStore.showDrawer = true"
+                >
+                  <template #icon>
+                    <NBadge :value="downloadStore.activeDownloads.length" :max="99" :show="downloadStore.activeDownloads.length > 0">
+                      <NIcon :size="16" :class="downloadStore.activeDownloads.length > 0 ? 'text-primary-theme animate-bounce' : ''">
+                        <Download />
+                      </NIcon>
+                    </NBadge>
+                  </template>
+                </NButton>
                 <NButton text class="titlebar-btn h-full! w-11! rounded-none! text-c-muted" @click="minimize">
                   <template #icon><NIcon :size="15"><Minus /></NIcon></template>
                 </NButton>
@@ -273,6 +292,9 @@ const close = closeWindow
 
             <!-- 版本更新日志弹窗 -->
             <ReleaseNotesDialog v-model:show="showReleaseNotes" />
+
+            <!-- 下载管理抽屉 -->
+            <DownloadDrawer v-model:show="downloadStore.showDrawer" />
           </div>
         </NDialogProvider>
       </NMessageProvider>

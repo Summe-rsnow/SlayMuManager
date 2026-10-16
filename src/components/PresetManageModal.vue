@@ -1,27 +1,38 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from "vue"
+import { ref, computed, onMounted, watch } from "vue"
 import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { getCurrentWebview } from "@tauri-apps/api/webview"
 import {
   NCard, NButton, NTag, NIcon, NSpace, NInput,
   NCheckbox, useMessage,
 } from "naive-ui"
 import {
-  Plus, FolderHeart, Edit3, Trash2, Play, Download, Search,
+  Plus, FolderHeart, Edit3, Trash2, Play, Download, Search, Sparkles,
 } from "@lucide/vue"
-import type { AppBootstrap, ModProfile, ApplyProfileResult, BundlePreview, ConflictResolution, InstalledMod } from "../types"
-import { useIsActive } from "@/composables/useIsActive"
+import type {
+  ModProfile,
+  ApplyProfileResult,
+  BundlePreview,
+  ConflictResolution,
+  InstalledMod,
+} from "@/types"
 import { useSidebarStore } from "@/stores/useSidebarStore"
 import { useExportStore } from "@/stores/useExportStore"
 import EmptyState from "@/components/EmptyState.vue"
-import DragOverlay from "@/components/DragOverlay.vue"
 import AppDialog from "@/components/AppDialog.vue"
-import PageHeader from "@/components/PageHeader.vue"
 import ConfirmBtn from "@/components/ConfirmBtn.vue"
 import LoadingOverlay from "@/components/LoadingOverlay.vue"
 import FloatingTip from "@/components/FloatingTip.vue"
+
+const props = defineProps<{
+  show: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: "update:show", v: boolean): void
+  (e: "applied", profile: ModProfile): void
+}>()
 
 const { t } = useI18n()
 const message = useMessage()
@@ -30,14 +41,13 @@ const message = useMessage()
 const profiles = ref<ModProfile[]>([])
 const sidebarStore = useSidebarStore()
 const { activePresetName, presetAppliedTick } = storeToRefs(sidebarStore)
+const { loadQuickPresets } = sidebarStore
+
 const showCreateDialog = ref(false)
 const showApplyDialog = ref(false)
 const showImportDialog = ref(false)
 const applyResult = ref<ApplyProfileResult | null>(null)
 const loading = ref(false)
-
-// --- 组件生命周期守卫 ---
-const { isActive } = useIsActive()
 
 // 创建/编辑表单
 const editingId = ref<string | null>(null)
@@ -70,13 +80,11 @@ async function loadInstalledMods() {
       invoke<InstalledMod[]>("list_installed_mods"),
       invoke<InstalledMod[]>("list_disabled_mods"),
     ])
-    if (!isActive.value) return
     installedMods.value = [...enabled, ...disabled]
   } catch {
-    if (!isActive.value) return
     installedMods.value = []
   } finally {
-    if (isActive.value) loadingMods.value = false
+    loadingMods.value = false
   }
 }
 
@@ -90,12 +98,10 @@ function toggleModSelection(modId: string, checked: boolean) {
   }
 }
 
-/** 全选（含工坊 mod 保持不变） */
 function selectAllMods() {
   selectedModIds.value = filteredModsForPicker.value.map(m => m.id)
 }
 
-/** 取消全选（工坊 mod 始终选中，不可取消） */
 function deselectAllMods() {
   selectedModIds.value = filteredModsForPicker.value
     .filter(m => m.source === "workshop")
@@ -110,24 +116,19 @@ const bundlePath = ref("")
 const bundlePreview = ref<BundlePreview | null>(null)
 const bundleResolutions = ref<Record<string, ConflictResolution>>({})
 
-// --- 计算 ---
 const formTitle = computed(() =>
   editingId.value ? t("profiles.form.editTitle") : t("profiles.form.createTitle"),
 )
 
-// --- 加载 ---
 async function loadProfiles() {
   try {
     const result = await invoke<ModProfile[]>("list_profiles")
-    if (!isActive.value) return
     profiles.value = result
   } catch (e: unknown) {
-    if (!isActive.value) return
     message.error(`${t("profiles.error.loadFailed")}: ${String(e)}`)
   }
 }
 
-// --- CRUD ---
 function openCreate() {
   editingId.value = null
   formName.value = ""
@@ -165,7 +166,6 @@ async function handleSave() {
         description: formDescription.value.trim() || null,
         modIds: ids,
       })
-      if (!isActive.value) return
       message.success(t("profiles.success.updated"))
     } else {
       await invoke("create_profile", {
@@ -173,16 +173,15 @@ async function handleSave() {
         description: formDescription.value.trim() || null,
         modIds: ids,
       })
-      if (!isActive.value) return
       message.success(t("profiles.success.created"))
     }
     showCreateDialog.value = false
     await loadProfiles()
+    loadQuickPresets()
   } catch (e: unknown) {
-    if (!isActive.value) return
     message.error(`${t("profiles.error.saveFailed")}: ${String(e)}`)
   } finally {
-    if (isActive.value) loading.value = false
+    loading.value = false
   }
 }
 
@@ -191,30 +190,29 @@ async function handleDelete(profile: ModProfile) {
     await invoke("delete_profile", { id: profile.id })
     message.success(t("profiles.success.deleted", { name: profile.name }))
     await loadProfiles()
+    loadQuickPresets()
   } catch (e: unknown) {
     message.error(`${t("profiles.error.deleteFailed")}: ${String(e)}`)
   }
 }
 
-// --- 应用预设 ---
 async function handleApply(profile: ModProfile) {
   loading.value = true
   try {
     applyResult.value = await invoke<ApplyProfileResult>("apply_profile", { id: profile.id })
-    if (!isActive.value) return
     activePresetName.value = applyResult.value.profile.name
     showApplyDialog.value = true
     await loadProfiles()
     presetAppliedTick.value++
+    loadQuickPresets()
+    emit("applied", profile)
   } catch (e: unknown) {
-    if (!isActive.value) return
     message.error(`${t("profiles.error.applyFailed")}: ${String(e)}`)
   } finally {
-    if (isActive.value) loading.value = false
+    loading.value = false
   }
 }
 
-// --- 导出 ---
 async function handleExport(profile: ModProfile) {
   try {
     const path = await invoke<string | null>("pick_save_bundle_path", {
@@ -235,7 +233,6 @@ async function handleExport(profile: ModProfile) {
   }
 }
 
-// --- 导入 ---
 async function startImport() {
   try {
     const path = await invoke<string | null>("pick_preset_bundle")
@@ -246,10 +243,11 @@ async function startImport() {
     bundlePreview.value = await invoke<BundlePreview>("preview_preset_bundle", {
       bundlePath: path,
     })
-    // 默认冲突跳过
+    const resolutions: Record<string, ConflictResolution> = {}
     for (const c of bundlePreview.value.conflicts) {
-      bundleResolutions.value[c.modId] = "skip"
+      resolutions[c.modId] = "skip"
     }
+    bundleResolutions.value = resolutions
     showImportDialog.value = true
   } catch (e: unknown) {
     message.error(`${t("profiles.error.importPreviewFailed")}: ${String(e)}`)
@@ -272,6 +270,9 @@ async function confirmImport() {
     message.success(t("profiles.success.bundleImported", { n: result.enabledModIds.length }))
     activePresetName.value = result.profile.name
     await loadProfiles()
+    loadQuickPresets()
+    presetAppliedTick.value++
+    emit("applied", result.profile)
   } catch (e: unknown) {
     message.error(`${t("profiles.error.importFailed")}: ${String(e)}`)
   } finally {
@@ -279,135 +280,129 @@ async function confirmImport() {
   }
 }
 
-// --- 拖拽导入预设 ---
-let unlistenDragDrop: (() => void) | null = null
-
-async function setupDragDrop() {
-  const webview = getCurrentWebview()
-  unlistenDragDrop = await webview.onDragDropEvent((event) => {
-    if (event.payload.type !== "drop") return
-    if (showImportDialog.value) return
-    const paths = event.payload.paths
-    const presetPath = paths.find((p: string) => p.toLowerCase().endsWith(".7z"))
-    if (!presetPath) return
-    handleDropPreset(presetPath)
-  })
-}
-
-async function handleDropPreset(path: string) {
-  try {
-    bundlePath.value = path
-    loading.value = true
-    bundlePreview.value = await invoke<BundlePreview>("preview_preset_bundle", {
-      bundlePath: path,
-    })
-    // 默认冲突跳过
-    const resolutions: Record<string, ConflictResolution> = {}
-    for (const c of bundlePreview.value.conflicts) {
-      resolutions[c.modId] = "skip"
-    }
-    bundleResolutions.value = resolutions
-    showImportDialog.value = true
-  } catch (e: unknown) {
-    message.error(`${t("profiles.error.importPreviewFailed")}: ${String(e)}`)
-  } finally {
-    loading.value = false
+watch(() => props.show, (val) => {
+  if (val) {
+    loadProfiles()
   }
-}
-
-onMounted(async () => {
-  await loadProfiles()
-  try {
-    const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
-    activePresetName.value = bootstrap.activeProfileName || ""
-  } catch { /* ignore */ }
-  setupDragDrop()
 })
 
-onUnmounted(() => {
-  unlistenDragDrop?.()
-})
-
-// 侧边栏切换预设后自动刷新
-watch(presetAppliedTick, () => {
-  loadProfiles()
+onMounted(() => {
+  if (props.show) {
+    loadProfiles()
+  }
 })
 </script>
 
 <template>
-  <div>
-    <!-- 头部 -->
-    <PageHeader :title="t('profiles.title')" :subtitle="t('profiles.subtitle')">
-      <NButton secondary @click="startImport">
-        <template #icon><NIcon :size="16"><Download /></NIcon></template>
-        {{ t("profiles.importBundle") }}
-      </NButton>
-      <NButton type="primary" @click="openCreate">
-        <template #icon><NIcon :size="16"><Plus /></NIcon></template>
-        {{ t("profiles.create") }}
-      </NButton>
-    </PageHeader>
+  <AppDialog
+    :show="show"
+    width="760px"
+    @update:show="(v: boolean) => emit('update:show', v)"
+  >
+    <template #header>
+      <div class="flex items-center justify-between w-full pr-6">
+        <div class="flex items-center gap-2">
+          <NIcon :size="20" class="text-primary-theme"><FolderHeart /></NIcon>
+          <span class="text-base font-bold text-c-primary">{{ t("profiles.manageTitle") }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <NButton size="small" secondary @click="startImport">
+            <template #icon><NIcon :size="14"><Download /></NIcon></template>
+            {{ t("profiles.importBundle") }}
+          </NButton>
+          <NButton size="small" type="primary" @click="openCreate">
+            <template #icon><NIcon :size="14"><Plus /></NIcon></template>
+            {{ t("profiles.create") }}
+          </NButton>
+        </div>
+      </div>
+    </template>
 
-    <!-- 预设列表 -->
-    <Transition name="preset-fade" mode="out-in">
-      <div :key="presetAppliedTick">
-        <div v-if="profiles.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-fr">
-          <NCard
-            v-for="p in profiles"
-            :key="p.id"
-            size="small"
-            class="profile-card cursor-pointer"
-          >
-            <div class="flex items-start">
-              <div class="flex-1 min-w-0">
-                <!-- 名称 + 标签 -->
-                <div class="flex items-center gap-2 flex-wrap">
-                  <NIcon :size="16" :color="p.builtin ? 'var(--primary-500)' : 'var(--primary-color)'"><FolderHeart /></NIcon>
-                  <span class="font-semibold text-c-primary truncate">{{ p.name }}</span>
-                  <NTag v-if="p.builtin" type="success" size="tiny" :bordered="false">
-                    {{ t("profiles.builtin") }}
-                  </NTag>
-                  <NTag v-if="p.name === activePresetName" type="info" size="tiny" :bordered="false">
-                    {{ t("profiles.active") }}
-                  </NTag>
-                </div>
-
-                <!-- 描述区域（固定高度，无描述时显示占位文字） -->
-                <div style="height: 2.25rem" class="mt-1 mb-0.5">
-                  <FloatingTip v-if="p.description" :text="p.description" truncated :max-lines="2" />
-                  <p v-else class="text-xs text-c-muted leading-5">{{ t("profiles.noDescription") }}</p>
-                </div>
-
-                <!-- Mod 数量 -->
-                <div class="h-6 flex items-center">
-                  <NTag size="small" :bordered="false">
-                    {{ t("profiles.modCount", { n: p.modIds.length }) }}
-                  </NTag>
-                </div>
+    <div class="max-h-[68vh] overflow-y-auto pr-1">
+      <div v-if="profiles.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <NCard
+          v-for="p in profiles"
+          :key="p.id"
+          size="small"
+          class="preset-item-card transition-all duration-200"
+          :class="p.name === activePresetName ? 'border-primary-theme/50 bg-primary-theme/5' : ''"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <NIcon :size="16" :class="p.builtin ? 'text-primary-theme' : 'text-primary-theme'"><FolderHeart /></NIcon>
+                <span class="font-semibold text-sm text-c-primary truncate">{{ p.name }}</span>
+                <NTag v-if="p.builtin" type="success" size="tiny" :bordered="false">
+                  {{ t("profiles.builtin") }}
+                </NTag>
+                <NTag v-if="p.name === activePresetName" type="info" size="tiny" :bordered="false">
+                  <template #icon><NIcon :size="10"><Sparkles /></NIcon></template>
+                  {{ t("profiles.active") }}
+                </NTag>
               </div>
 
-              <!-- 右侧操作按钮 -->
-              <NSpace :size="4" class="ml-3 flex-shrink-0">
-                <NButton text size="tiny" @click="() => handleApply(p)">
-                  <template #icon><NIcon :size="14"><Play /></NIcon></template>
-                </NButton>
-                <NButton v-if="!p.builtin" text size="tiny" :loading="exportingId === p.id" @click="() => handleExport(p)">
-                  <template #icon><NIcon :size="14"><Download /></NIcon></template>
-                </NButton>
-                <NButton v-if="!p.builtin" text size="tiny" @click="() => openEdit(p)">
-                  <template #icon><NIcon :size="14"><Edit3 /></NIcon></template>
-                </NButton>
-                <ConfirmBtn v-if="!p.builtin" :icon="Trash2" :confirmText="t('profiles.confirmDelete', { name: p.name })" @confirm="handleDelete(p)" />
-              </NSpace>
+              <div class="mt-1 mb-1 text-xs min-h-[1.5rem]">
+                <FloatingTip v-if="p.description" :text="p.description" truncated :max-lines="2" />
+                <span v-else class="text-c-muted">{{ t("profiles.noDescription") }}</span>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <NTag size="tiny" :bordered="false">
+                  {{ t("profiles.modCount", { n: p.modIds.length }) }}
+                </NTag>
+              </div>
             </div>
-          </NCard>
-        </div>
 
-        <EmptyState v-else :icon="FolderHeart" :title="t('profiles.empty.noProfiles')" :description="t('profiles.empty.noProfilesHint')" bordered />
+            <NSpace :size="2" class="flex-shrink-0">
+              <NButton
+                secondary
+                size="tiny"
+                :type="p.name === activePresetName ? 'default' : 'primary'"
+                @click="() => handleApply(p)"
+              >
+                <template #icon><NIcon :size="12"><Play /></NIcon></template>
+                {{ t("profiles.applyBtn") }}
+              </NButton>
+              <NButton
+                v-if="!p.builtin"
+                secondary
+                size="tiny"
+                :loading="exportingId === p.id"
+                @click="() => handleExport(p)"
+              >
+                <template #icon><NIcon :size="12"><Download /></NIcon></template>
+              </NButton>
+              <NButton
+                v-if="!p.builtin"
+                secondary
+                size="tiny"
+                @click="() => openEdit(p)"
+              >
+                <template #icon><NIcon :size="12"><Edit3 /></NIcon></template>
+              </NButton>
+              <ConfirmBtn
+                v-if="!p.builtin"
+                size="tiny"
+                secondary
+                :icon="Trash2"
+                :confirmText="t('profiles.confirmDelete', { name: p.name })"
+                @confirm="handleDelete(p)"
+              />
+            </NSpace>
+          </div>
+        </NCard>
       </div>
-    </Transition>
 
-    <!-- 创建/编辑对话框 -->
+      <EmptyState
+        v-else
+        :icon="FolderHeart"
+        :title="t('profiles.empty.noProfiles')"
+        :description="t('profiles.empty.noProfilesHint')"
+        bordered
+      />
+    </div>
+
+    <!-- 创建/编辑预设对话框 -->
     <AppDialog v-model:show="showCreateDialog" :title="formTitle" width="520px">
       <NSpace vertical :size="12">
         <div>
@@ -441,7 +436,7 @@ watch(presetAppliedTick, () => {
             <template #prefix><NIcon :size="14"><Search /></NIcon></template>
           </NInput>
 
-          <div class="max-h-60 overflow-y-auto border border-c-default rounded-lg p-2 space-y-1">
+          <div class="max-h-56 overflow-y-auto border border-c-default rounded-lg p-2 space-y-1">
             <div v-if="loadingMods" class="text-center py-4 text-xs text-c-muted">
               {{ t("profiles.form.loadingMods") }}
             </div>
@@ -490,9 +485,9 @@ watch(presetAppliedTick, () => {
     </AppDialog>
 
     <!-- 应用结果对话框 -->
-    <AppDialog v-if="applyResult" v-model:show="showApplyDialog" width="480px">
+    <AppDialog v-if="applyResult" v-model:show="showApplyDialog" width="460px">
       <template #header>
-        <span class="text-lg font-semibold">
+        <span class="text-base font-semibold">
           {{ t("profiles.apply.applied", { name: applyResult.profile.name }) }}
         </span>
       </template>
@@ -511,30 +506,27 @@ watch(presetAppliedTick, () => {
         </div>
       </NSpace>
       <template #footer>
-        <NButton type="primary" @click="showApplyDialog = false">
-          {{ t("profiles.apply.ok") }}
-        </NButton>
+        <div class="flex justify-end">
+          <NButton type="primary" size="small" @click="showApplyDialog = false">
+            {{ t("profiles.apply.ok") }}
+          </NButton>
+        </div>
       </template>
     </AppDialog>
-
-    <!-- 分析导入文件时的加载遮罩 -->
-    <LoadingOverlay :loading="loading && !showImportDialog" :text="t('common.loading')" />
 
     <!-- 导入预设对话框 -->
     <AppDialog v-if="bundlePreview" v-model:show="showImportDialog" width="560px">
       <template #header>
-        <span class="text-lg font-semibold">
+        <span class="text-base font-semibold">
           {{ t("profiles.importDialog.title", { name: bundlePreview.manifest.profile.name }) }}
         </span>
       </template>
 
-      <div class="mb-3">
-        <span class="text-sm text-c-secondary">
-          {{ t("profiles.importDialog.summary", {
-            n1: bundlePreview.manifest.mods.length,
-            n2: bundlePreview.manifest.profile.modIds.length,
-          }) }}
-        </span>
+      <div class="mb-3 text-sm text-c-secondary">
+        {{ t("profiles.importDialog.summary", {
+          n1: bundlePreview.manifest.mods.length,
+          n2: bundlePreview.manifest.profile.modIds.length,
+        }) }}
       </div>
 
       <div
@@ -573,26 +565,17 @@ watch(presetAppliedTick, () => {
       </template>
     </AppDialog>
 
-    <!-- 拖拽导入遮罩 -->
-    <DragOverlay
-      :accept-ext="['7z']"
-      title="松开以导入预设"
-      subtitle="拖放 .7z 预设整合包到此处"
-    />
-  </div>
+    <LoadingOverlay :loading="loading && !showImportDialog" :text="t('common.loading')" />
+  </AppDialog>
 </template>
 
 <style scoped>
-.profile-card {
+.preset-item-card {
   background-color: var(--glass-surface-bg) !important;
-  -webkit-backdrop-filter: blur(var(--glass-surface-blur));
-  backdrop-filter: blur(var(--glass-surface-blur));
-  --n-border-color: var(--glass-surface-border) !important;
-  box-shadow: var(--shadow-glass-surface) !important;
+  border-color: var(--glass-surface-border) !important;
 }
-.profile-card:hover {
+.preset-item-card:hover {
   background-color: var(--glass-surface-bg-hover) !important;
   box-shadow: var(--shadow-glow) !important;
-  border-color: color-mix(in srgb, var(--primary-color) 35%, var(--glass-surface-border)) !important;
 }
 </style>

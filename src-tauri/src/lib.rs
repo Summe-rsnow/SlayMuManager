@@ -111,8 +111,19 @@ pub fn run() {
             app::commands::search_workshop,
             app::commands::subscribe_workshop_mod,
             app::commands::unsubscribe_workshop_mod,
-            // 5.11 设置
+            // 5.11 设置与 Nexus
             app::commands::update_nexus_api_key,
+            app::commands::validate_nexus_api_key,
+            app::commands::get_nexus_mod_files,
+            app::commands::get_nexus_download_link,
+            // 5.11.x 下载管理
+            app::commands::start_nexus_download,
+            app::commands::pause_download,
+            app::commands::resume_download,
+            app::commands::cancel_download,
+            app::commands::get_download_tasks,
+            app::commands::clear_completed_downloads,
+            app::commands::open_downloads_folder,
             app::commands::update_proxy_url,
             app::commands::test_proxy,
             app::commands::update_auto_backup_keep_count,
