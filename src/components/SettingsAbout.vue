@@ -6,11 +6,10 @@ import { Button, FormRow } from "@miuui/vue"
 import { Sparkles } from "@lucide/vue"
 import { version as APP_VERSION } from "@/../package.json"
 import SettingsSection from "./SettingsSection.vue"
-import ReleaseNotesDialog from "./ReleaseNotesDialog.vue"
 import { useReleaseNotes } from "@/composables/useReleaseNotes"
 
 const { t } = useI18n()
-const { showReleaseNotes, openReleaseNotes } = useReleaseNotes()
+const { openReleaseNotes } = useReleaseNotes()
 
 const updateStatus = ref<"idle" | "checking" | "uptodate" | "available">("idle")
 const latestVersion = ref("")
@@ -149,7 +148,5 @@ async function checkForUpdate() {
         </Button>
       </div>
     </FormRow>
-
-    <ReleaseNotesDialog v-model:show="showReleaseNotes" />
   </SettingsSection>
 </template>

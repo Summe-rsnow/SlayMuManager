@@ -7,7 +7,7 @@
     "title": "New Version Available",
     "available": "New Version Available",
     "latestVersion": "Latest Version",
-    "currentVersion": "Current Version",
+    "currentVersion": "Current v{v}",
     "github": "GitHub",
     "downloadNetdisk": "Cloud Drive",
     "later": "Remind Me Later",
@@ -686,15 +686,28 @@
       "fix": "Fix",
       "opt": "Optimized"
     },
+    "v1_10_1": {
+      "title": "Fix Release Notes & Update Dialog Rendering, Tooltip Scrollbar & Drawer Backdrop",
+      "highlights": [
+        "Fixed a vue-i18n compilation error in release notes strings that broke dialog rendering, restoring both startup release notes and update prompt dialogs",
+        "Unified Dialog and Drawer backdrop blur overlays and eliminated false scrollbars on short tooltips"
+      ],
+      "changes": [
+        "Fixed vue-i18n linked-message syntax conflict in v1.10.0 release notes and removed duplicate ReleaseNotesDialog instance in SettingsAbout",
+        "Restored current version display in the app update prompt dialog",
+        "Fixed short Tooltips displaying an unnecessary vertical scrollbar caused by arrow placement",
+        "Unified Drawer and Dialog backdrop blur overlays to match Dialog specs"
+      ]
+    },
     "v1_10_0": {
       "title": "Full μui Design System Migration, Unified Motion & Dynamic Wallpaper Theme",
       "highlights": [
-        "Migrated the entire UI to the @miuui design system and OKLCH semantic token architecture, removing legacy wrappers and duplicate CSS",
+        "Migrated the entire UI to the μui design system and OKLCH semantic token architecture, removing legacy wrappers and duplicate CSS",
         "Unified spring motion language across all controls with sliding indicators, card glow lift, and consistent feedback even when Windows disables system animations",
         "Upgraded custom wallpaper cropping to export transparent padding that adapts dynamically to light/dark themes, alongside updated frontend and Rust dependencies"
       ],
       "changes": [
-        "Adopted @miuui/vue, @miuui/tokens, and @miuui/materials across AppBar, SideNav, cards, dialogs, drawers, switches, selects, pagination, tooltips, and skeletons",
+        "Adopted miuui/vue, miuui/tokens, and miuui/materials across AppBar, SideNav, cards, dialogs, drawers, switches, selects, pagination, tooltips, and skeletons",
         "Unified spring interaction motion across all components, adding card hover glow/lift, overlay transitions, and subtle empty-state floating motion",
         "Upgraded custom wallpaper cropping to export transparent margins and dynamically follow active light/dark theme gradients in preview and app background",
         "Streamlined global styles and removed 8 obsolete local wrapper components while polishing Library, Discover, Saves, and Settings layouts",
