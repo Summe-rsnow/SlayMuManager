@@ -21,7 +21,7 @@ function compareVersions(a: string, b: string): number {
 }
 
 /** GitHub 仓库信息 */
-const GITHUB_REPO = "xcmm1543/SlayMuManager"
+const GITHUB_REPO = "Summe-rsnow/SlayMuManager"
 const NETDISK_URL = "https://pan.quark.cn/s/3bd89f2513a8"
 
 export function useAppUpdateCheck() {
