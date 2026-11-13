@@ -2,6 +2,7 @@
 import { watch, nextTick } from "vue"
 import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
+import { PageHeader } from "@miuui/vue"
 import { useHighlightStore } from "@/stores/useHighlightStore"
 import SettingsGamePath from "@/components/SettingsGamePath.vue"
 import SettingsLaunch from "@/components/SettingsLaunch.vue"
@@ -12,7 +13,6 @@ import SettingsDiscover from "@/components/SettingsDiscover.vue"
 import SettingsBackup from "@/components/SettingsBackup.vue"
 import SettingsAbout from "@/components/SettingsAbout.vue"
 import SettingsLaunchGame from "@/components/SettingsLaunchGame.vue"
-import PageHeader from "@/components/PageHeader.vue"
 
 const { t } = useI18n()
 const highlightStore = useHighlightStore()
@@ -34,7 +34,7 @@ watch(highlightedSetting, (val) => {
 
 <template>
   <div>
-    <PageHeader :title="t('settings.title')" :subtitle="t('settings.subtitle')" />
+    <PageHeader :title="t('settings.title')" :description="t('settings.subtitle')" class="mb-5" />
 
     <div class="max-w-2xl mx-auto flex flex-col gap-6">
       <SettingsGamePath />

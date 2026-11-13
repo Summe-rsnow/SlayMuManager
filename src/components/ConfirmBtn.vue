@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from "vue"
-import { NButton, NIcon, NPopconfirm } from "naive-ui"
+import { Button, Popconfirm } from "@miuui/vue"
 import FloatingTip from "./FloatingTip.vue"
 
 defineProps<{
@@ -19,37 +19,44 @@ const emit = defineEmits<{
 
 <template>
   <FloatingTip v-if="tip" :text="tip">
-    <NPopconfirm @positive-click="emit('confirm')">
+    <Popconfirm
+      :title="confirmText"
+      :danger="!type || type === 'error'"
+      material="glass"
+      @confirm="emit('confirm')"
+    >
       <template #trigger>
-        <NButton
-          text
-          :size="(size ?? 'tiny') as any"
-          :type="(type as any) ?? 'error'"
+        <Button
+          variant="ghost"
+          size="xs"
+          icon-only
+          :aria-label="tip"
           :disabled="disabled"
-          class="transition-transform duration-150 active:scale-90"
+          class="text-red-500 hover:text-red-600 transition-transform duration-150 active:scale-90"
         >
-          <template #icon
-            ><NIcon :size="14"><component :is="icon" /></NIcon
-          ></template>
-        </NButton>
+          <component :is="icon" :size="14" />
+        </Button>
       </template>
-      <slot name="confirm-content">{{ confirmText }}</slot>
-    </NPopconfirm>
+    </Popconfirm>
   </FloatingTip>
-  <NPopconfirm v-else @positive-click="emit('confirm')">
+  <Popconfirm
+    v-else
+    :title="confirmText"
+    :danger="!type || type === 'error'"
+    material="glass"
+    @confirm="emit('confirm')"
+  >
     <template #trigger>
-      <NButton
-        text
-        :size="(size ?? 'tiny') as any"
-        :type="(type as any) ?? 'error'"
+      <Button
+        variant="ghost"
+        size="xs"
+        icon-only
+        :aria-label="confirmText"
         :disabled="disabled"
-        class="transition-transform duration-150 active:scale-90"
+        class="text-red-500 hover:text-red-600 transition-transform duration-150 active:scale-90"
       >
-        <template #icon
-          ><NIcon :size="14"><component :is="icon" /></NIcon
-        ></template>
-      </NButton>
+        <component :is="icon" :size="14" />
+      </Button>
     </template>
-    <slot name="confirm-content">{{ confirmText }}</slot>
-  </NPopconfirm>
+  </Popconfirm>
 </template>

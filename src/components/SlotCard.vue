@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n"
-import { NTag, NButton, NIcon, NSpace, NPopconfirm } from "naive-ui"
-import { Clock, Upload, Database, Trash2, ShieldAlert } from "@lucide/vue"
+import { Badge, Button, Card, Popconfirm } from "@miuui/vue"
+import { Clock, Upload, Database, Trash2 } from "@lucide/vue"
 import { currentLocale } from "@/i18n"
 import type { SaveSlot } from "../types"
 import { kindLabel } from "@/utils/kindLabel"
@@ -20,20 +20,12 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div
-    :class="
-      slot.hasData
-        ? 'glass-surface p-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5'
-        : 'p-2 rounded-xl border border-dashed border-c-default bg-c-secondary/40 backdrop-blur-sm transition-all duration-200'
-    "
-    :style="slot.hasData ? { boxShadow: 'var(--shadow-glass-surface)' } : {}"
-    @mouseenter="
-      slot.hasData && (($event.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-glow)')
-    "
-    @mouseleave="
-      slot.hasData &&
-      (($event.currentTarget as HTMLElement).style.boxShadow = 'var(--shadow-glass-surface)')
-    "
+  <Card
+    :variant="slot.hasData ? 'surface' : 'outline'"
+    :material="slot.hasData ? 'glass' : undefined"
+    :interactive="slot.hasData"
+    padding="sm"
+    :class="slot.hasData ? '' : 'border-dashed opacity-85'"
   >
     <div
       :class="
@@ -45,18 +37,18 @@ const { t } = useI18n()
       <span class="font-medium text-sm text-c-primary">
         {{ t("saves.slotIndex", { i: slot.slotIndex }) }}
       </span>
-      <NSpace :size="4">
-        <NTag v-if="slot.hasCurrentRun" type="warning" size="tiny" :bordered="false">
+      <div class="flex items-center gap-1">
+        <Badge v-if="slot.hasCurrentRun" variant="warning" size="xs">
           {{ t("saves.currentRun") }}
-        </NTag>
-        <NTag :type="slot.hasData ? 'success' : 'default'" size="tiny" :bordered="false">
+        </Badge>
+        <Badge :variant="slot.hasData ? 'success' : 'neutral'" size="xs">
           {{ slot.hasData ? t("saves.fileCount", { n: slot.fileCount }) : t("saves.empty.empty") }}
-        </NTag>
-      </NSpace>
+        </Badge>
+      </div>
     </div>
 
     <div v-if="slot.hasData" class="flex items-center gap-1 text-xs text-c-muted mb-2">
-      <NIcon :size="12"><Clock /></NIcon>
+      <Clock :size="12" />
       {{
         slot.lastModifiedAt
           ? new Date(slot.lastModifiedAt).toLocaleString(currentLocale)
@@ -66,42 +58,28 @@ const { t } = useI18n()
 
     <!-- 操作按钮行 -->
     <div v-if="slot.hasData" class="flex items-center gap-1 flex-wrap">
-      <NButton size="tiny" secondary @click="emit('backup', slot)">
-        <template #icon
-          ><NIcon :size="12"><Database /></NIcon
-        ></template>
+      <Button size="xs" variant="secondary" @click="emit('backup', slot)">
+        <template #icon><Database :size="12" /></template>
         {{ t("saves.backup") }}
-      </NButton>
-      <NButton size="tiny" secondary @click="emit('migrate', slot)">
-        <template #icon
-          ><NIcon :size="12"><Upload /></NIcon
-        ></template>
+      </Button>
+      <Button size="xs" variant="secondary" @click="emit('migrate', slot)">
+        <template #icon><Upload :size="12" /></template>
         {{ t("saves.migrate") }}
-      </NButton>
-      <NPopconfirm @positive-click="() => emit('delete', slot)">
+      </Button>
+      <Popconfirm
+        :title="t('saves.confirmDeleteSlotTitle')"
+        :description="`${t('saves.confirmDeleteSlotDesc', { kind: kindLabel(t, slot.kind), i: slot.slotIndex })} ${t('saves.confirmDeleteSlotNote')}`"
+        danger
+        material="glass"
+        @confirm="emit('delete', slot)"
+      >
         <template #trigger>
-          <NButton size="tiny" type="error" secondary>
-            <template #icon
-              ><NIcon :size="12"><Trash2 /></NIcon
-            ></template>
+          <Button size="xs" variant="danger">
+            <template #icon><Trash2 :size="12" /></template>
             {{ t("saves.deleteSlot") }}
-          </NButton>
+          </Button>
         </template>
-        <div class="max-w-64">
-          <div class="flex items-center gap-2 mb-1">
-            <NIcon :size="16" color="#d03050"><ShieldAlert /></NIcon>
-            <span class="font-medium">{{ t("saves.confirmDeleteSlotTitle") }}</span>
-          </div>
-          <p class="text-xs text-c-secondary">
-            {{
-              t("saves.confirmDeleteSlotDesc", { kind: kindLabel(t, slot.kind), i: slot.slotIndex })
-            }}
-          </p>
-          <p class="text-xs text-c-warning mt-1">
-            {{ t("saves.confirmDeleteSlotNote") }}
-          </p>
-        </div>
-      </NPopconfirm>
+      </Popconfirm>
     </div>
-  </div>
+  </Card>
 </template>

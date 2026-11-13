@@ -2,10 +2,9 @@
 import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NSwitch, NInputNumber } from "naive-ui"
+import { FormRow, NumberInput, Switch } from "@miuui/vue"
 import type { AppBootstrap } from "../types"
 import SettingsSection from "./SettingsSection.vue"
-import SettingsRow from "./SettingsRow.vue"
 import FloatingTip from "./FloatingTip.vue"
 
 const { t } = useI18n()
@@ -19,7 +18,7 @@ onMounted(async () => {
   backupOnPathSwitch.value = b.backupOnPathSwitch
 })
 
-async function updateBackupCount(val: number | null) {
+async function updateBackupCount(val: number | undefined) {
   if (val == null) return
   backupCount.value = val
   try {
@@ -41,18 +40,18 @@ async function toggleBackupOnPathSwitch(val: boolean) {
 
 <template>
   <SettingsSection :title="t('settings.backup.title')">
-    <SettingsRow :label="t('settings.backup.autoKeepCount')">
-      <NInputNumber
-        :value="backupCount"
+    <FormRow :label="t('settings.backup.autoKeepCount')">
+      <NumberInput
+        :model-value="backupCount"
         :min="1"
         :max="20"
-        size="small"
-        style="width: 120px"
-        @update:value="updateBackupCount"
+        size="sm"
+        class="w-30"
+        @update:model-value="updateBackupCount"
       />
-    </SettingsRow>
-    <SettingsRow>
-      <template #label>
+    </FormRow>
+    <FormRow>
+      <template #lead>
         <FloatingTip
           :label="t('settings.backup.onPathSwitch')"
           :text="t('settings.backup.onPathSwitchDesc')"
@@ -60,7 +59,11 @@ async function toggleBackupOnPathSwitch(val: boolean) {
           :width="240"
         />
       </template>
-      <NSwitch :value="backupOnPathSwitch" @update:value="toggleBackupOnPathSwitch" />
-    </SettingsRow>
+      <Switch
+        :model-value="backupOnPathSwitch"
+        size="sm"
+        @update:model-value="toggleBackupOnPathSwitch"
+      />
+    </FormRow>
   </SettingsSection>
 </template>

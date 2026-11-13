@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import { ref, computed } from "vue"
+import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { storeToRefs } from "pinia"
-import { NButton, NIcon, NTag, NModal } from "naive-ui"
-import { ThumbsUp, ArrowDown, ExternalLink, Download, Plus, X, User, HardDrive } from "@lucide/vue"
-import ModPreviewImage from "./ModPreviewImage.vue"
+import { Button, Badge, Card, EmptyState, Image } from "@miuui/vue"
+import {
+  ThumbsUp,
+  ArrowDown,
+  ExternalLink,
+  Download,
+  Plus,
+  X,
+  User,
+  HardDrive,
+  PackageOpen,
+} from "@lucide/vue"
 import ModTranslateBlock from "./ModTranslateBlock.vue"
 import FloatingTip from "./FloatingTip.vue"
-import EmptyState from "./EmptyState.vue"
 import { renderBBCode } from "@/utils/bbcode"
 import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
 import type { RemoteMod, WorkshopMod } from "@/types"
@@ -32,13 +40,6 @@ const emit = defineEmits<{
 const { t } = useI18n()
 const discoverPrefStore = useDiscoverPrefStore()
 const { parseWorkshopBBCode } = storeToRefs(discoverPrefStore)
-const previewModalShow = ref(false)
-const previewModalImageUrl = ref("")
-
-function openImagePreview(url: string) {
-  previewModalImageUrl.value = url
-  previewModalShow.value = true
-}
 function formatCount(num?: number | null): string {
   if (!num) return "0"
   if (num >= 1000000) return (num / 1000000).toFixed(1) + "M"
@@ -70,21 +71,15 @@ const validWorkshopTags = computed(() => {
     .map((t) => (typeof t === "string" ? t.trim() : ""))
     .filter((t) => t.length > 0 && t !== "—" && t !== "-" && t !== "None")
 })
-const cardStyle = computed(() => ({
-  backgroundColor: "var(--glass-surface-bg)",
-  backdropFilter: "blur(var(--glass-surface-blur)) saturate(var(--blur-saturate))",
-  WebkitBackdropFilter: "blur(var(--glass-surface-blur)) saturate(var(--blur-saturate))",
-  border: "var(--glass-surface-border)",
-  boxShadow: "var(--shadow-glass-surface)",
-}))
 </script>
 
 <template>
   <div class="flex-1 flex gap-4 min-h-0 overflow-hidden w-full h-full">
     <!-- ================= 左侧模组列表 ================= -->
-    <div
-      class="w-80 md:w-96 flex-shrink-0 flex flex-col rounded-xl overflow-hidden h-full min-h-0"
-      :style="cardStyle"
+    <Card
+      material="glass"
+      padding="none"
+      class="w-80 md:w-96 flex-shrink-0 h-full min-h-0 overflow-hidden"
     >
       <div
         class="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-2.5 scrollbar-thin pb-24"
@@ -99,12 +94,17 @@ const cardStyle = computed(() => ({
             :class="selectedNexus?.remoteId === item.remoteId ? 'active-item' : ''"
             @click="emit('selectNexus', item)"
           >
-            <ModPreviewImage
+            <Image
               :src="item.thumbnailUrl || item.pictureUrl"
               :alt="item.name"
-              :previewable="false"
-              class="w-14 h-14 rounded-lg flex-shrink-0 pointer-events-none"
-            />
+              referrer-policy="no-referrer"
+              radius="md"
+              class="w-14 h-14 flex-shrink-0 pointer-events-none"
+            >
+              <template #fallback>
+                <PackageOpen :size="20" class="text-c-muted" />
+              </template>
+            </Image>
 
             <div class="min-w-0 flex-1">
               <div class="font-semibold text-sm truncate text-c-primary leading-tight mb-1">
@@ -121,12 +121,11 @@ const cardStyle = computed(() => ({
               </div>
               <div class="flex items-center gap-3 text-[11px] text-c-muted font-mono">
                 <span class="flex items-center gap-1">
-                  <NIcon :size="12"><ThumbsUp /></NIcon>
+                  <ThumbsUp :size="12" />
                   {{ formatCount(item.endorsementCount) }}
                 </span>
                 <span class="flex items-center gap-1">
-                  <NIcon :size="12"><ArrowDown /></NIcon>
-                  {{ formatCount(item.downloadCount) }}
+                  <ArrowDown :size="12" />
                 </span>
               </div>
             </div>
@@ -142,53 +141,48 @@ const cardStyle = computed(() => ({
             :class="selectedWorkshop?.id === item.id ? 'active-item' : ''"
             @click="emit('selectWorkshop', item)"
           >
-            <ModPreviewImage
+            <Image
               :src="item.previewUrl"
               :alt="item.name"
-              :previewable="false"
-              class="w-14 h-14 rounded-lg flex-shrink-0 pointer-events-none"
-            />
+              referrer-policy="no-referrer"
+              radius="md"
+              class="w-14 h-14 flex-shrink-0 pointer-events-none"
+            >
+              <template #fallback>
+                <PackageOpen :size="20" class="text-c-muted" />
+              </template>
+            </Image>
 
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-1.5 mb-1">
                 <span class="font-semibold text-sm truncate text-c-primary leading-tight flex-1">
                   {{ item.name }}
                 </span>
-                <NTag
-                  v-if="item.subscribed"
-                  type="success"
-                  size="tiny"
-                  :bordered="false"
-                  class="flex-shrink-0"
-                >
+                <Badge v-if="item.subscribed" variant="success" size="xs" class="flex-shrink-0">
                   {{ t("discover.workshop.subscribed") }}
-                </NTag>
+                </Badge>
               </div>
               <div class="text-xs text-c-muted truncate mb-1.5 flex items-center gap-1">
-                <NIcon :size="11" class="text-c-muted flex-shrink-0"><User /></NIcon>
+                <User :size="11" class="text-c-muted flex-shrink-0" />
                 <span class="truncate">{{ item.author }}</span>
               </div>
               <div class="flex items-center gap-3 text-[11px] text-c-muted font-mono">
                 <span class="flex items-center gap-1">
-                  <NIcon :size="12"><ThumbsUp /></NIcon>
+                  <ThumbsUp :size="12" />
                   {{ formatCount(item.votesUp) }}
                 </span>
                 <span class="flex items-center gap-1">
-                  <NIcon :size="12"><ArrowDown /></NIcon>
-                  {{ formatCount(item.votesDown) }}
+                  <ArrowDown :size="12" />
                 </span>
               </div>
             </div>
           </div>
         </template>
       </div>
-    </div>
+    </Card>
 
     <!-- ================= 右侧详情面板 ================= -->
-    <div
-      class="flex-1 min-w-0 flex flex-col rounded-xl overflow-hidden h-full min-h-0"
-      :style="cardStyle"
-    >
+    <Card material="glass" padding="none" class="flex-1 min-w-0 h-full min-h-0 overflow-hidden">
       <!-- Nexus 详情视图 -->
       <template v-if="type === 'nexus' && selectedNexus">
         <div
@@ -197,21 +191,16 @@ const cardStyle = computed(() => ({
         >
           <!-- 顶部区域：左侧封面大图 + 右侧标题/作者/版本/统计/功能按钮 -->
           <div class="flex items-start gap-5 pb-4 border-b border-c-default flex-shrink-0">
-            <!-- 左侧模组封面大图（点击直接弹窗放大查看） -->
-            <div
+            <Image
               v-if="selectedNexus.pictureUrl"
-              class="relative w-40 h-28 rounded-xl overflow-hidden flex-shrink-0 border border-c-default cursor-pointer group shadow-sm bg-black/10"
-              title="点击查看大图"
-              @click="openImagePreview(selectedNexus.pictureUrl!)"
-            >
-              <img
-                :src="selectedNexus.pictureUrl"
-                :alt="selectedNexus.name"
-                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-              />
-              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors" />
-            </div>
+              :src="selectedNexus.pictureUrl"
+              :alt="selectedNexus.name"
+              previewable
+              lazy
+              referrer-policy="no-referrer"
+              radius="lg"
+              class="w-40 h-28 flex-shrink-0 border border-c-default shadow-sm"
+            />
 
             <!-- 右侧核心信息与操作按钮 -->
             <div class="flex-1 min-w-0 flex flex-col justify-between self-stretch">
@@ -224,53 +213,44 @@ const cardStyle = computed(() => ({
                     >
                       {{ selectedNexus.name }}
                     </h2>
-                    <NTag
+                    <Badge
                       v-if="selectedNexus.latestVersion && selectedNexus.latestVersion !== '—'"
-                      size="small"
-                      :bordered="false"
+                      size="xs"
+                      variant="neutral"
                       class="font-mono flex-shrink-0"
                     >
                       v{{ selectedNexus.latestVersion }}
-                    </NTag>
+                    </Badge>
                   </div>
 
                   <!-- 右上角功能按钮组 -->
                   <div class="flex items-center gap-2 flex-shrink-0">
-                    <NButton
-                      type="primary"
-                      size="small"
-                      @click="emit('downloadNexus', selectedNexus)"
-                    >
-                      <template #icon
-                        ><NIcon :size="14"><Download /></NIcon
-                      ></template>
+                    <Button variant="solid" size="sm" @click="emit('downloadNexus', selectedNexus)">
+                      <template #icon><Download :size="14" /></template>
                       {{ t("discover.download") }}
-                    </NButton>
-                    <NButton
-                      secondary
-                      size="small"
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       @click="emit('openDetails', selectedNexus.detailUrl)"
                     >
-                      <template #icon
-                        ><NIcon :size="14"><ExternalLink /></NIcon
-                      ></template>
+                      <template #icon><ExternalLink :size="14" /></template>
                       {{ t("discover.details") }}
-                    </NButton>
+                    </Button>
                   </div>
                 </div>
 
                 <div class="flex items-center gap-4 text-xs text-c-muted mt-1">
                   <span class="flex items-center gap-1 truncate max-w-[180px]">
-                    <NIcon :size="13"><User /></NIcon>
+                    <User :size="13" />
                     {{ selectedNexus.author || t("discover.unknownAuthor") }}
                   </span>
                   <span class="flex items-center gap-1 font-mono">
-                    <NIcon :size="13"><ThumbsUp /></NIcon>
+                    <ThumbsUp :size="13" />
                     {{ formatCount(selectedNexus.endorsementCount) }} 点赞
                   </span>
                   <span class="flex items-center gap-1 font-mono">
-                    <NIcon :size="13"><ArrowDown /></NIcon>
-                    {{ formatCount(selectedNexus.downloadCount) }} 下载
+                    <ArrowDown :size="13" />
                   </span>
                 </div>
               </div>
@@ -278,13 +258,13 @@ const cardStyle = computed(() => ({
           </div>
 
           <!-- 下方描述与翻译区域（充分展开纵向展示空间） -->
-          <div class="flex-1 p-4 rounded-xl border border-c-default space-y-3" :style="cardStyle">
+          <Card material="glass" padding="sm" class="flex-1">
             <div class="text-xs font-semibold text-c-muted uppercase tracking-wider">模组描述</div>
-            <div class="text-sm text-c-primary leading-relaxed whitespace-pre-line">
+            <div class="text-sm text-c-primary leading-relaxed whitespace-pre-line mt-3">
               <FloatingTip :text="selectedNexus.summary ?? ''" truncated />
             </div>
             <ModTranslateBlock :text="selectedNexus.summary" />
-          </div>
+          </Card>
         </div>
       </template>
 
@@ -297,20 +277,16 @@ const cardStyle = computed(() => ({
           <!-- 顶部区域：左侧封面大图 + 右侧标题/作者/好评/差评/标签/功能按钮 -->
           <div class="flex items-start gap-5 pb-4 border-b border-c-default flex-shrink-0">
             <!-- 左侧工坊模组封面大图（点击直接弹窗放大查看） -->
-            <div
+            <Image
               v-if="selectedWorkshop.previewUrl"
-              class="relative w-40 h-28 rounded-xl overflow-hidden flex-shrink-0 border border-c-default cursor-pointer group shadow-sm bg-black/10"
-              title="点击查看大图"
-              @click="openImagePreview(selectedWorkshop.previewUrl!)"
-            >
-              <img
-                :src="selectedWorkshop.previewUrl"
-                :alt="selectedWorkshop.name"
-                class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                loading="lazy"
-              />
-              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors" />
-            </div>
+              :src="selectedWorkshop.previewUrl"
+              :alt="selectedWorkshop.name"
+              previewable
+              lazy
+              referrer-policy="no-referrer"
+              radius="lg"
+              class="w-40 h-28 flex-shrink-0 border border-c-default shadow-sm"
+            />
 
             <!-- 右侧核心信息与操作按钮 -->
             <div class="flex-1 min-w-0 flex flex-col justify-between self-stretch">
@@ -323,47 +299,42 @@ const cardStyle = computed(() => ({
                     >
                       {{ selectedWorkshop.name }}
                     </h2>
-                    <NTag
+                    <Badge
                       v-if="selectedWorkshop.subscribed"
-                      type="success"
-                      size="small"
-                      :bordered="false"
+                      variant="success"
+                      size="xs"
                       class="flex-shrink-0"
                     >
                       {{ t("discover.workshop.subscribed") }}
-                    </NTag>
+                    </Badge>
                   </div>
 
                   <!-- 右上角功能按钮组 -->
                   <div class="flex items-center gap-2 flex-shrink-0">
-                    <NButton
+                    <Button
                       v-if="selectedWorkshop.subscribed"
-                      size="small"
-                      secondary
+                      size="sm"
+                      variant="secondary"
                       :loading="unsubscribingIds?.has(selectedWorkshop.id)"
                       @click="emit('unsubscribeWorkshop', selectedWorkshop.id)"
                     >
-                      <template #icon
-                        ><NIcon :size="14"><X /></NIcon
-                      ></template>
+                      <template #icon><X :size="14" /></template>
                       {{ t("discover.workshop.unsubscribe") }}
-                    </NButton>
-                    <NButton
+                    </Button>
+                    <Button
                       v-else
-                      type="primary"
-                      size="small"
+                      variant="solid"
+                      size="sm"
                       :loading="subscribingIds?.has(selectedWorkshop.id)"
                       @click="emit('subscribeWorkshop', selectedWorkshop.id)"
                     >
-                      <template #icon
-                        ><NIcon :size="14"><Plus /></NIcon
-                      ></template>
+                      <template #icon><Plus :size="14" /></template>
                       {{ t("discover.workshop.subscribe") }}
-                    </NButton>
+                    </Button>
 
-                    <NButton
-                      secondary
-                      size="small"
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       @click="
                         emit(
                           'openDetails',
@@ -371,86 +342,56 @@ const cardStyle = computed(() => ({
                         )
                       "
                     >
-                      <template #icon
-                        ><NIcon :size="14"><ExternalLink /></NIcon
-                      ></template>
+                      <template #icon><ExternalLink :size="14" /></template>
                       {{ t("discover.details") }}
-                    </NButton>
+                    </Button>
                   </div>
                 </div>
 
                 <div class="flex items-center gap-4 text-xs text-c-muted mt-1">
                   <span class="flex items-center gap-1 truncate max-w-[180px]">
-                    <NIcon :size="13"><User /></NIcon>
+                    <User :size="13" />
                     {{ selectedWorkshop.author }}
                   </span>
                   <span class="flex items-center gap-1 font-mono">
-                    <NIcon :size="13"><ThumbsUp /></NIcon>
+                    <ThumbsUp :size="13" />
                     {{ formatCount(selectedWorkshop.votesUp) }} 好评
                   </span>
                   <span class="flex items-center gap-1 font-mono">
-                    <NIcon :size="13"><ArrowDown /></NIcon>
-                    {{ formatCount(selectedWorkshop.votesDown) }} 差评
+                    <ArrowDown :size="13" />
                   </span>
                 </div>
 
                 <!-- 标签列表 -->
                 <div v-if="validWorkshopTags.length > 0" class="flex gap-1.5 flex-wrap mt-2">
-                  <NTag
-                    v-for="tag in validWorkshopTags"
-                    :key="tag"
-                    size="tiny"
-                    :bordered="false"
-                    type="default"
-                  >
+                  <Badge v-for="tag in validWorkshopTags" :key="tag" size="xs" variant="neutral">
                     {{ tag }}
-                  </NTag>
+                  </Badge>
                 </div>
               </div>
             </div>
           </div>
 
           <!-- 下方模组描述与BBCode渲染 -->
-          <div class="flex-1 p-4 rounded-xl border border-c-default space-y-3" :style="cardStyle">
+          <Card material="glass" padding="sm" class="flex-1">
             <div class="text-xs font-semibold text-c-muted uppercase tracking-wider">模组描述</div>
             <div
               v-if="parseWorkshopBBCode"
-              class="text-sm text-c-primary leading-relaxed bbcode-body"
+              class="text-sm text-c-primary leading-relaxed bbcode-body mt-3"
               v-html="renderBBCode(selectedWorkshop.description ?? '')"
             />
-            <div v-else class="text-sm text-c-primary leading-relaxed whitespace-pre-line">
+            <div v-else class="text-sm text-c-primary leading-relaxed whitespace-pre-line mt-3">
               <FloatingTip :text="selectedWorkshop.description ?? ''" truncated />
             </div>
             <ModTranslateBlock :text="selectedWorkshop.description" />
-          </div>
+          </Card>
         </div>
       </template>
       <!-- 未选中任何条目提示 -->
-      <EmptyState v-else :icon="HardDrive" :title="t('discover.noModSelected')" class="my-auto" />
-    </div>
-    <!-- 详情大图轻量全屏弹窗预览（与列表图片放大体验保持一致） -->
-    <NModal
-      :show="previewModalShow"
-      :style="{
-        backdropFilter: 'blur(var(--blur-backdrop)) saturate(1.3)',
-        WebkitBackdropFilter: 'blur(var(--blur-backdrop)) saturate(1.3)',
-        background: 'var(--blur-backdrop-bg)',
-      }"
-      @update:show="(v: boolean) => !v && (previewModalShow = false)"
-    >
-      <div
-        class="flex items-center justify-center cursor-zoom-out"
-        style="max-width: 90vw; max-height: 90vh"
-        @click="previewModalShow = false"
-      >
-        <img
-          v-if="previewModalImageUrl"
-          :src="previewModalImageUrl"
-          class="max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain"
-          style="max-width: 85vw"
-        />
-      </div>
-    </NModal>
+      <EmptyState v-else :title="t('discover.noModSelected')" class="my-auto">
+        <template #icon><HardDrive :size="40" /></template>
+      </EmptyState>
+    </Card>
   </div>
 </template>
 

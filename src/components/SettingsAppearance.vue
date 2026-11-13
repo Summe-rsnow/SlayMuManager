@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NSelect, NRadioGroup, NRadio, NButton, NIcon, NSlider, useMessage } from "naive-ui"
+import { Button, FormRow, RadioGroup, Select, Slider, useToast } from "@miuui/vue"
 import { Image, RotateCcw, Crop } from "@lucide/vue"
 import { setLocale } from "@/i18n"
 import {
@@ -17,11 +17,10 @@ import {
 import { useBackgroundStore } from "@/stores/useBackgroundStore"
 import { storeToRefs } from "pinia"
 import SettingsSection from "./SettingsSection.vue"
-import SettingsRow from "./SettingsRow.vue"
 import WallpaperCropModal from "./WallpaperCropModal.vue"
 
 const { t } = useI18n()
-const message = useMessage()
+const { toast } = useToast()
 
 const bgStore = useBackgroundStore()
 const { customBgUrl, customBgBlur, customBgDim, loading: bgLoading } = storeToRefs(bgStore)
@@ -56,20 +55,22 @@ const themeColorOptions = computed<{ label: string; value: ThemeColorKey }[]>(()
   { label: t("settings.appearance.themeColors.yellow"), value: "yellow" },
 ])
 
-async function updateLocale(val: string) {
-  locale.value = val
-  setLocale(val)
+async function updateLocale(val: string | number) {
+  const next = String(val)
+  locale.value = next
+  setLocale(next)
   try {
-    await invoke("update_app_locale", { locale: val })
+    await invoke("update_app_locale", { locale: next })
   } catch {
     /* ignore */
   }
 }
 
-async function handleDisplayModeChange(val: DisplayMode) {
-  setDisplayMode(val)
+async function handleDisplayModeChange(val: string | number) {
+  const mode = val as DisplayMode
+  setDisplayMode(mode)
   try {
-    await invoke("update_theme_mode", { mode: val })
+    await invoke("update_theme_mode", { mode })
   } catch {
     /* ignore */
   }
@@ -84,42 +85,36 @@ async function handleThemeColorChange(val: ThemeColorKey) {
   }
 }
 
-async function handleCropApply(payload: {
-  croppedUrl: string
-  originalUrl: string
-  fillColor: string
-}) {
-  await bgStore.applyCroppedWallpaper(payload.croppedUrl, payload.originalUrl, payload.fillColor)
-  message.success(t("settings.appearance.cropSuccess"))
+async function handleCropApply(payload: { croppedUrl: string; originalUrl: string }) {
+  await bgStore.applyCroppedWallpaper(payload.croppedUrl, payload.originalUrl)
+  toast.success(t("settings.appearance.cropSuccess"))
 }
 </script>
 
 <template>
   <SettingsSection :title="t('settings.appearance.title')">
-    <SettingsRow :label="t('settings.appearance.language')">
-      <NSelect
+    <FormRow :label="t('settings.appearance.language')">
+      <Select
         :options="languageOptions"
-        :value="locale"
-        style="width: 160px"
-        size="small"
-        @update:value="updateLocale"
+        :model-value="locale"
+        class="w-40"
+        size="sm"
+        @update:model-value="updateLocale"
       />
-    </SettingsRow>
+    </FormRow>
 
-    <SettingsRow :label="t('settings.appearance.displayMode')">
-      <NRadioGroup
-        :value="displayMode"
+    <FormRow :label="t('settings.appearance.displayMode')">
+      <RadioGroup
+        :model-value="displayMode"
+        :options="displayModeOptions"
+        orientation="horizontal"
         name="displayMode"
-        size="small"
-        @update:value="handleDisplayModeChange"
-      >
-        <NRadio v-for="opt in displayModeOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </NRadio>
-      </NRadioGroup>
-    </SettingsRow>
+        size="sm"
+        @update:model-value="handleDisplayModeChange"
+      />
+    </FormRow>
 
-    <SettingsRow :label="t('settings.appearance.themeColor')">
+    <FormRow :label="t('settings.appearance.themeColor')">
       <div class="flex gap-1.5">
         <button
           v-for="opt in themeColorOptions"
@@ -131,10 +126,10 @@ async function handleCropApply(payload: {
           @click="handleThemeColorChange(opt.value)"
         />
       </div>
-    </SettingsRow>
+    </FormRow>
 
     <!-- 自定义背景图片 -->
-    <SettingsRow :label="t('settings.appearance.customBackground')">
+    <FormRow :label="t('settings.appearance.customBackground')">
       <div class="flex items-center gap-2.5">
         <!-- 缩略图预览（点击直接打开裁切） -->
         <div
@@ -145,71 +140,63 @@ async function handleCropApply(payload: {
           @click="bgStore.reopenCurrentCrop"
         />
         <!-- 裁切调整按钮（仅在已设置壁纸时出现） -->
-        <NButton
+        <Button
           v-if="customBgUrl"
-          size="small"
-          secondary
+          size="sm"
+          variant="secondary"
           :loading="bgLoading"
           @click="bgStore.reopenCurrentCrop"
         >
-          <template #icon>
-            <NIcon :size="15"><Crop /></NIcon>
-          </template>
+          <template #icon><Crop :size="15" /></template>
           {{ t("settings.appearance.cropBackground") }}
-        </NButton>
-        <NButton
-          size="small"
+        </Button>
+        <Button
+          size="sm"
           :loading="bgLoading"
-          secondary
+          variant="secondary"
           @click="bgStore.chooseCustomBackground"
         >
-          <template #icon>
-            <NIcon :size="15"><Image /></NIcon>
-          </template>
+          <template #icon><Image :size="15" /></template>
           {{
             customBgUrl
               ? t("settings.appearance.changeBackground")
               : t("settings.appearance.chooseBackground")
           }}
-        </NButton>
-        <NButton
+        </Button>
+        <Button
           v-if="customBgUrl"
-          size="small"
-          quaternary
-          type="error"
+          size="sm"
+          variant="danger"
           :loading="bgLoading"
           @click="bgStore.removeCustomBackground"
         >
-          <template #icon>
-            <NIcon :size="15"><RotateCcw /></NIcon>
-          </template>
+          <template #icon><RotateCcw :size="15" /></template>
           {{ t("settings.appearance.clearBackground") }}
-        </NButton>
+        </Button>
       </div>
-    </SettingsRow>
+    </FormRow>
 
     <!-- 背景模糊调节（仅在设置了自定义背景时生效） -->
-    <SettingsRow v-if="customBgUrl" :label="t('settings.appearance.backgroundBlur')">
+    <FormRow v-if="customBgUrl" :label="t('settings.appearance.backgroundBlur')">
       <div class="flex items-center gap-3 w-56">
-        <NSlider v-model:value="customBgBlur" :min="0" :max="40" :step="1" size="small" />
+        <Slider v-model="customBgBlur" :min="0" :max="40" :step="1" size="sm" aria-label="Blur" />
         <span class="text-xs font-mono text-c-muted w-10 text-right">{{ customBgBlur }}px</span>
       </div>
-    </SettingsRow>
+    </FormRow>
 
     <!-- 背景遮罩暗度调节（仅在设置了自定义背景时生效） -->
-    <SettingsRow v-if="customBgUrl" :label="t('settings.appearance.backgroundDim')">
+    <FormRow v-if="customBgUrl" :label="t('settings.appearance.backgroundDim')">
       <div class="flex items-center gap-3 w-56">
-        <NSlider v-model:value="customBgDim" :min="0" :max="80" :step="5" size="small" />
+        <Slider v-model="customBgDim" :min="0" :max="80" :step="5" size="sm" aria-label="Dim" />
         <span class="text-xs font-mono text-c-muted w-10 text-right">{{ customBgDim }}%</span>
       </div>
-    </SettingsRow>
+    </FormRow>
   </SettingsSection>
 
   <!-- 壁纸裁切调整弹窗 -->
   <WallpaperCropModal
     v-model:show="bgStore.showCropModal"
     :image-url="bgStore.cropSourceUrl"
-    :initial-fill-color="bgStore.customBgFillColor"
     @apply="handleCropApply"
   />
 </template>

@@ -1,19 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
-import {
-  NDrawer,
-  NDrawerContent,
-  NTabs,
-  NTabPane,
-  NButton,
-  NIcon,
-  NProgress,
-  NTag,
-  NSpace,
-  useMessage,
-} from "naive-ui"
+import { Badge, Button, Card, Drawer, EmptyState, Progress, Tabs, useToast } from "@miuui/vue"
 import {
   Download,
   Pause,
@@ -27,7 +16,6 @@ import {
   Clock,
 } from "@lucide/vue"
 import { useDownloadStore } from "@/stores/useDownloadStore"
-import EmptyState from "@/components/EmptyState.vue"
 
 defineProps<{
   show: boolean
@@ -38,11 +26,26 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const message = useMessage()
+const { toast } = useToast()
 const downloadStore = useDownloadStore()
 const { activeDownloads, completedDownloads } = storeToRefs(downloadStore)
 const activeTab = ref<"active" | "completed">("active")
-
+const tabItems = computed(() => [
+  {
+    value: "active",
+    label:
+      activeDownloads.value.length > 0
+        ? `${t("download.tabs.active")} (${activeDownloads.value.length})`
+        : t("download.tabs.active"),
+  },
+  {
+    value: "completed",
+    label:
+      completedDownloads.value.length > 0
+        ? `${t("download.tabs.completed")} (${completedDownloads.value.length})`
+        : t("download.tabs.completed"),
+  },
+])
 function formatBytes(bytes: number): string {
   if (bytes <= 0) return "0 B"
   const k = 1024
@@ -61,7 +64,7 @@ async function handlePause(taskId: string) {
   try {
     await downloadStore.pauseDownload(taskId)
   } catch (e: unknown) {
-    message.error(`${t("download.error.pauseFailed")}: ${String(e)}`)
+    toast.error(`${t("download.error.pauseFailed")}: ${String(e)}`)
   }
 }
 
@@ -69,25 +72,25 @@ async function handleResume(taskId: string) {
   try {
     await downloadStore.resumeDownload(taskId)
   } catch (e: unknown) {
-    message.error(`${t("download.error.resumeFailed")}: ${String(e)}`)
+    toast.error(`${t("download.error.resumeFailed")}: ${String(e)}`)
   }
 }
 
 async function handleCancel(taskId: string) {
   try {
     await downloadStore.cancelDownload(taskId)
-    message.info(t("download.cancelled"))
+    toast.info(t("download.cancelled"))
   } catch (e: unknown) {
-    message.error(`${t("download.error.cancelFailed")}: ${String(e)}`)
+    toast.error(`${t("download.error.cancelFailed")}: ${String(e)}`)
   }
 }
 
 async function handleClearCompleted() {
   try {
     await downloadStore.clearCompleted()
-    message.success(t("download.clearedCompleted"))
+    toast.success(t("download.clearedCompleted"))
   } catch (e: unknown) {
-    message.error(String(e))
+    toast.error(String(e))
   }
 }
 
@@ -95,76 +98,62 @@ async function handleOpenFolder() {
   try {
     await downloadStore.openDownloadsFolder()
   } catch (e: unknown) {
-    message.error(String(e))
+    toast.error(String(e))
   }
 }
 </script>
 
 <template>
-  <NDrawer
-    :show="show"
-    :width="460"
-    placement="right"
-    class="custom-glass-drawer"
-    @update:show="(v: boolean) => emit('update:show', v)"
+  <Drawer
+    :open="show"
+    width="460px"
+    side="end"
+    material="glass"
+    :aria-label="t('download.title')"
+    @update:open="(v: boolean) => emit('update:show', v)"
   >
-    <NDrawerContent closable>
-      <template #header>
-        <div class="flex items-center justify-between w-full pr-4">
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-base text-c-primary">{{ t("download.title") }}</span>
-          </div>
-          <NSpace :size="6">
-            <NButton
-              size="tiny"
-              secondary
-              :title="t('download.openFolder')"
-              @click="handleOpenFolder"
-            >
-              <template #icon
-                ><NIcon :size="13"><FolderOpen /></NIcon
-              ></template>
-              {{ t("download.openFolder") }}
-            </NButton>
-            <NButton
-              v-if="completedDownloads.length > 0"
-              size="tiny"
-              secondary
-              :title="t('download.clearCompleted')"
-              @click="handleClearCompleted"
-            >
-              <template #icon
-                ><NIcon :size="13"><Trash2 /></NIcon
-              ></template>
-              {{ t("download.clearCompleted") }}
-            </NButton>
-          </NSpace>
+    <template #title>
+      <div class="flex items-center justify-between w-full pr-4">
+        <span class="font-bold text-base text-c-primary">{{ t("download.title") }}</span>
+        <div class="flex items-center gap-1.5">
+          <Button
+            size="xs"
+            variant="secondary"
+            :title="t('download.openFolder')"
+            @click="handleOpenFolder"
+          >
+            <template #icon><FolderOpen :size="13" /></template>
+            {{ t("download.openFolder") }}
+          </Button>
+          <Button
+            v-if="completedDownloads.length > 0"
+            size="xs"
+            variant="secondary"
+            :title="t('download.clearCompleted')"
+            @click="handleClearCompleted"
+          >
+            <template #icon><Trash2 :size="13" /></template>
+            {{ t("download.clearCompleted") }}
+          </Button>
         </div>
-      </template>
+      </div>
+    </template>
 
-      <NTabs v-model:value="activeTab" type="line" animated>
-        <!-- 正在下载 -->
-        <NTabPane name="active">
-          <template #tab>
-            <div class="flex items-center gap-1.5">
-              <span>{{ t("download.tabs.active") }}</span>
-              <NTag
-                v-if="activeDownloads.length > 0"
-                type="primary"
-                size="tiny"
-                round
-                :bordered="false"
-              >
-                {{ activeDownloads.length }}
-              </NTag>
-            </div>
-          </template>
-
+    <Tabs
+      :model-value="activeTab"
+      :items="tabItems"
+      variant="underline"
+      @update:model-value="(v: string) => (activeTab = v as 'active' | 'completed')"
+    >
+      <template #panel="{ value }">
+        <template v-if="value === 'active'">
           <div v-if="activeDownloads.length > 0" class="flex flex-col gap-3 p-3.5">
-            <div
+            <Card
               v-for="task in activeDownloads"
               :key="task.id"
-              class="download-task-card p-3.5 rounded-xl border transition-all duration-200 hover:-translate-y-0.5"
+              material="glass"
+              interactive
+              padding="sm"
             >
               <div class="flex items-start justify-between gap-2 mb-1.5">
                 <div class="min-w-0 flex-1">
@@ -173,46 +162,47 @@ async function handleOpenFolder() {
                   </div>
                   <div class="text-xs text-c-muted truncate font-mono">{{ task.fileName }}</div>
                 </div>
-                <NSpace :size="4" class="flex-shrink-0">
-                  <NButton
+                <div class="flex items-center gap-1 flex-shrink-0">
+                  <Button
                     v-if="task.status === 'downloading'"
-                    size="tiny"
-                    secondary
+                    size="xs"
+                    variant="secondary"
+                    icon-only
+                    :aria-label="t('download.status.downloading')"
                     @click="handlePause(task.id)"
                   >
-                    <template #icon
-                      ><NIcon :size="12"><Pause /></NIcon
-                    ></template>
-                  </NButton>
-                  <NButton
+                    <Pause :size="12" />
+                  </Button>
+                  <Button
                     v-else-if="task.status === 'paused'"
-                    size="tiny"
-                    secondary
-                    type="primary"
+                    size="xs"
+                    variant="solid"
+                    icon-only
+                    :aria-label="t('download.status.paused')"
                     @click="handleResume(task.id)"
                   >
-                    <template #icon
-                      ><NIcon :size="12"><Play /></NIcon
-                    ></template>
-                  </NButton>
-                  <NButton size="tiny" secondary @click="handleCancel(task.id)">
-                    <template #icon
-                      ><NIcon :size="12"><X /></NIcon
-                    ></template>
-                  </NButton>
-                </NSpace>
+                    <Play :size="12" />
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    icon-only
+                    :aria-label="t('common.cancel')"
+                    @click="handleCancel(task.id)"
+                  >
+                    <X :size="12" />
+                  </Button>
+                </div>
               </div>
 
               <!-- 进度条 -->
-              <NProgress
-                type="line"
-                :percentage="calcPercent(task.downloadedBytes, task.totalBytes)"
-                :status="task.status === 'paused' ? 'warning' : 'default'"
-                :show-indicator="false"
-                :height="6"
+              <Progress
+                :model-value="calcPercent(task.downloadedBytes, task.totalBytes)"
+                :variant="task.status === 'paused' ? 'warning' : 'primary'"
+                size="sm"
+                :show-value="false"
                 class="mb-1.5"
               />
-
               <div class="flex items-center justify-between text-xs text-c-muted font-mono">
                 <span>
                   {{ formatBytes(task.downloadedBytes) }} /
@@ -221,44 +211,31 @@ async function handleOpenFolder() {
                 <span v-if="task.status === 'downloading'" class="text-primary-theme font-medium">
                   {{ formatBytes(task.speedBytesPerSec) }}/s
                 </span>
-                <NTag
-                  v-else-if="task.status === 'paused'"
-                  type="warning"
-                  size="tiny"
-                  :bordered="false"
-                >
+                <Badge v-else-if="task.status === 'paused'" variant="warning" size="xs">
                   {{ t("download.status.paused") }}
-                </NTag>
+                </Badge>
               </div>
-            </div>
+            </Card>
           </div>
 
-          <EmptyState
-            v-else
-            :icon="Download"
-            :title="t('download.empty.noActive')"
-            :description="t('download.empty.noActiveHint')"
-            bordered
-            class="mt-6"
-          />
-        </NTabPane>
+          <Card v-else material="glass" padding="sm" class="mt-6">
+            <EmptyState
+              :title="t('download.empty.noActive')"
+              :description="t('download.empty.noActiveHint')"
+            >
+              <template #icon><Download :size="36" /></template>
+            </EmptyState>
+          </Card>
+        </template>
 
-        <!-- 已完成与历史 -->
-        <NTabPane name="completed">
-          <template #tab>
-            <div class="flex items-center gap-1.5">
-              <span>{{ t("download.tabs.completed") }}</span>
-              <NTag v-if="completedDownloads.length > 0" size="tiny" round :bordered="false">
-                {{ completedDownloads.length }}
-              </NTag>
-            </div>
-          </template>
-
+        <template v-else-if="value === 'completed'">
           <div v-if="completedDownloads.length > 0" class="flex flex-col gap-3 p-3.5">
-            <div
+            <Card
               v-for="task in completedDownloads"
               :key="task.id"
-              class="download-task-card p-3.5 rounded-xl border transition-all duration-200 hover:-translate-y-0.5"
+              material="glass"
+              interactive
+              padding="sm"
             >
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0 flex-1">
@@ -269,36 +246,23 @@ async function handleOpenFolder() {
                     {{ task.fileName }}
                   </div>
                 </div>
-                <NTag
-                  v-if="task.installed"
-                  type="success"
-                  size="tiny"
-                  :bordered="false"
-                  class="flex-shrink-0"
-                >
-                  <template #icon
-                    ><NIcon :size="10"><PackageCheck /></NIcon
-                  ></template>
+                <Badge v-if="task.installed" variant="success" size="xs" class="flex-shrink-0">
+                  <PackageCheck :size="10" />
                   {{ t("download.status.installed") }}
-                </NTag>
-                <NTag
+                </Badge>
+                <Badge
                   v-else-if="task.installError"
-                  type="warning"
-                  size="tiny"
-                  :bordered="false"
+                  variant="warning"
+                  size="xs"
                   class="flex-shrink-0"
                 >
-                  <template #icon
-                    ><NIcon :size="10"><AlertCircle /></NIcon
-                  ></template>
+                  <AlertCircle :size="10" />
                   {{ t("download.status.notInstalled") }}
-                </NTag>
-                <NTag v-else type="info" size="tiny" :bordered="false" class="flex-shrink-0">
-                  <template #icon
-                    ><NIcon :size="10"><CheckCircle2 /></NIcon
-                  ></template>
+                </Badge>
+                <Badge v-else variant="info" size="xs" class="flex-shrink-0">
+                  <CheckCircle2 :size="10" />
                   {{ t("download.status.completed") }}
-                </NTag>
+                </Badge>
               </div>
 
               <div
@@ -308,65 +272,21 @@ async function handleOpenFolder() {
                   formatBytes(task.totalBytes || task.downloadedBytes)
                 }}</span>
                 <span v-if="task.completedAt" class="flex items-center gap-1">
-                  <NIcon :size="11"><Clock /></NIcon>
-                  {{
-                    new Date(task.completedAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  }}
+                  <Clock :size="11" />
+                  new Date(task.completedAt).toLocaleTimeString([], { hour: "2-digit", minute:
+                  "2-digit", }) }}
                 </span>
               </div>
-            </div>
+            </Card>
           </div>
 
-          <EmptyState
-            v-else
-            :icon="PackageCheck"
-            :title="t('download.empty.noCompleted')"
-            bordered
-            class="mt-6"
-          />
-        </NTabPane>
-      </NTabs>
-    </NDrawerContent>
-  </NDrawer>
+          <Card v-else material="glass" padding="sm" class="mt-6">
+            <EmptyState :title="t('download.empty.noCompleted')">
+              <template #icon><PackageCheck :size="36" /></template>
+            </EmptyState>
+          </Card>
+        </template>
+      </template>
+    </Tabs>
+  </Drawer>
 </template>
-
-<style scoped>
-:global(.custom-glass-drawer.n-drawer) {
-  background-color: var(--glass-modal-bg) !important;
-  backdrop-filter: blur(var(--glass-modal-blur, 20px)) saturate(var(--blur-saturate)) !important;
-  -webkit-backdrop-filter: blur(var(--glass-modal-blur, 20px)) saturate(var(--blur-saturate)) !important;
-  border-left: 1px solid var(--glass-modal-border, var(--glass-surface-border)) !important;
-  box-shadow: var(--shadow-glass-modal) !important;
-}
-:global(.custom-glass-drawer .n-drawer-content) {
-  background: transparent !important;
-}
-:global(.custom-glass-drawer .n-drawer-header) {
-  border-bottom: 1px solid var(--glass-surface-border) !important;
-}
-.download-task-card {
-  background-color: var(--glass-surface-bg) !important;
-  border-color: var(--glass-surface-border) !important;
-  backdrop-filter: blur(var(--glass-surface-blur)) saturate(var(--blur-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-surface-blur)) saturate(var(--blur-saturate));
-  box-shadow: var(--shadow-glass-surface) !important;
-  transform: translateZ(0);
-  transition:
-    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.2s ease,
-    border-color 0.2s ease,
-    background-color 0.2s ease;
-}
-.download-task-card:hover {
-  background-color: var(--glass-surface-bg-hover) !important;
-  box-shadow: var(--shadow-card-hover), var(--shadow-glow) !important;
-  border-color: color-mix(
-    in srgb,
-    var(--primary-color) 35%,
-    var(--glass-surface-border)
-  ) !important;
-}
-</style>

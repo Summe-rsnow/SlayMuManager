@@ -3,7 +3,7 @@ import { ref, onMounted } from "vue"
 import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NInput, NButton, NIcon } from "naive-ui"
+import { Input, Button } from "@miuui/vue"
 import { FolderSearch } from "@lucide/vue"
 import type { AppBootstrap } from "../types"
 import { useHighlightStore } from "@/stores/useHighlightStore"
@@ -74,18 +74,25 @@ async function saveGamePath() {
     :highlighted="highlightedSetting === 'game-path'"
   >
     <div class="flex gap-2">
-      <NInput v-model:value="gamePath" :placeholder="t('settings.gamePath.placeholder')" clearable>
-        <template #prefix
-          ><NIcon :size="16"><FolderSearch /></NIcon
-        ></template>
-      </NInput>
-      <NButton secondary @click="browseGamePath">{{ t("settings.gamePath.browse") }}</NButton>
-      <NButton secondary :loading="saving" @click="saveGamePath">{{ t("common.save") }}</NButton>
+      <Input
+        v-model="gamePath"
+        :placeholder="t('settings.gamePath.placeholder')"
+        clearable
+        class="flex-1"
+      >
+        <template #prefix><FolderSearch :size="16" /></template>
+      </Input>
+      <Button variant="secondary" @click="browseGamePath">{{
+        t("settings.gamePath.browse")
+      }}</Button>
+      <Button variant="secondary" :loading="saving" @click="saveGamePath">{{
+        t("common.save")
+      }}</Button>
     </div>
     <div class="flex items-center gap-2">
-      <NButton secondary size="small" :loading="detecting" @click="detectGame">
+      <Button variant="secondary" size="sm" :loading="detecting" @click="detectGame">
         {{ t("settings.gamePath.autoDetect") }}
-      </NButton>
+      </Button>
       <span v-if="gamePath" class="text-xs" :class="gameValid ? 'text-green-600' : 'text-red-500'">
         {{ gameValid ? t("settings.gamePath.valid") : t("settings.gamePath.invalid") }}
       </span>

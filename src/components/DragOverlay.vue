@@ -2,7 +2,6 @@
 import { ref, onMounted, onUnmounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
-import { NIcon } from "naive-ui"
 import { Upload } from "@lucide/vue"
 
 const { t } = useI18n()
@@ -78,9 +77,7 @@ onUnmounted(() => {
               backgroundColor: 'color-mix(in srgb, var(--primary-color) 15%, transparent)',
             }"
           >
-            <NIcon :size="60" :color="'var(--primary-color)'">
-              <Upload />
-            </NIcon>
+            <Upload :size="60" class="text-primary-theme" />
           </div>
           <p class="text-3xl font-semibold text-c-primary">
             {{ title ?? t("import.dropZoneDropHint") }}

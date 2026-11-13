@@ -1,7 +1,7 @@
 import { ref } from "vue"
 import { storeToRefs } from "pinia"
 import { invoke } from "@tauri-apps/api/core"
-import { useMessage } from "naive-ui"
+import { useToast } from "@miuui/vue"
 import { useI18n } from "vue-i18n"
 import type { InstalledMod, ModToggleResult } from "../types"
 import { useSidebarStore } from "@/stores/useSidebarStore"
@@ -12,7 +12,7 @@ import { useIsActive } from "./useIsActive"
  * 模组操作：启用/禁用/卸载/打开文件夹/批量操作
  */
 export function useModOperations() {
-  const message = useMessage()
+  const { toast } = useToast()
   const { t } = useI18n()
   const modCacheStore = useModCacheStore()
   const { enabledMods, disabledMods } = storeToRefs(modCacheStore)
@@ -39,11 +39,12 @@ export function useModOperations() {
         saveGuardInfo.value = result
         showSaveGuardDialog.value = true
       } else {
-        message.success(
-          t(isEnabling ? "library.success.enabled" : "library.success.disabled", {
+        toast({
+          title: t(isEnabling ? "library.success.enabled" : "library.success.disabled", {
             name: mod.name,
           }),
-        )
+          variant: "success",
+        })
       }
       await fetchMods()
       // 同步激活预设快照
@@ -54,7 +55,7 @@ export function useModOperations() {
         presetSnapshot.value = next
       }
     } catch (e: unknown) {
-      message.error(t("library.error.operationFailed", { e }))
+      toast({ title: t("library.error.operationFailed", { e }), variant: "error" })
     } finally {
       busyId.value = null
     }
@@ -70,10 +71,10 @@ export function useModOperations() {
       } else {
         await invoke("uninstall_mod", { modId: mod.id })
       }
-      message.success(t("library.success.uninstalled", { name: mod.name }))
+      toast({ title: t("library.success.uninstalled", { name: mod.name }), variant: "success" })
       await fetchMods()
     } catch (e: unknown) {
-      message.error(t("library.error.uninstallFailed", { e }))
+      toast({ title: t("library.error.uninstallFailed", { e }), variant: "error" })
     } finally {
       busyId.value = null
     }
@@ -88,7 +89,7 @@ export function useModOperations() {
         await invoke("open_mod_folder", { modId: mod.id })
       }
     } catch (e: unknown) {
-      message.error(t("library.error.openFailed", { e }))
+      toast({ title: t("library.error.openFailed", { e }), variant: "error" })
     }
   }
 
@@ -97,7 +98,7 @@ export function useModOperations() {
     try {
       await invoke("open_mods_directory")
     } catch (e: unknown) {
-      message.error(t("library.error.openFailed", { e }))
+      toast({ title: t("library.error.openFailed", { e }), variant: "error" })
     }
   }
 
@@ -105,7 +106,7 @@ export function useModOperations() {
   async function enableAllMods() {
     const targets = disabledMods.value
     if (targets.length === 0) {
-      message.info(t("library.info.allAlreadyEnabled"))
+      toast({ title: t("library.info.allAlreadyEnabled"), variant: "info" })
       return
     }
     batchBusy.value = true
@@ -121,7 +122,7 @@ export function useModOperations() {
     }
     batchBusy.value = false
     if (!isActive.value) return
-    message.success(t("library.success.batchEnabled", { n: success }))
+    toast({ title: t("library.success.batchEnabled", { n: success }), variant: "success" })
     await fetchMods()
   }
 
@@ -129,7 +130,7 @@ export function useModOperations() {
   async function disableAllMods() {
     const targets = enabledMods.value.filter((m) => m.source !== "workshop")
     if (targets.length === 0) {
-      message.info(t("library.info.allAlreadyDisabled"))
+      toast({ title: t("library.info.allAlreadyDisabled"), variant: "info" })
       return
     }
     batchBusy.value = true
@@ -145,7 +146,7 @@ export function useModOperations() {
     }
     batchBusy.value = false
     if (!isActive.value) return
-    message.success(t("library.success.batchDisabled", { n: success }))
+    toast({ title: t("library.success.batchDisabled", { n: success }), variant: "success" })
     await fetchMods()
   }
 
@@ -153,15 +154,16 @@ export function useModOperations() {
   function dismissSaveGuard() {
     showSaveGuardDialog.value = false
     if (saveGuardInfo.value) {
-      message.success(
-        t("library.success.toggle", {
+      toast({
+        title: t("library.success.toggle", {
           action:
             saveGuardInfo.value.modItem.state === "enabled"
               ? t("common.enabled")
               : t("common.disabled"),
           name: saveGuardInfo.value.modItem.name,
         }),
-      )
+        variant: "success",
+      })
     }
   }
 

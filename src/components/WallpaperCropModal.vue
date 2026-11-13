@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from "vue"
 import { useI18n } from "vue-i18n"
-import { NButton, NIcon, NSlider, NSpace, NRadioGroup, NRadioButton } from "naive-ui"
+import { Button, Slider, RadioGroup } from "@miuui/vue"
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Minimize2, Crop } from "@lucide/vue"
 import AppDialog from "./AppDialog.vue"
 
@@ -9,7 +9,6 @@ const props = withDefaults(
   defineProps<{
     show: boolean
     imageUrl: string
-    initialFillColor?: string
     mode?: "crop" | "preview"
     title?: string
   }>(),
@@ -19,7 +18,7 @@ const props = withDefaults(
 )
 const emit = defineEmits<{
   (e: "update:show", v: boolean): void
-  (e: "apply", payload: { croppedUrl: string; originalUrl: string; fillColor: string }): void
+  (e: "apply", payload: { croppedUrl: string; originalUrl: string }): void
 }>()
 
 const { t } = useI18n()
@@ -33,17 +32,6 @@ const ratioOptions: { label: string; value: AspectRatioKey }[] = [
   { label: "16:10", value: "16:10" },
   { label: "4:3", value: "4:3" },
   { label: "自适应", value: "window" },
-]
-
-// 预设背景填充色：仅保留深色和浅色（移除纯黑），以及自定义
-const DARK_FILL = "#12121A"
-const LIGHT_FILL = "#F4F5F7"
-
-const fillColor = ref<string>(props.initialFillColor || DARK_FILL)
-
-const colorPresets = [
-  { key: "dark", color: DARK_FILL, labelKey: "settings.appearance.cropDarkFill" },
-  { key: "light", color: LIGHT_FILL, labelKey: "settings.appearance.cropLightFill" },
 ]
 
 // 变换状态
@@ -168,9 +156,6 @@ watch(
   () => props.show,
   (val) => {
     if (val) {
-      if (props.initialFillColor) {
-        fillColor.value = props.initialFillColor === "#000000" ? DARK_FILL : props.initialFillColor
-      }
       fitToFrame()
     }
   },
@@ -196,11 +181,7 @@ async function onConfirm() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // 1. 填充超出边界底色
-    ctx.fillStyle = fillColor.value
-    ctx.fillRect(0, 0, targetWidth, targetHeight)
-
-    // 2. 计算绘制目标位置与尺寸
+    // 计算绘制目标位置与尺寸（保留透明留白，由当前深/浅主题背景动态填充）
     const m = targetWidth / VIEWPORT_WIDTH
     const drawW = baseDimensions.value.width * zoom.value * m
     const drawH = baseDimensions.value.height * zoom.value * m
@@ -209,11 +190,10 @@ async function onConfirm() {
 
     ctx.drawImage(imgRef.value, drawX, drawY, drawW, drawH)
 
-    const croppedUrl = canvas.toDataURL("image/jpeg", 0.92)
+    const croppedUrl = canvas.toDataURL("image/png")
     emit("apply", {
       croppedUrl,
       originalUrl: props.imageUrl,
-      fillColor: fillColor.value,
     })
   } finally {
     saving.value = false
@@ -225,9 +205,9 @@ async function onConfirm() {
   <AppDialog :show="show" width="680px" @update:show="(v) => emit('update:show', v)">
     <template #header>
       <div class="flex items-center gap-2">
-        <NIcon :size="20" class="text-primary-theme">
-          <component :is="mode === 'preview' ? Maximize2 : Crop" />
-        </NIcon>
+        <span class="text-primary-theme inline-flex items-center">
+          <component :is="mode === 'preview' ? Maximize2 : Crop" :size="20" />
+        </span>
         <span class="text-base font-bold text-c-primary">
           {{
             title ||
@@ -247,8 +227,8 @@ async function onConfirm() {
           :style="{
             width: VIEWPORT_WIDTH + 'px',
             height: viewportHeight + 'px',
-            backgroundColor: fillColor,
-            transition: 'background-color 0.2s ease, height 0.2s ease',
+            background: 'var(--app-bg-gradient)',
+            transition: 'height 0.2s ease',
           }"
           @mousedown="onMouseDown"
           @wheel="onWheel"
@@ -289,41 +269,41 @@ async function onConfirm() {
           <div
             class="absolute right-2.5 top-2.5 z-10 flex items-center gap-1 p-1 rounded-lg bg-black/50 backdrop-blur-md border border-white/10"
           >
-            <NButton
-              size="tiny"
-              quaternary
+            <Button
+              size="xs"
+              variant="ghost"
+              icon-only
+              :aria-label="t('settings.appearance.cropFit')"
               :title="t('settings.appearance.cropFit')"
               @click.stop="fitToFrame"
             >
-              <template #icon
-                ><NIcon :size="14"><Minimize2 /></NIcon
-              ></template>
-            </NButton>
-            <NButton
-              size="tiny"
-              quaternary
+              <Minimize2 :size="14" />
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              icon-only
+              :aria-label="t('settings.appearance.cropFill')"
               :title="t('settings.appearance.cropFill')"
               @click.stop="fillFrame"
             >
-              <template #icon
-                ><NIcon :size="14"><Maximize2 /></NIcon
-              ></template>
-            </NButton>
-            <NButton
-              size="tiny"
-              quaternary
+              <Maximize2 :size="14" />
+            </Button>
+            <Button
+              size="xs"
+              variant="ghost"
+              icon-only
+              :aria-label="t('settings.appearance.cropCenter')"
               :title="t('settings.appearance.cropCenter')"
               @click.stop="fitToFrame"
             >
-              <template #icon
-                ><NIcon :size="14"><RotateCcw /></NIcon
-              ></template>
-            </NButton>
+              <RotateCcw :size="14" />
+            </Button>
           </div>
         </div>
       </div>
 
-      <!-- 操作控制面板：复用 Naive UI 现有原生组件 -->
+      <!-- 操作控制面板：复用 @miuui/vue 组件 -->
       <div class="flex flex-col gap-3.5 px-1 pt-1">
         <!-- 比例与底色行（仅裁切模式显示） -->
         <div v-if="mode === 'crop'" class="flex items-center justify-between gap-4 flex-wrap">
@@ -332,67 +312,24 @@ async function onConfirm() {
             <span class="text-xs text-c-secondary font-medium">{{
               t("settings.appearance.cropRatio")
             }}</span>
-            <NRadioGroup v-model:value="selectedRatio" size="small" name="aspect-ratio-group">
-              <NRadioButton v-for="opt in ratioOptions" :key="opt.value" :value="opt.value">
-                {{ opt.label }}
-              </NRadioButton>
-            </NRadioGroup>
-          </div>
-
-          <!-- 留白填充底色选择（仅深色、浅色、自定义） -->
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-c-secondary font-medium">{{
-              t("settings.appearance.cropFillColor")
-            }}</span>
-            <div class="flex items-center gap-1.5">
-              <NButton
-                v-for="p in colorPresets"
-                :key="p.key"
-                size="small"
-                :secondary="fillColor === p.color"
-                :type="fillColor === p.color ? 'primary' : 'default'"
-                @click="fillColor = p.color"
-              >
-                <template #icon>
-                  <span
-                    class="w-3 h-3 rounded-full border border-black/20 flex-shrink-0"
-                    :style="{ backgroundColor: p.color }"
-                  />
-                </template>
-                {{ t(p.labelKey) }}
-              </NButton>
-
-              <!-- 自定义颜色选择 -->
-              <label class="relative inline-flex items-center">
-                <NButton
-                  size="small"
-                  :secondary="!colorPresets.some((p) => p.color === fillColor)"
-                  :type="!colorPresets.some((p) => p.color === fillColor) ? 'primary' : 'default'"
-                >
-                  <template #icon>
-                    <span
-                      class="w-3 h-3 rounded-full border border-black/20 flex-shrink-0"
-                      :style="{ backgroundColor: fillColor }"
-                    />
-                  </template>
-                  {{ t("settings.appearance.cropCustomFill") }}
-                </NButton>
-                <input
-                  v-model="fillColor"
-                  type="color"
-                  class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                />
-              </label>
-            </div>
+            <RadioGroup
+              :model-value="selectedRatio"
+              :options="ratioOptions"
+              orientation="horizontal"
+              variant="button"
+              size="sm"
+              name="aspect-ratio-group"
+              @update:model-value="(v: string | number) => (selectedRatio = v as AspectRatioKey)"
+            />
           </div>
         </div>
         <!-- 画面缩放控制行 -->
         <div class="flex items-center gap-3">
-          <NIcon :size="16" class="text-c-muted"><ZoomOut /></NIcon>
+          <ZoomOut :size="16" class="text-c-muted" />
           <div class="flex-1">
-            <NSlider v-model:value="zoom" :min="0.2" :max="3.0" :step="0.02" size="small" />
+            <Slider v-model="zoom" :min="0.2" :max="3.0" :step="0.02" size="sm" aria-label="Zoom" />
           </div>
-          <NIcon :size="16" class="text-c-muted"><ZoomIn /></NIcon>
+          <ZoomIn :size="16" class="text-c-muted" />
           <span class="text-xs font-mono text-c-muted w-12 text-right"
             >{{ Math.round(zoom * 100) }}%</span
           >
@@ -411,20 +348,20 @@ async function onConfirm() {
               : t("settings.appearance.cropModalHint")
           }}
         </span>
-        <NSpace :size="12">
-          <NButton size="small" secondary @click="emit('update:show', false)">
+        <div class="flex items-center gap-3">
+          <Button size="sm" variant="secondary" @click="emit('update:show', false)">
             {{ mode === "preview" ? t("common.close", "关闭") : t("common.cancel") }}
-          </NButton>
-          <NButton
+          </Button>
+          <Button
             v-if="mode === 'crop'"
-            size="small"
-            type="primary"
+            size="sm"
+            variant="solid"
             :loading="saving"
             @click="onConfirm"
           >
             {{ t("settings.appearance.cropApply") }}
-          </NButton>
-        </NSpace>
+          </Button>
+        </div>
       </div>
     </template>
   </AppDialog>

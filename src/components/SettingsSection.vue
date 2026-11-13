@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { NCard, NSpace } from "naive-ui"
-
+import { Card } from "@miuui/vue"
 defineProps<{
   title: string
   id?: string
@@ -9,23 +8,23 @@ defineProps<{
 </script>
 
 <template>
-  <NCard
+  <Card
     :id="id"
     :title="title"
-    size="small"
+    padding="sm"
+    material="glass"
     class="settings-section glass-surface"
     :class="{ 'setting-highlight': highlighted }"
   >
-    <NSpace vertical>
+    <div class="flex flex-col gap-3">
       <slot />
-    </NSpace>
-  </NCard>
+    </div>
+  </Card>
 </template>
 
 <style scoped>
 .settings-section {
-  --n-border-color: var(--glass-surface-border) !important;
-  background-color: var(--glass-surface-bg) !important;
+  background-color: var(--glass-surface-bg);
 }
 .setting-highlight {
   animation: highlight-flash 2.5s ease-in-out;

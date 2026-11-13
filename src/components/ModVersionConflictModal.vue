@@ -2,7 +2,7 @@
 import { ref, computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NButton, NTag, NIcon, NTooltip, useMessage, useDialog } from "naive-ui"
+import { Alert, Button, Badge, Tooltip, useToast, useConfirm } from "@miuui/vue"
 import { Trash2, FolderOpen, ShieldCheck, ArrowRightLeft, AlertTriangle, Check } from "@lucide/vue"
 import AppDialog from "./AppDialog.vue"
 import ConfirmBtn from "./ConfirmBtn.vue"
@@ -19,8 +19,8 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const message = useMessage()
-const dialog = useDialog()
+const { toast } = useToast()
+const { confirm } = useConfirm()
 const modCacheStore = useModCacheStore()
 
 const busy = ref(false)
@@ -37,7 +37,7 @@ async function handleOpenFolder(mod: InstalledMod) {
       await invoke("open_mod_folder_by_path", { installDir: mod.installDir })
     }
   } catch (e: unknown) {
-    message.error(String(e))
+    toast.error(String(e))
   }
 }
 
@@ -50,15 +50,17 @@ async function handleDeleteInstance(mod: InstalledMod) {
       installDir: mod.installDir,
       modId: mod.id,
     })
-    message.success(
-      t("library.success.uninstalled", { name: `${mod.name} (v${mod.version ?? mod.folderName})` }),
+    toast.success(
+      t("library.success.uninstalled", {
+        name: `${mod.name} (v${mod.version ?? mod.folderName})`,
+      }),
     )
     await modCacheStore.fetchMods()
     if (!modCacheStore.hasConflict(mod.id)) {
       emit("update:show", false)
     }
   } catch (e: unknown) {
-    message.error(String(e))
+    toast.error(String(e))
   } finally {
     busy.value = false
   }
@@ -73,43 +75,43 @@ async function handleSwitchActive(mod: InstalledMod) {
       installDir: mod.installDir,
       modId: mod.id,
     })
-    message.success(`已切换生效版本为: v${mod.version ?? mod.folderName}`)
+    toast.success(`已切换生效版本为: v${mod.version ?? mod.folderName}`)
     await modCacheStore.fetchMods()
   } catch (e: unknown) {
-    message.error(`版本切换失败: ${String(e)}`)
+    toast.error(`版本切换失败: ${String(e)}`)
   } finally {
     busy.value = false
   }
 }
 
 /** 保留此版本并清理其他所有旧版本 */
-function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
+async function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
   if (!group.value || busy.value) return
   const otherCount = group.value.instances.length - 1
-  dialog.warning({
+  const ok = await confirm({
     title: "保留此版本并清理旧版本",
-    content: `将保留版本「v${targetMod.version ?? targetMod.folderName}」，并彻底删除其余 ${otherCount} 个多余物理版本。此操作不可撤销，确认继续？`,
-    positiveText: "确认清理",
-    negativeText: t("common.cancel"),
-    onPositiveClick: async () => {
-      busy.value = true
-      try {
-        const cleanedCount = await invoke<number>("keep_mod_version_and_clean_others", {
-          installDir: targetMod.installDir,
-          modId: targetMod.id,
-        })
-        message.success(
-          `已保留版本 v${targetMod.version ?? targetMod.folderName}，并成功清理 ${cleanedCount} 个旧版本！`,
-        )
-        await modCacheStore.fetchMods()
-        emit("update:show", false)
-      } catch (e: unknown) {
-        message.error(`清理失败: ${String(e)}`)
-      } finally {
-        busy.value = false
-      }
-    },
+    description: `将保留版本「v${targetMod.version ?? targetMod.folderName}」，并彻底删除其余 ${otherCount} 个多余物理版本。此操作不可撤销，确认继续？`,
+    confirmLabel: "确认清理",
+    cancelLabel: t("common.cancel"),
+    danger: true,
   })
+  if (!ok) return
+  busy.value = true
+  try {
+    const cleanedCount = await invoke<number>("keep_mod_version_and_clean_others", {
+      installDir: targetMod.installDir,
+      modId: targetMod.id,
+    })
+    toast.success(
+      `已保留版本 v${targetMod.version ?? targetMod.folderName}，并成功清理 ${cleanedCount} 个旧版本！`,
+    )
+    await modCacheStore.fetchMods()
+    emit("update:show", false)
+  } catch (e: unknown) {
+    toast.error(`清理失败: ${String(e)}`)
+  } finally {
+    busy.value = false
+  }
 }
 </script>
 
@@ -122,21 +124,12 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
   >
     <div v-if="group" class="space-y-4">
       <!-- 提示横条 -->
-      <div
-        class="flex items-center gap-2.5 p-3 rounded-xl text-sm"
-        :style="{
-          backgroundColor: 'color-mix(in srgb, var(--warning-color, #f59e0b) 12%, transparent)',
-          border: '1px solid color-mix(in srgb, var(--warning-color, #f59e0b) 25%, transparent)',
-          color: 'var(--color-text-secondary)',
-        }"
-      >
-        <NIcon :size="18" class="text-amber-500 shrink-0"><AlertTriangle /></NIcon>
-        <div class="leading-snug">
-          检测到系统中共存
-          <strong>{{ group.instances.length }}</strong>
-          个不同版本的安装实例。请选择需要的版本生效，或清理冗余文件避免冲突。
-        </div>
-      </div>
+      <Alert variant="warning" material="glass">
+        <template #icon><AlertTriangle :size="18" class="text-amber-500" /></template>
+        检测到系统中共存
+        <strong>{{ group.instances.length }}</strong>
+        个不同版本的安装实例。请选择需要的版本生效，或清理冗余文件避免冲突。
+      </Alert>
 
       <!-- 版本实例列表 -->
       <div class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
@@ -161,16 +154,12 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
               <span class="font-bold text-[15px] font-mono text-c-primary">
                 v{{ item.version ?? "未知版本" }}
               </span>
-              <NTag v-if="item.state === 'enabled'" type="success" size="tiny" :bordered="false">
-                <template #icon
-                  ><NIcon :size="12"><Check /></NIcon
-                ></template>
+              <Badge v-if="item.state === 'enabled'" variant="success" size="xs">
+                <Check :size="12" />
                 当前生效
-              </NTag>
-              <NTag v-else type="default" size="tiny" :bordered="false"> 已禁用 </NTag>
-              <NTag v-if="item.source === 'workshop'" type="info" size="tiny" :bordered="false">
-                创意工坊
-              </NTag>
+              </Badge>
+              <Badge v-else variant="neutral" size="xs"> 已禁用 </Badge>
+              <Badge v-if="item.source === 'workshop'" variant="info" size="xs"> 创意工坊 </Badge>
             </div>
 
             <!-- 文件夹路径 -->
@@ -183,49 +172,48 @@ function confirmKeepThisAndCleanOthers(targetMod: InstalledMod) {
           <!-- 右侧操作 -->
           <div class="flex items-center gap-1.5 shrink-0">
             <!-- 切换为此版本生效 -->
-            <NButton
+            <Button
               v-if="item.state !== 'enabled' && item.source !== 'workshop'"
-              size="small"
-              secondary
+              size="sm"
+              variant="secondary"
               :disabled="busy"
               @click="handleSwitchActive(item)"
             >
-              <template #icon
-                ><NIcon :size="14"><ArrowRightLeft /></NIcon
-              ></template>
+              <template #icon><ArrowRightLeft :size="14" /></template>
               设为当前版本
-            </NButton>
+            </Button>
 
             <!-- 保留此版本并清理其他版本 -->
-            <NTooltip trigger="hover" placement="top">
+            <Tooltip side="top" material="glass">
               <template #trigger>
-                <NButton
-                  size="small"
-                  type="primary"
-                  secondary
+                <Button
+                  size="sm"
+                  variant="solid"
                   :disabled="busy"
                   @click="confirmKeepThisAndCleanOthers(item)"
                 >
-                  <template #icon
-                    ><NIcon :size="14"><ShieldCheck /></NIcon
-                  ></template>
+                  <template #icon><ShieldCheck :size="14" /></template>
                   保留并清理旧版
-                </NButton>
+                </Button>
               </template>
               将保留此版本，并彻底删除其余 {{ group.instances.length - 1 }} 个多余版本
-            </NTooltip>
+            </Tooltip>
 
             <!-- 打开文件夹 -->
-            <NTooltip trigger="hover" placement="top">
+            <Tooltip side="top" material="glass">
               <template #trigger>
-                <NButton size="small" quaternary @click="handleOpenFolder(item)">
-                  <template #icon
-                    ><NIcon :size="14"><FolderOpen /></NIcon
-                  ></template>
-                </NButton>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon-only
+                  aria-label="打开所在文件夹"
+                  @click="handleOpenFolder(item)"
+                >
+                  <FolderOpen :size="14" />
+                </Button>
               </template>
               打开所在文件夹
-            </NTooltip>
+            </Tooltip>
 
             <!-- 单独删除当前版本 -->
             <ConfirmBtn

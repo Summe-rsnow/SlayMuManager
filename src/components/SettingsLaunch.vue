@@ -3,11 +3,10 @@ import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NSwitch, NSelect } from "naive-ui"
+import { FormRow, Select, Switch } from "@miuui/vue"
 import { useStorage } from "@/composables/useStorage"
 import type { AppBootstrap } from "../types"
 import SettingsSection from "./SettingsSection.vue"
-import SettingsRow from "./SettingsRow.vue"
 
 const { t, te } = useI18n()
 const router = useRouter()
@@ -47,21 +46,17 @@ const pageOptions = computed(() => {
 
 <template>
   <SettingsSection :title="t('settings.launch.title')">
-    <SettingsRow :label="t('settings.launch.defaultPageLabel')">
-      <NSelect
-        :value="defaultPage"
+    <FormRow :label="t('settings.launch.defaultPageLabel')">
+      <Select
+        :model-value="defaultPage"
         :options="pageOptions"
-        size="small"
-        style="width: 200px"
-        @update:value="
-          (v: string) => {
-            defaultPage = v
-          }
-        "
+        size="sm"
+        class="w-50"
+        @update:model-value="(v: string | number) => (defaultPage = String(v))"
       />
-    </SettingsRow>
-    <SettingsRow :label="t('settings.launch.autoCheck')">
-      <NSwitch :value="autoCheckUpdate" size="small" @update:value="toggleAutoCheck" />
-    </SettingsRow>
+    </FormRow>
+    <FormRow :label="t('settings.launch.autoCheck')">
+      <Switch :model-value="autoCheckUpdate" size="sm" @update:model-value="toggleAutoCheck" />
+    </FormRow>
   </SettingsSection>
 </template>

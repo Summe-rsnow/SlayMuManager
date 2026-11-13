@@ -2,7 +2,7 @@ import { defineStore } from "pinia"
 import { ref } from "vue"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
-import { useMessage } from "naive-ui"
+import { useToast } from "@miuui/vue"
 import { useI18n } from "vue-i18n"
 import type { ModUpdateInfo, InstalledMod } from "../types"
 
@@ -43,7 +43,7 @@ export const useUpdateStore = defineStore("updates", () => {
     listenerReady = true
     listen<ModUpdateCheckEvent>("slaymgr:update-check-result", (event) => {
       const { t } = useI18n()
-      const message = useMessage()
+      const { toast } = useToast()
       const payload = event.payload
       if (payload.reqId !== searchReqId) return
       clearCheckTimeout()
@@ -61,9 +61,11 @@ export const useUpdateStore = defineStore("updates", () => {
         updateModsMap.value = map
       } else {
         const err = payload.error ?? ""
-        if (err.includes("API Key")) message.warning(t("library.updateCheck.noApiKey"))
-        else if (err.includes("游戏目录")) message.warning(t("library.updateCheck.noGamePath"))
-        else message.error(t("library.updateCheck.error", { e: err }))
+        if (err.includes("API Key"))
+          toast({ title: t("library.updateCheck.noApiKey"), variant: "warning" })
+        else if (err.includes("游戏目录"))
+          toast({ title: t("library.updateCheck.noGamePath"), variant: "warning" })
+        else toast({ title: t("library.updateCheck.error", { e: err }), variant: "error" })
       }
     }).catch(() => {
       /* ignore */
@@ -83,7 +85,7 @@ export const useUpdateStore = defineStore("updates", () => {
 
   function checkUpdates() {
     const { t } = useI18n()
-    const message = useMessage()
+    const { toast } = useToast()
     checkingUpdates.value = true
     searchReqId++
     const currentReqId = searchReqId
@@ -91,13 +93,13 @@ export const useUpdateStore = defineStore("updates", () => {
     clearCheckTimeout()
     checkTimeoutId = setTimeout(() => {
       checkingUpdates.value = false
-      message.error(t("library.updateCheck.timeout"))
+      toast({ title: t("library.updateCheck.timeout"), variant: "error" })
     }, CHECK_TIMEOUT_MS)
 
     invoke("start_mod_update_check", { reqId: currentReqId }).catch((e: unknown) => {
       clearCheckTimeout()
       checkingUpdates.value = false
-      message.error(t("library.updateCheck.error", { e: String(e) }))
+      toast({ title: t("library.updateCheck.error", { e: String(e) }), variant: "error" })
     })
   }
 

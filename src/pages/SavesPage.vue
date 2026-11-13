@@ -4,20 +4,19 @@ import { useI18n } from "vue-i18n"
 import { currentLocale } from "@/i18n"
 import { invoke } from "@tauri-apps/api/core"
 import {
-  NCard,
-  NButton,
-  NTag,
-  NIcon,
-  NSpace,
-  NPopconfirm,
-  NSwitch,
-  NSelect,
-  NRadioGroup,
-  NRadio,
-  useMessage,
-} from "naive-ui"
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  PageHeader,
+  Popconfirm,
+  RadioGroup,
+  Select,
+  Switch,
+  useToast,
+} from "@miuui/vue"
 import SlotCard from "@/components/SlotCard.vue"
-import CountBadge from "@/components/CountBadge.vue"
 import {
   HardDrive,
   ArrowRightLeft,
@@ -45,13 +44,11 @@ import type {
 import { useStorage } from "@/composables/useStorage"
 import { useIsActive } from "@/composables/useIsActive"
 import { kindLabel } from "@/utils/kindLabel"
-import EmptyState from "@/components/EmptyState.vue"
 import AppDialog from "@/components/AppDialog.vue"
 import FloatingTip from "@/components/FloatingTip.vue"
-import PageHeader from "@/components/PageHeader.vue"
 
 const { t } = useI18n()
-const message = useMessage()
+const { toast } = useToast()
 const { isActive } = useIsActive()
 
 // --- 状态 ---
@@ -155,13 +152,13 @@ const pairOptions = computed(() => {
   return slots.map((m) => ({ label: t("saves.pairSync.slotWithNumber", { n: m }), value: m }))
 })
 
-function pairOptionsForSlot(vanillaSlot: number): any[] {
+function pairOptionsForSlot(vanillaSlot: number): Array<{ label: string; value: number }> {
   // 已被其他原版槽位占用的模组版槽位
   const taken = syncPairs.value
     .filter((p) => p.vanillaSlot !== vanillaSlot)
     .map((p) => p.moddedSlot)
   return [
-    { label: t("saves.pairSync.noPair"), value: null as number | null },
+    { label: t("saves.pairSync.noPair"), value: -1 },
     ...pairOptions.value.filter((o) => !taken.includes(o.value)),
   ]
 }
@@ -199,11 +196,11 @@ async function deleteSaveSlot(slot: SaveSlot) {
       slotIndex: slot.slotIndex,
     })
     if (!isActive.value) return
-    message.success(t("saves.success.slotDeleted", { i: slot.slotIndex }))
+    toast({ title: t("saves.success.slotDeleted", { i: slot.slotIndex }), variant: "success" })
     await loadSlots()
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.deleteSlotFailed") + ": " + String(e))
+    toast({ title: t("saves.error.deleteSlotFailed") + ": " + String(e), variant: "error" })
   }
 }
 
@@ -217,7 +214,7 @@ async function openAllBackups() {
     showBackupsDialog.value = true
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.loadBackupsFailed") + ": " + String(e))
+    toast({ title: t("saves.error.loadBackupsFailed") + ": " + String(e), variant: "error" })
   } finally {
     loading.value = false
   }
@@ -232,12 +229,12 @@ async function createBackup(slot: SaveSlot): Promise<SaveBackupEntry | null> {
       reason: t("saves.backups.manualReason"),
     })
     if (!isActive.value) return null
-    message.success(t("saves.success.slotBackedUp", { i: slot.slotIndex }))
+    toast({ title: t("saves.success.slotBackedUp", { i: slot.slotIndex }), variant: "success" })
     await loadBackupCounts()
     return entry
   } catch (e: unknown) {
     if (!isActive.value) return null
-    message.error(t("saves.error.backupFailed") + ": " + String(e))
+    toast({ title: t("saves.error.backupFailed") + ": " + String(e), variant: "error" })
     return null
   }
 }
@@ -276,18 +273,19 @@ async function doRestoreToSlot() {
       targetSlotIndex: target.slotIndex,
     })
     if (!isActive.value) return
-    message.success(
-      t("saves.success.backupRestoredToSlot", {
+    toast({
+      title: t("saves.success.backupRestoredToSlot", {
         kind: kindLabel(t, target.kind),
         i: target.slotIndex,
       }),
-    )
+      variant: "success",
+    })
     showRestoreToSlotDialog.value = false
     showBackupsDialog.value = false
     await loadSlots()
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.restoreFailed") + ": " + String(e))
+    toast({ title: t("saves.error.restoreFailed") + ": " + String(e), variant: "error" })
   }
 }
 
@@ -295,12 +293,12 @@ async function deleteBackup(backup: SaveBackupEntry) {
   try {
     await invoke("delete_save_backup", { backupId: backup.id })
     if (!isActive.value) return
-    message.success(t("saves.success.backupDeleted"))
+    toast({ title: t("saves.success.backupDeleted"), variant: "success" })
     backups.value = backups.value.filter((b) => b.id !== backup.id)
     await loadBackupCounts()
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.backupDeleteFailed") + ": " + String(e))
+    toast({ title: t("saves.error.backupDeleteFailed") + ": " + String(e), variant: "error" })
   }
 }
 
@@ -324,7 +322,7 @@ async function confirmUpgrade() {
       manual: upgradeDialogManual.value,
     })
     if (!isActive.value) return
-    message.success(t("saves.success.backupUpgraded"))
+    toast({ title: t("saves.success.backupUpgraded"), variant: "success" })
     // 更新本地缓存
     const b = backups.value.find((x) => x.id === bid)
     if (b) b.manual = upgradeDialogManual.value
@@ -332,7 +330,7 @@ async function confirmUpgrade() {
     showUpgradeDialog.value = false
     upgradingBackupId.value = null
   } catch (e: unknown) {
-    message.error(t("saves.error.backupUpgradeFailed") + ": " + String(e))
+    toast({ title: t("saves.error.backupUpgradeFailed") + ": " + String(e), variant: "error" })
   }
 }
 
@@ -343,14 +341,17 @@ async function handleSync() {
     const result = await invoke<SaveSyncResult>("sync_saves")
     if (!isActive.value) return
     if (result.syncedCount > 0) {
-      message.success(t("saves.success.syncPairsDone", { n: result.syncedCount }))
+      toast({
+        title: t("saves.success.syncPairsDone", { n: result.syncedCount }),
+        variant: "success",
+      })
     } else {
-      message.info(t("saves.info.noSyncNeeded"))
+      toast({ title: t("saves.info.noSyncNeeded"), variant: "info" })
     }
     await loadSlots()
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.syncFailed") + ": " + String(e))
+    toast({ title: t("saves.error.syncFailed") + ": " + String(e), variant: "error" })
   } finally {
     loading.value = false
   }
@@ -363,7 +364,7 @@ async function toggleAutoSync(val: boolean) {
     autoSync.value = val
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.toggleFailed") + ": " + String(e))
+    toast({ title: t("saves.error.toggleFailed") + ": " + String(e), variant: "error" })
   }
 }
 
@@ -385,10 +386,10 @@ async function saveSyncPairs() {
   try {
     await invoke("update_save_sync_pairs", { pairs: syncPairs.value })
     if (!isActive.value) return
-    message.success(t("saves.success.syncPairsSaved"))
+    toast({ title: t("saves.success.syncPairsSaved"), variant: "success" })
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.pairSaveFailed") + ": " + String(e))
+    toast({ title: t("saves.error.pairSaveFailed") + ": " + String(e), variant: "error" })
   }
 }
 
@@ -407,7 +408,7 @@ async function openCloudDialog() {
     showCloudDialog.value = true
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.cloudUnavailable") + ": " + String(e))
+    toast({ title: t("saves.error.cloudUnavailable") + ": " + String(e), variant: "error" })
   } finally {
     cloudStatusLoading.value = false
   }
@@ -417,11 +418,11 @@ async function copyCloudSide(relPath: string, side: string) {
   try {
     await invoke("copy_cloud_save_diff_side", { relativePath: relPath, side })
     if (!isActive.value) return
-    message.success(t("saves.success.copied"))
+    toast({ title: t("saves.success.copied"), variant: "success" })
     await openCloudDialog()
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.copyFailed") + ": " + String(e))
+    toast({ title: t("saves.error.copyFailed") + ": " + String(e), variant: "error" })
   }
 }
 
@@ -431,11 +432,11 @@ async function ascendFull() {
   try {
     await invoke("ascend_to_cloud_full")
     if (!isActive.value) return
-    message.success(t("saves.success.ascended"))
+    toast({ title: t("saves.success.ascended"), variant: "success" })
     await openCloudDialog()
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.ascendFailed") + ": " + String(e))
+    toast({ title: t("saves.error.ascendFailed") + ": " + String(e), variant: "error" })
   } finally {
     cloudActionLoading.value = false
   }
@@ -447,11 +448,11 @@ async function descendFull() {
   try {
     await invoke("descend_from_cloud_full")
     if (!isActive.value) return
-    message.success(t("saves.success.descended"))
+    toast({ title: t("saves.success.descended"), variant: "success" })
     await openCloudDialog()
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.descendFailed") + ": " + String(e))
+    toast({ title: t("saves.error.descendFailed") + ": " + String(e), variant: "error" })
   } finally {
     cloudActionLoading.value = false
   }
@@ -461,10 +462,10 @@ async function cleanupArtifacts() {
   try {
     await invoke("cleanup_backup_artifacts")
     if (!isActive.value) return
-    message.success(t("saves.success.artifactsCleaned"))
+    toast({ title: t("saves.success.artifactsCleaned"), variant: "success" })
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("saves.error.cleanupFailed") + ": " + String(e))
+    toast({ title: t("saves.error.cleanupFailed") + ": " + String(e), variant: "error" })
   }
 }
 
@@ -478,14 +479,14 @@ function diffKindLabel(k: string): string {
   return m[k] ?? k
 }
 
-function diffKindType(k: string): "success" | "warning" | "error" | "info" | "default" {
-  const m: Record<string, "success" | "warning" | "error" | "info"> = {
+function diffKindType(k: string): "success" | "warning" | "danger" | "info" | "neutral" {
+  const m: Record<string, "success" | "warning" | "danger" | "info"> = {
     in_sync: "success",
     different: "warning",
     local_only: "info",
     cloud_only: "info",
   }
-  return m[k] ?? "default"
+  return m[k] ?? "neutral"
 }
 
 function mismatchLabel(s: CloudSaveStatus): string {
@@ -515,71 +516,63 @@ onMounted(async () => {
 <template>
   <div>
     <!-- 头部 -->
-    <PageHeader :title="t('saves.title')" :subtitle="t('saves.subtitle')">
-      <NButton secondary :loading="loading" @click="loadSlots">
-        <template #icon
-          ><NIcon :size="16"><RefreshCw /></NIcon
-        ></template>
-        {{ t("common.refresh") }}
-      </NButton>
-      <NButton secondary @click="handleSync">
-        <template #icon
-          ><NIcon :size="16"><ArrowRightLeft /></NIcon
-        ></template>
-        {{ t("saves.sync") }}
-      </NButton>
-      <NButton secondary @click="openAllBackups">
-        <template #icon
-          ><NIcon :size="16"><History /></NIcon
-        ></template>
-        {{ t("saves.allHistoryBackups") }}
-      </NButton>
+    <PageHeader :title="t('saves.title')" :description="t('saves.subtitle')" class="mb-5">
+      <template #actions>
+        <Button variant="secondary" :loading="loading" @click="loadSlots">
+          <template #icon><RefreshCw :size="16" /></template>
+          {{ t("common.refresh") }}
+        </Button>
+        <Button variant="secondary" @click="handleSync">
+          <template #icon><ArrowRightLeft :size="16" /></template>
+          {{ t("saves.sync") }}
+        </Button>
+        <Button variant="secondary" @click="openAllBackups">
+          <template #icon><History :size="16" /></template>
+          {{ t("saves.allHistoryBackups") }}
+        </Button>
+      </template>
     </PageHeader>
 
     <!-- 空状态 -->
-    <EmptyState
-      v-if="slots.length === 0 && !loading"
-      :icon="HardDrive"
-      :title="t('saves.empty.setGamePath')"
-      bordered
-    />
+    <Card v-if="slots.length === 0 && !loading" material="glass" padding="sm">
+      <EmptyState :title="t('saves.empty.setGamePath')">
+        <template #icon><HardDrive :size="40" /></template>
+      </EmptyState>
+    </Card>
 
     <template v-else>
       <!-- 多用户切换 -->
       <div v-if="userIds.length > 1" class="flex items-center gap-3 mb-4">
-        <NIcon :size="16" class="text-c-muted"><User /></NIcon>
+        <User :size="16" class="text-c-muted" />
         <span class="text-xs text-c-muted">{{ t("saves.steamUser") }}:</span>
         <div class="flex gap-1.5">
-          <NButton
+          <Button
             v-for="uid in userIds"
             :key="uid"
-            :size="'tiny'"
-            :type="uid === safeActiveUserId ? 'primary' : 'default'"
-            :secondary="uid !== safeActiveUserId"
+            size="xs"
+            :variant="uid === safeActiveUserId ? 'solid' : 'secondary'"
             @click="activeUserId = uid"
           >
-            <template #icon
-              ><NIcon :size="12"><User /></NIcon
-            ></template>
+            <template #icon><User :size="12" /></template>
             {{ shortUserId(uid) }}
-          </NButton>
+          </Button>
         </div>
       </div>
 
       <!-- 双列布局 -->
       <div class="grid grid-cols-2 gap-6">
         <!-- 原版存档 -->
-        <NCard size="small" class="save-card-glass">
+        <Card padding="sm" material="glass" class="save-card-glass">
           <template #header>
             <div class="flex items-center gap-2">
-              <NTag type="info" size="small" :bordered="false">{{ t("saves.kind.vanilla") }}</NTag>
+              <Badge variant="info" size="sm">{{ t("saves.kind.vanilla") }}</Badge>
               <span class="text-xs text-c-muted">
                 {{ t("saves.slotCount", { n: vanillaSlots.length }) }}
               </span>
             </div>
           </template>
 
-          <NSpace v-if="vanillaSlots.length > 0" vertical :size="8">
+          <div v-if="vanillaSlots.length > 0" class="flex flex-col gap-2">
             <SlotCard
               v-for="slot in vanillaSlots"
               :key="`v-${slot.steamUserId}-${slot.slotIndex}`"
@@ -588,23 +581,21 @@ onMounted(async () => {
               @migrate="migrateSlot"
               @delete="deleteSaveSlot"
             />
-          </NSpace>
-        </NCard>
+          </div>
+        </Card>
 
         <!-- 模组版存档 -->
-        <NCard size="small" class="save-card-glass">
+        <Card padding="sm" material="glass" class="save-card-glass">
           <template #header>
             <div class="flex items-center gap-2">
-              <NTag type="warning" size="small" :bordered="false">{{
-                t("saves.kind.modded")
-              }}</NTag>
+              <Badge variant="warning" size="sm">{{ t("saves.kind.modded") }}</Badge>
               <span class="text-xs text-c-muted">
                 {{ t("saves.slotCount", { n: moddedSlots.length }) }}
               </span>
             </div>
           </template>
 
-          <NSpace v-if="moddedSlots.length > 0" vertical :size="8">
+          <div v-if="moddedSlots.length > 0" class="flex flex-col gap-2">
             <SlotCard
               v-for="slot in moddedSlots"
               :key="`m-${slot.steamUserId}-${slot.slotIndex}`"
@@ -613,30 +604,31 @@ onMounted(async () => {
               @migrate="migrateSlot"
               @delete="deleteSaveSlot"
             />
-          </NSpace>
-        </NCard>
+          </div>
+        </Card>
       </div>
 
       <!-- 配对同步配置 -->
-      <NCard class="save-card-glass mt-4">
+      <Card material="glass" class="save-card-glass mt-4">
         <template #header>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between w-full">
             <div class="flex items-center gap-2.5">
-              <NIcon :size="18" :color="'var(--primary-color)'"><ArrowRightLeft /></NIcon>
+              <ArrowRightLeft :size="18" class="text-primary-theme" />
               <span class="text-base font-semibold text-c-primary">{{
                 t("saves.pairSync.title")
               }}</span>
-              <NTag :type="autoSync ? 'success' : 'default'" size="small" :bordered="false">
+              <Badge :variant="autoSync ? 'success' : 'neutral'" size="sm">
                 {{ autoSync ? t("saves.pairSync.autoSyncing") : t("saves.pairSync.manual") }}
-              </NTag>
+              </Badge>
             </div>
-            <NSwitch :value="autoSync" @update:value="toggleAutoSync">
-              <template #checked>{{ t("saves.pairSync.on") }}</template>
-              <template #unchecked>{{ t("saves.pairSync.off") }}</template>
-            </NSwitch>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-c-muted">{{
+                autoSync ? t("saves.pairSync.on") : t("saves.pairSync.off")
+              }}</span>
+              <Switch :model-value="autoSync" size="sm" @update:model-value="toggleAutoSync" />
+            </div>
           </div>
         </template>
-
         <p class="text-sm mb-4 text-c-secondary">
           {{ t("saves.pairSync.description") }}
         </p>
@@ -673,16 +665,10 @@ onMounted(async () => {
               </div>
 
               <div class="flex flex-col items-center flex-shrink-0">
-                <NIcon
+                <ArrowRightLeft
                   :size="22"
-                  :color="
-                    getPairedModdedSlot(i) !== null
-                      ? 'var(--primary-color)'
-                      : 'var(--color-text-muted)'
-                  "
-                >
-                  <ArrowRightLeft />
-                </NIcon>
+                  :class="getPairedModdedSlot(i) !== null ? 'text-primary-theme' : 'text-c-muted'"
+                />
                 <span
                   v-if="getPairedModdedSlot(i) !== null"
                   class="text-[10px] text-primary-theme mt-0.5"
@@ -710,13 +696,15 @@ onMounted(async () => {
                 </div>
                 <div class="flex flex-col items-end gap-1">
                   <span class="text-xs text-c-muted">{{ t("saves.pairSync.moddedSlot") }}</span>
-                  <NSelect
-                    :value="getPairedModdedSlot(i)"
+                  <Select
+                    :model-value="getPairedModdedSlot(i) ?? -1"
                     :options="pairOptionsForSlot(i)"
-                    size="small"
-                    style="width: 110px"
+                    size="sm"
+                    class="w-28"
                     :placeholder="t('saves.pairSync.chooseSlot')"
-                    @update:value="(v: number | null) => updatePair(i, v)"
+                    @update:model-value="
+                      (v: string | number) => updatePair(i, Number(v) === -1 ? null : Number(v))
+                    "
                   />
                 </div>
               </div>
@@ -728,21 +716,19 @@ onMounted(async () => {
           <span class="text-xs text-c-muted">
             {{ t("saves.pairSync.pairCount", { n: syncPairs.length }) }}
           </span>
-          <NButton type="primary" size="small" @click="saveSyncPairs">
-            <template #icon
-              ><NIcon :size="14"><ArrowRightLeft /></NIcon
-            ></template>
+          <Button variant="solid" size="sm" @click="saveSyncPairs">
+            <template #icon><ArrowRightLeft :size="14" /></template>
             {{ t("saves.pairSync.savePairs") }}
-          </NButton>
+          </Button>
         </div>
-      </NCard>
+      </Card>
 
       <!-- Steam 云存档 -->
-      <NCard class="save-card-glass mt-4">
+      <Card material="glass" class="save-card-glass mt-4">
         <template #header>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2.5">
-              <NIcon :size="18" :color="'var(--primary-color)'"><Cloud /></NIcon>
+              <Cloud :size="18" class="text-primary-theme" />
               <span class="text-base font-semibold text-c-primary">{{
                 t("saves.cloud.title")
               }}</span>
@@ -752,27 +738,26 @@ onMounted(async () => {
         <p class="text-sm mb-4 text-c-secondary">
           {{ t("saves.cloud.description") }}
         </p>
-        <NSpace>
-          <NButton secondary size="small" :loading="cloudStatusLoading" @click="openCloudDialog">
-            <template #icon
-              ><NIcon :size="14"><Cloud /></NIcon
-            ></template>
+        <div class="flex items-center gap-2 flex-wrap">
+          <Button
+            variant="secondary"
+            size="sm"
+            :loading="cloudStatusLoading"
+            @click="openCloudDialog"
+          >
+            <template #icon><Cloud :size="14" /></template>
             {{ t("saves.cloud.viewStatus") }}
-          </NButton>
-          <NButton secondary size="small" :loading="cloudActionLoading" @click="ascendFull">
-            <template #icon
-              ><NIcon :size="14"><Upload /></NIcon
-            ></template>
+          </Button>
+          <Button variant="secondary" size="sm" :loading="cloudActionLoading" @click="ascendFull">
+            <template #icon><Upload :size="14" /></template>
             {{ t("saves.cloud.uploadAll") }}
-          </NButton>
-          <NButton secondary size="small" :loading="cloudActionLoading" @click="descendFull">
-            <template #icon
-              ><NIcon :size="14"><Download /></NIcon
-            ></template>
+          </Button>
+          <Button variant="secondary" size="sm" :loading="cloudActionLoading" @click="descendFull">
+            <template #icon><Download :size="14" /></template>
             {{ t("saves.cloud.downloadAll") }}
-          </NButton>
-        </NSpace>
-      </NCard>
+          </Button>
+        </div>
+      </Card>
     </template>
 
     <!-- 备份列表对话框 -->
@@ -781,21 +766,18 @@ onMounted(async () => {
         <span class="text-lg font-semibold">{{ t("saves.allHistoryBackups") }}</span>
       </template>
       <div class="flex items-center gap-3 text-xs text-c-muted mb-4 px-1">
-        <CountBadge
-          :label="t('saves.backups.manualCountLabel')"
-          :count="totalBackupStats.manual"
-          dot-color="bg-blue-500"
-        />
-        <CountBadge :label="t('saves.backups.autoCountLabel')" :count="totalBackupStats.auto" />
+        <Badge dot variant="info" size="sm">
+          {{ t("saves.backups.manualCountLabel") }} {{ totalBackupStats.manual }}
+        </Badge>
+        <Badge dot variant="neutral" size="sm">
+          {{ t("saves.backups.autoCountLabel") }} {{ totalBackupStats.auto }}
+        </Badge>
         <span>· {{ t("saves.backups.limitLabel", { n: totalBackupStats.limit }) }}</span>
       </div>
 
-      <EmptyState
-        v-if="backups.length === 0"
-        :icon="Database"
-        :title="t('saves.backups.empty')"
-        size="sm"
-      />
+      <EmptyState v-if="backups.length === 0" :title="t('saves.backups.empty')">
+        <template #icon><Database :size="32" /></template>
+      </EmptyState>
 
       <div v-else class="max-h-[500px] overflow-auto space-y-3 pr-1">
         <div
@@ -809,16 +791,16 @@ onMounted(async () => {
               <span class="text-sm font-semibold text-c-primary whitespace-nowrap">
                 {{ new Date(b.createdAt).toLocaleString(currentLocale) }}
               </span>
-              <NTag v-if="b.manual === true" type="success" size="tiny" :bordered="false">
+              <Badge v-if="b.manual === true" variant="success" size="xs">
                 {{ t("saves.backups.manualReason") }}
-              </NTag>
-              <NTag v-else-if="b.manual === false" type="default" size="tiny" :bordered="false">
+              </Badge>
+              <Badge v-else-if="b.manual === false" variant="neutral" size="xs">
                 {{ t("saves.backups.autoBackup") }}
-              </NTag>
+              </Badge>
               <template v-else>
-                <NTag type="warning" size="tiny" :bordered="false">
+                <Badge variant="warning" size="xs">
                   {{ t("saves.backups.legacyBackup") }}
-                </NTag>
+                </Badge>
                 <FloatingTip :text="t('saves.backups.legacyBackupHint')" :width="280" />
               </template>
             </div>
@@ -826,11 +808,11 @@ onMounted(async () => {
             <!-- 第二行：Steam 用户 + 槽位 -->
             <div class="flex items-center gap-4 text-xs text-c-muted">
               <div class="flex items-center gap-1">
-                <NIcon :size="12"><User /></NIcon>
+                <User :size="12" />
                 <span>{{ t("saves.steamUser") }}: {{ b.steamUserId }}</span>
               </div>
               <div class="flex items-center gap-1">
-                <NIcon :size="12"><Database /></NIcon>
+                <Database :size="12" />
                 <span
                   >{{ kindLabel(t, b.kind) }} {{ t("saves.slotIndex", { i: b.slotIndex }) }}</span
                 >
@@ -846,30 +828,36 @@ onMounted(async () => {
 
           <!-- 操作按钮 -->
           <div class="flex items-center gap-2 ml-4 flex-shrink-0">
-            <NButton
+            <Button
               v-if="b.manual === null"
-              size="tiny"
-              secondary
+              size="xs"
+              variant="secondary"
               @click="openUpgradeDialog(b.id)"
             >
               {{ t("saves.backups.upgrade") }}
-            </NButton>
-            <NButton size="tiny" secondary @click="openRestoreToSlot(b)">
-              <template #icon
-                ><NIcon :size="12"><RotateCcw /></NIcon
-              ></template>
+            </Button>
+            <Button size="xs" variant="secondary" @click="openRestoreToSlot(b)">
+              <template #icon><RotateCcw :size="12" /></template>
               {{ t("saves.backups.restoreTo") }}
-            </NButton>
-            <NPopconfirm @positive-click="() => deleteBackup(b)">
+            </Button>
+            <Popconfirm
+              :title="t('saves.backups.confirmDelete')"
+              danger
+              material="glass"
+              @confirm="deleteBackup(b)"
+            >
               <template #trigger>
-                <NButton size="tiny" type="error" text>
-                  <template #icon
-                    ><NIcon :size="12"><Trash2 /></NIcon
-                  ></template>
-                </NButton>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  icon-only
+                  :aria-label="t('common.delete')"
+                  class="text-red-500"
+                >
+                  <Trash2 :size="12" />
+                </Button>
               </template>
-              {{ t("saves.backups.confirmDelete") }}
-            </NPopconfirm>
+            </Popconfirm>
           </div>
         </div>
       </div>
@@ -879,7 +867,7 @@ onMounted(async () => {
     <AppDialog v-if="restoreToSlotBackup" v-model:show="showRestoreToSlotDialog" width="400px">
       <template #header>
         <div class="flex items-center gap-2">
-          <NIcon :size="18" :color="'var(--primary-color)'"><RotateCcw /></NIcon>
+          <RotateCcw :size="18" class="text-primary-theme" />
           <span class="text-lg font-semibold">{{ t("saves.backups.restoreToTitle") }}</span>
         </div>
       </template>
@@ -898,40 +886,43 @@ onMounted(async () => {
 
         <div class="p-3 rounded-lg border bg-c-secondary border-c-default">
           <div class="text-xs mb-2 text-c-muted">{{ t("saves.backups.restoreTarget") }}</div>
-          <NSpace vertical :size="8">
-            <NRadioGroup
-              :value="restoreToSlotTarget.kind"
-              @update:value="(v: string) => setRestoreTargetKind(v)"
-            >
-              <NSpace>
-                <NRadio value="vanilla">{{ t("saves.kind.vanilla") }}</NRadio>
-                <NRadio value="modded">{{ t("saves.kind.modded") }}</NRadio>
-              </NSpace>
-            </NRadioGroup>
-            <NSelect
-              :value="restoreToSlotTarget.slotIndex"
-              :options="[1, 2, 3].map((i) => ({ label: t('saves.slotIndex', { i }), value: i }))"
-              size="small"
-              style="width: 120px"
-              :placeholder="t('saves.backups.chooseSlot')"
-              @update:value="(v: number) => setRestoreTargetSlot(v)"
+          <div class="flex flex-col gap-2">
+            <RadioGroup
+              :model-value="restoreToSlotTarget.kind"
+              :options="[
+                { value: 'vanilla', label: t('saves.kind.vanilla') },
+                { value: 'modded', label: t('saves.kind.modded') },
+              ]"
+              orientation="horizontal"
+              size="sm"
+              @update:model-value="(v: string | number) => setRestoreTargetKind(String(v))"
             />
-          </NSpace>
+            <Select
+              :model-value="restoreToSlotTarget.slotIndex"
+              :options="[1, 2, 3].map((i) => ({ label: t('saves.slotIndex', { i }), value: i }))"
+              size="sm"
+              class="w-32"
+              :placeholder="t('saves.backups.chooseSlot')"
+              @update:model-value="(v: string | number) => setRestoreTargetSlot(Number(v))"
+            />
+          </div>
         </div>
 
-        <div class="mt-3 p-2 rounded bg-c-warning text-xs text-c-warning flex items-start gap-1.5">
-          <NIcon :size="14"><AlertTriangle /></NIcon>
-          <span>{{ t("saves.backups.restoreConfirmHint") }}</span>
-        </div>
+        <Alert variant="warning" material="glass" class="mt-3">
+          <template #icon><AlertTriangle :size="14" /></template>
+          <span class="text-xs">{{ t("saves.backups.restoreConfirmHint") }}</span>
+        </Alert>
       </div>
 
       <template #footer>
-        <NSpace justify="end">
-          <NButton @click="showRestoreToSlotDialog = false">{{ t("common.cancel") }}</NButton>
-          <NButton type="primary" @click="doRestoreToSlot">
+        <div class="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" @click="showRestoreToSlotDialog = false">{{
+            t("common.cancel")
+          }}</Button>
+          <Button variant="solid" size="sm" @click="doRestoreToSlot">
             {{ t("saves.backups.confirmRestore") }}
-          </NButton>
-        </NSpace>
+          </Button>
+        </div>
       </template>
     </AppDialog>
 
@@ -943,37 +934,46 @@ onMounted(async () => {
 
       <div class="text-sm text-c-secondary space-y-3">
         <p>{{ t("saves.backups.upgradeDesc") }}</p>
-        <NRadioGroup v-model:value="upgradeDialogManual">
-          <NSpace vertical>
-            <NRadio :value="true">{{ t("saves.backups.manualReason") }}</NRadio>
-            <NRadio :value="false">{{ t("saves.backups.autoBackup") }}</NRadio>
-          </NSpace>
-        </NRadioGroup>
+        <RadioGroup
+          :model-value="upgradeDialogManual ? 'manual' : 'auto'"
+          :options="[
+            { value: 'manual', label: t('saves.backups.manualReason') },
+            { value: 'auto', label: t('saves.backups.autoBackup') },
+          ]"
+          orientation="vertical"
+          size="sm"
+          @update:model-value="(v: string | number) => (upgradeDialogManual = v === 'manual')"
+        />
       </div>
 
       <template #footer>
-        <NSpace justify="end">
-          <NButton @click="upgradingBackupId = null">{{ t("common.cancel") }}</NButton>
-          <NButton type="primary" @click="confirmUpgrade">{{
+        <div class="flex justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            @click="((showUpgradeDialog = false), (upgradingBackupId = null))"
+            >{{ t("common.cancel") }}</Button
+          >
+          <Button variant="solid" size="sm" @click="confirmUpgrade">{{
             t("saves.backups.upgradeConfirm")
-          }}</NButton>
-        </NSpace>
+          }}</Button>
+        </div>
       </template>
     </AppDialog>
 
     <!-- Steam 云存档对话框 -->
     <AppDialog v-model:show="showCloudDialog" width="640px">
       <template #header>
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between w-full gap-3 pr-2">
           <span class="text-lg font-semibold">{{ t("saves.cloud.title") }}</span>
-          <NButton size="tiny" secondary @click="cleanupArtifacts">
+          <Button size="xs" variant="secondary" @click="cleanupArtifacts">
             {{ t("saves.cloud.cleanupArtifacts") }}
             <FloatingTip
               :text="t('saves.cloud.cleanupArtifactsTip')"
               :width="240"
               placement="bottom-end"
             />
-          </NButton>
+          </Button>
         </div>
       </template>
 
@@ -1053,10 +1053,11 @@ onMounted(async () => {
           }"
         >
           <div class="flex items-center gap-1.5 leading-tight">
-            <NIcon :size="18" :color="cloudStatus.hasMismatch ? '#f59e0b' : '#10b981'">
-              <AlertTriangle v-if="cloudStatus.hasMismatch" />
-              <Check v-else />
-            </NIcon>
+            <component
+              :is="cloudStatus.hasMismatch ? AlertTriangle : Check"
+              :size="18"
+              :class="cloudStatus.hasMismatch ? 'text-amber-500' : 'text-emerald-500'"
+            />
             <span
               class="text-sm font-bold truncate max-w-[80px]"
               :class="cloudStatus.hasMismatch ? 'text-amber-500' : 'text-emerald-500'"
@@ -1070,52 +1071,46 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div
+      <Alert
         v-if="cloudStatus && !cloudStatus.isAvailable"
-        class="p-4 rounded-xl bg-c-warning/10 border border-c-warning/40 mb-4"
+        variant="warning"
+        material="glass"
+        :title="t('saves.cloud.unavailable')"
+        class="mb-4"
       >
-        <div class="flex items-start gap-2.5">
-          <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
-          <div>
-            <div class="text-sm font-medium text-c-warning mb-1">
-              {{ t("saves.cloud.unavailable") }}
-            </div>
-            <div class="text-xs text-c-warning">{{ cloudStatus.diagnostic }}</div>
-            <div v-if="cloudStatus.cloudPath" class="text-xs mt-1 font-mono text-c-muted">
-              {{ t("saves.cloud.cloudLabel") }}: {{ cloudStatus.cloudPath }}
-            </div>
-            <div v-if="cloudStatus.localPath" class="text-xs mt-0.5 font-mono text-c-muted">
-              {{ t("saves.cloud.localLabel") }}: {{ cloudStatus.localPath }}
-            </div>
+        <template #icon><AlertTriangle :size="18" class="text-amber-500" /></template>
+        <div class="text-xs space-y-1">
+          <div>{{ cloudStatus.diagnostic }}</div>
+          <div v-if="cloudStatus.cloudPath" class="font-mono text-c-muted">
+            {{ t("saves.cloud.cloudLabel") }}: {{ cloudStatus.cloudPath }}
+          </div>
+          <div v-if="cloudStatus.localPath" class="font-mono text-c-muted">
+            {{ t("saves.cloud.localLabel") }}: {{ cloudStatus.localPath }}
           </div>
         </div>
-      </div>
+      </Alert>
 
       <div class="flex items-center gap-2 mb-4">
-        <NButton
-          size="small"
-          secondary
+        <Button
+          size="sm"
+          variant="secondary"
           :disabled="!cloudStatus?.isAvailable"
           :loading="cloudActionLoading"
           @click="ascendFull"
         >
-          <template #icon
-            ><NIcon :size="14"><Upload /></NIcon
-          ></template>
+          <template #icon><Upload :size="14" /></template>
           {{ t("saves.cloud.ascend") }}
-        </NButton>
-        <NButton
-          size="small"
-          secondary
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
           :disabled="!cloudStatus?.isAvailable"
           :loading="cloudActionLoading"
           @click="descendFull"
         >
-          <template #icon
-            ><NIcon :size="14"><Download /></NIcon
-          ></template>
+          <template #icon><Download :size="14" /></template>
           {{ t("saves.cloud.descend") }}
-        </NButton>
+        </Button>
       </div>
 
       <div
@@ -1134,29 +1129,29 @@ onMounted(async () => {
             class="flex items-center justify-between p-2.5 text-sm transition-colors hover:bg-c-secondary/40"
           >
             <div class="flex-1 min-w-0 flex items-center gap-2">
-              <NTag :type="diffKindType(d.kind)" size="tiny" :bordered="false">
+              <Badge :variant="diffKindType(d.kind)" size="xs">
                 {{ diffKindLabel(d.kind) }}
-              </NTag>
+              </Badge>
               <span class="truncate font-mono text-xs text-c-primary">{{ d.relativePath }}</span>
             </div>
-            <NSpace :size="4" class="flex-shrink-0 ml-3">
-              <NButton
+            <div class="flex items-center gap-1 flex-shrink-0 ml-3">
+              <Button
                 v-if="d.kind === 'local_only'"
-                size="tiny"
-                secondary
+                size="xs"
+                variant="secondary"
                 @click="copyCloudSide(d.relativePath, 'local_to_cloud')"
               >
                 {{ t("saves.cloud.toCloud") }}
-              </NButton>
-              <NButton
+              </Button>
+              <Button
                 v-if="d.kind === 'cloud_only'"
-                size="tiny"
-                secondary
+                size="xs"
+                variant="secondary"
                 @click="copyCloudSide(d.relativePath, 'cloud_to_local')"
               >
                 {{ t("saves.cloud.toLocal") }}
-              </NButton>
-            </NSpace>
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -1169,8 +1164,7 @@ onMounted(async () => {
 
 <style scoped>
 .save-card-glass {
-  --n-border-color: var(--glass-surface-border) !important;
-  background-color: var(--glass-surface-bg) !important;
+  background-color: var(--glass-surface-bg);
   -webkit-backdrop-filter: blur(var(--glass-surface-blur));
   backdrop-filter: blur(var(--glass-surface-blur));
   box-shadow: var(--shadow-glass-surface) !important;

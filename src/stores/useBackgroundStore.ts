@@ -13,7 +13,6 @@ export const useBackgroundStore = defineStore("background", () => {
   const originalBgUrl = ref<string>("")
   const customBgBlur = useStorage<number>("slaymgr:custom-bg-blur", 0)
   const customBgDim = useStorage<number>("slaymgr:custom-bg-dim", 40)
-  const customBgFillColor = useStorage<string>("slaymgr:custom-bg-fill-color", "#0A0A12")
   const loading = ref(false)
 
   // 裁切弹窗控制
@@ -71,12 +70,11 @@ export const useBackgroundStore = defineStore("background", () => {
     }
   }
 
-  async function applyCroppedWallpaper(croppedUrl: string, originalUrl: string, fillColor: string) {
+  async function applyCroppedWallpaper(croppedUrl: string, originalUrl: string) {
     loading.value = true
     try {
       customBgUrl.value = croppedUrl
       originalBgUrl.value = originalUrl
-      customBgFillColor.value = fillColor
       await saveWallpaperToIDB(croppedUrl, originalUrl)
     } finally {
       loading.value = false
@@ -103,7 +101,6 @@ export const useBackgroundStore = defineStore("background", () => {
     originalBgUrl,
     customBgBlur,
     customBgDim,
-    customBgFillColor,
     loading,
     showCropModal,
     cropSourceUrl,

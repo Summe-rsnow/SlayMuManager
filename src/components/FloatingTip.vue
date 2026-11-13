@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useSlots } from "vue"
-import { NIcon, NTooltip } from "naive-ui"
+import { computed, useSlots } from "vue"
+import { Tooltip, TruncateText } from "@miuui/vue"
 import { HelpCircle } from "@lucide/vue"
 
 const props = withDefaults(
@@ -24,77 +24,73 @@ const props = withDefaults(
 )
 
 const slots = useSlots()
+const side = computed(() => {
+  const base = props.placement?.split("-")[0]
+  if (base === "top" || base === "right" || base === "bottom" || base === "left") return base
+  return "top"
+})
 </script>
 
 <template>
   <!-- 1. 自定义触发元素模式（包裹任意按钮、开关等） -->
-  <NTooltip
+  <Tooltip
     v-if="slots.default"
-    class="glass-floating"
-    trigger="hover"
-    :placement="placement as any"
-    :to="to as any"
-    :style="width ? { maxWidth: `${width}px` } : undefined"
+    :side="side"
+    material="glass"
+    :max-width="width ? `${width}px` : '420px'"
+    max-height="280px"
   >
     <template #trigger>
       <span class="inline-flex items-center">
         <slot />
       </span>
     </template>
-    <span>{{ text }}</span>
-  </NTooltip>
+    <span class="whitespace-pre-wrap break-words">{{ text }}</span>
+  </Tooltip>
 
   <!-- 2. 截断文本模式（用于发现页/预设描述文本 hover 查看全文） -->
   <div v-else-if="truncated" class="truncated-wrapper">
-    <NTooltip
-      class="glass-floating"
-      trigger="hover"
-      :placement="placement as any"
-      :to="to as any"
-      :style="width ? { maxWidth: `${width}px` } : undefined"
+    <Tooltip
+      :side="side"
+      material="glass"
+      :max-width="width ? `${width}px` : '420px'"
+      max-height="280px"
     >
       <template #trigger>
-        <p
-          class="text-xs text-c-muted truncated-content cursor-help"
-          :style="{ '-webkit-line-clamp': maxLines }"
-        >
-          {{ text }}
-        </p>
+        <TruncateText
+          as="p"
+          :text="text"
+          :lines="maxLines"
+          :title="false"
+          class="text-xs text-c-muted cursor-help"
+        />
       </template>
-      <span>{{ text }}</span>
-    </NTooltip>
+      <span class="whitespace-pre-wrap break-words">{{ text }}</span>
+    </Tooltip>
   </div>
 
   <!-- 3. 带标签或独立问号提示模式 -->
-  <NTooltip
+  <Tooltip
     v-else
-    class="glass-floating"
-    trigger="hover"
-    :placement="placement as any"
-    :to="to as any"
-    :style="width ? { maxWidth: `${width}px` } : undefined"
+    :side="side"
+    material="glass"
+    :max-width="width ? `${width}px` : '420px'"
+    max-height="280px"
   >
     <template #trigger>
       <span v-if="label" class="floating-tip-label">
         <span>{{ label }}</span>
-        <NIcon :size="iconSize" class="text-c-muted"><HelpCircle /></NIcon>
+        <HelpCircle :size="iconSize" class="text-c-muted" />
       </span>
       <span v-else class="floating-tip-icon" @click.stop>
-        <NIcon :size="iconSize" class="text-c-muted cursor-help"><HelpCircle /></NIcon>
+        <HelpCircle :size="iconSize" class="text-c-muted cursor-help" />
       </span>
     </template>
-    <span>{{ text }}</span>
-  </NTooltip>
+    <span class="whitespace-pre-wrap break-words">{{ text }}</span>
+  </Tooltip>
 </template>
 
 <style scoped>
-.truncated-content {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  max-height: 7.5rem;
-  line-height: 1.25;
-}
 .floating-tip-label {
   display: flex;
   align-items: center;

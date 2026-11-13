@@ -1,27 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
+import { computed, ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NSwitch, NRadioGroup, NRadio } from "naive-ui"
+import { FormRow, RadioGroup, Switch } from "@miuui/vue"
 import type { AppBootstrap } from "../types"
 import SettingsSection from "./SettingsSection.vue"
-import SettingsRow from "./SettingsRow.vue"
 
 const { t } = useI18n()
 
 const launchMode = ref("steam")
 const launchCheckCloudSave = ref(true)
-
+const launchModeOptions = computed(() => [
+  { value: "steam", label: t("settings.launchGame.steam") },
+  { value: "direct", label: t("settings.launchGame.direct") },
+])
 onMounted(async () => {
   const b = await invoke<AppBootstrap>("get_app_bootstrap")
   launchMode.value = b.launchMode
   launchCheckCloudSave.value = b.launchCheckCloudSave
 })
 
-async function handleLaunchModeChange(val: string) {
-  launchMode.value = val
+async function handleLaunchModeChange(val: string | number) {
+  const mode = String(val)
+  launchMode.value = mode
   try {
-    await invoke("update_launch_mode", { mode: val })
+    await invoke("update_launch_mode", { mode })
   } catch {
     /* ignore */
   }
@@ -39,14 +42,21 @@ async function handleLaunchCheckCloudSaveChange(val: boolean) {
 
 <template>
   <SettingsSection :title="t('settings.launchGame.title')">
-    <SettingsRow :label="t('settings.launchGame.mode')">
-      <NRadioGroup :value="launchMode" size="small" @update:value="handleLaunchModeChange">
-        <NRadio value="steam">{{ t("settings.launchGame.steam") }}</NRadio>
-        <NRadio value="direct">{{ t("settings.launchGame.direct") }}</NRadio>
-      </NRadioGroup>
-    </SettingsRow>
-    <SettingsRow :label="t('settings.launchGame.checkCloudSave')">
-      <NSwitch :value="launchCheckCloudSave" @update:value="handleLaunchCheckCloudSaveChange" />
-    </SettingsRow>
+    <FormRow :label="t('settings.launchGame.mode')">
+      <RadioGroup
+        :model-value="launchMode"
+        :options="launchModeOptions"
+        orientation="horizontal"
+        size="sm"
+        @update:model-value="handleLaunchModeChange"
+      />
+    </FormRow>
+    <FormRow :label="t('settings.launchGame.checkCloudSave')">
+      <Switch
+        :model-value="launchCheckCloudSave"
+        size="sm"
+        @update:model-value="handleLaunchCheckCloudSaveChange"
+      />
+    </FormRow>
   </SettingsSection>
 </template>

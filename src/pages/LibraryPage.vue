@@ -7,7 +7,20 @@ import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
-import { NSpace, NButton, NInput, NIcon, NCheckbox, NSwitch, useMessage, useDialog } from "naive-ui"
+import {
+  Alert,
+  Badge,
+  Button,
+  Checkbox,
+  EmptyState,
+  Input,
+  PageHeader,
+  SectionHeader,
+  Switch,
+  Textarea,
+  useConfirm,
+  useToast,
+} from "@miuui/vue"
 import {
   Search,
   Download,
@@ -23,6 +36,7 @@ import {
   ArrowUp,
   HardDrive,
   CheckCircle,
+  Check,
   AlertCircle,
 } from "@lucide/vue"
 import { currentLocale } from "@/i18n"
@@ -35,12 +49,8 @@ import DragOverlay from "@/components/DragOverlay.vue"
 import FloatingTip from "@/components/FloatingTip.vue"
 import ModCard from "@/components/ModCard.vue"
 import ModVersionConflictModal from "@/components/ModVersionConflictModal.vue"
-import PresetManageModal from "@/components/PresetManageModal.vue"
 import AppDialog from "@/components/AppDialog.vue"
-import EmptyState from "@/components/EmptyState.vue"
-import PageHeader from "@/components/PageHeader.vue"
-import CountBadge from "@/components/CountBadge.vue"
-import ListSection from "@/components/ListSection.vue"
+import PresetManageModal from "@/components/PresetManageModal.vue"
 import SkeletonCard from "@/components/SkeletonCard.vue"
 import type {
   InstalledMod,
@@ -53,8 +63,8 @@ import { useIsActive } from "@/composables/useIsActive"
 import { useModOperations } from "@/composables/useModOperations"
 
 const { t } = useI18n()
-const message = useMessage()
-const dialog = useDialog()
+const { toast } = useToast()
+const { confirm } = useConfirm()
 const router = useRouter()
 const highlightStore = useHighlightStore()
 const modCacheStore = useModCacheStore()
@@ -78,9 +88,10 @@ async function onCardToggle(mod: InstalledMod) {
     const group = modCacheStore.getConflictGroup(mod.id)
     const alreadyEnabled = group?.instances.find((i) => i.state === "enabled")
     if (alreadyEnabled) {
-      message.warning(
-        `该模组已有版本 (v${alreadyEnabled.version ?? alreadyEnabled.folderName}) 处于生效状态，请在版本面板中切换！`,
-      )
+      toast({
+        title: `该模组已有版本 (v${alreadyEnabled.version ?? alreadyEnabled.folderName}) 处于生效状态，请在版本面板中切换！`,
+        variant: "warning",
+      })
       openVersionConflictModal(mod)
       return
     }
@@ -125,21 +136,20 @@ const importResolutions = ref<Record<string, "skip" | "replace">>({})
 const importBusy = ref(false)
 
 /** 弹窗引导前往设置 */
-function showSettingsPrompt(type: "game-path" | "nexus") {
+async function showSettingsPrompt(type: "game-path" | "nexus") {
   const isGamePath = type === "game-path"
-  dialog.warning({
+  const ok = await confirm({
     title: t(isGamePath ? "settings.prompt.gamePathRequired" : "settings.prompt.apiKeyRequired"),
-    content: t(
+    description: t(
       isGamePath ? "settings.prompt.gamePathRequiredDesc" : "settings.prompt.apiKeyRequiredDesc",
     ),
-    positiveText: t("settings.prompt.goToSettings"),
-    negativeText: t("common.cancel"),
-    onPositiveClick: () => {
-      highlightStore.highlight(type)
-      router.push("/settings")
-    },
-    maskClosable: true,
+    confirmLabel: t("settings.prompt.goToSettings"),
+    cancelLabel: t("common.cancel"),
   })
+  if (ok) {
+    highlightStore.highlight(type)
+    router.push("/settings")
+  }
 }
 
 /** 带游戏路径守卫的导入 */
@@ -178,7 +188,7 @@ async function doImportFlow(paths: string[]) {
         .map((m) => m.modId)
       if (allIds.length === 0) {
         if (!isActive.value) return
-        message.warning(t("common.noData"))
+        toast({ title: t("common.noData"), variant: "warning" })
         return
       }
       await invoke<BatchInstallResult>("batch_install_mods", {
@@ -191,11 +201,14 @@ async function doImportFlow(paths: string[]) {
       if (!isActive.value) return
       fetchMods()
       loadCachedUpdates()
-      message.success(t("import.success.installedCount", { count: allIds.length }))
+      toast({
+        title: t("import.success.installedCount", { count: allIds.length }),
+        variant: "success",
+      })
     }
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("import.error.installFailed", { e: String(e) }))
+    toast({ title: t("import.error.installFailed", { e: String(e) }), variant: "error" })
   } finally {
     if (isActive.value) importBusy.value = false
   }
@@ -223,10 +236,13 @@ async function confirmImportWithConflicts() {
     showImportConflictDialog.value = false
     fetchMods()
     loadCachedUpdates()
-    message.success(t("import.success.installedCount", { count: allIds.length }))
+    toast({
+      title: t("import.success.installedCount", { count: allIds.length }),
+      variant: "success",
+    })
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("import.error.installFailed", { e: String(e) }))
+    toast({ title: t("import.error.installFailed", { e: String(e) }), variant: "error" })
   } finally {
     if (isActive.value) importBusy.value = false
   }
@@ -353,7 +369,7 @@ function openSaveAsPreset() {
 async function handleSaveAsPreset() {
   const name = saveAsPresetName.value.trim()
   if (!name) {
-    message.warning(t("library.warning.enterPresetName"))
+    toast({ title: t("library.warning.enterPresetName"), variant: "warning" })
     return
   }
   savingAsPreset.value = true
@@ -373,14 +389,14 @@ async function handleSaveAsPreset() {
       activePresetName.value = created.name
       quickPresetId.value = created.id
       presetSnapshot.value = new Set(modIds)
-      message.success(t("library.success.savedAsPreset", { name }))
+      toast({ title: t("library.success.savedAsPreset", { name }), variant: "success" })
       await fetchMods()
       loadQuickPresets()
     }
     showSaveAsPresetDialog.value = false
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(`${t("profiles.error.saveFailed")}: ${String(e)}`)
+    toast({ title: `${t("profiles.error.saveFailed")}: ${String(e)}`, variant: "error" })
   } finally {
     savingAsPreset.value = false
   }
@@ -399,11 +415,11 @@ async function handleUnsubscribe(workshopId: string) {
   try {
     await invoke("unsubscribe_workshop_mod", { publishedFileId: Number(workshopId) })
     if (!isActive.value) return
-    message.success(t("library.mod.unsubscribed"))
+    toast({ title: t("library.mod.unsubscribed"), variant: "success" })
     await fetchMods()
   } catch (e: unknown) {
     if (!isActive.value) return
-    message.error(t("library.error.operationFailed", { e }))
+    toast({ title: t("library.error.operationFailed", { e }), variant: "error" })
   } finally {
     if (isActive.value) {
       const next = new Set(unsubscribing.value)
@@ -618,98 +634,94 @@ watch(presetAppliedTick, () => {
 <template>
   <div>
     <!-- 头部 -->
-    <PageHeader :title="t('library.title')" :subtitle="t('library.subtitle')">
-      <CountBadge
-        :label="t('library.enabledCountLabel')"
-        :count="enabledMods.length"
-        dot-color="bg-green-500"
-      />
-      <CountBadge :label="t('library.disabledCountLabel')" :count="disabledMods.length" />
-      <span
-        v-if="activePresetName"
-        class="flex items-center gap-1 text-c-muted flex-shrink-0 whitespace-nowrap"
-      >
-        <NIcon :size="14"><Bookmark /></NIcon>
-        <span>{{ activePresetName }}</span>
-      </span>
-      <span v-if="loading" class="text-xs text-c-muted animate-pulse">{{
-        t("library.refreshing")
-      }}</span>
-      <FloatingTip :label="t('library.vanillaLaunch')" :text="t('library.vanillaLaunchHint')" />
-      <NSwitch :value="vanillaLaunch" size="small" @update:value="handleToggleVanillaLaunch" />
-      <div class="flex gap-2">
-        <NButton size="small" secondary @click="handleOpenModsDir">
-          <template #icon
-            ><NIcon :size="14"><FolderOpen /></NIcon
-          ></template>
-          {{ t("library.openModsDir") }}
-        </NButton>
-        <NButton size="small" secondary @click="openSaveAsPreset">
-          <template #icon
-            ><NIcon :size="14"><BookmarkPlus /></NIcon
-          ></template>
-          {{ t("library.saveAsPreset") }}
-        </NButton>
-        <NButton size="small" secondary @click="showPresetManageModal = true">
-          <template #icon
-            ><NIcon :size="14"><FolderHeart /></NIcon
-          ></template>
-          {{ t("library.managePresets") }}
-        </NButton>
-        <NButton size="small" secondary :loading="localChecking" @click="checkUpdates">
-          <template #icon
-            ><NIcon :size="14"><ArrowUp /></NIcon
-          ></template>
-          {{ localChecking ? t("library.updateCheck.checking") : t("library.updateCheck.check") }}
-          <FloatingTip :text="t('library.updateCheck.supportHint')" :width="240" />
-        </NButton>
-        <NButton size="small" secondary :loading="loading" @click="() => fetchMods()">
-          <template #icon
-            ><NIcon :size="14"><RefreshCw /></NIcon
-          ></template>
-          {{ t("common.refresh") }}
-        </NButton>
-        <NButton size="small" type="primary" @click="handleImport">
-          <template #icon
-            ><NIcon :size="14"><Download /></NIcon
-          ></template>
-          {{ t("library.importMod") }}
-        </NButton>
-      </div>
+    <PageHeader :title="t('library.title')" :description="t('library.subtitle')" class="mb-5">
+      <template #actions>
+        <Badge dot variant="success" size="sm">
+          {{ t("library.enabledCountLabel") }} {{ enabledMods.length }}
+        </Badge>
+        <Badge dot variant="neutral" size="sm">
+          {{ t("library.disabledCountLabel") }} {{ disabledMods.length }}
+        </Badge>
+        <span
+          v-if="activePresetName"
+          class="flex items-center gap-1 text-c-muted flex-shrink-0 whitespace-nowrap"
+        >
+          <Bookmark :size="14" />
+          <span>{{ activePresetName }}</span>
+        </span>
+        <span v-if="loading" class="text-xs text-c-muted animate-pulse">{{
+          t("library.refreshing")
+        }}</span>
+        <FloatingTip :label="t('library.vanillaLaunch')" :text="t('library.vanillaLaunchHint')" />
+        <Switch
+          :model-value="vanillaLaunch"
+          size="sm"
+          @update:model-value="handleToggleVanillaLaunch"
+        />
+        <div class="flex gap-2 flex-wrap">
+          <Button size="sm" variant="secondary" @click="handleOpenModsDir">
+            <template #icon><FolderOpen :size="14" /></template>
+            {{ t("library.openModsDir") }}
+          </Button>
+          <Button size="sm" variant="secondary" @click="openSaveAsPreset">
+            <template #icon><BookmarkPlus :size="14" /></template>
+            {{ t("library.saveAsPreset") }}
+          </Button>
+          <Button size="sm" variant="secondary" @click="showPresetManageModal = true">
+            <template #icon><FolderHeart :size="14" /></template>
+            {{ t("library.managePresets") }}
+          </Button>
+          <Button size="sm" variant="secondary" :loading="localChecking" @click="checkUpdates">
+            <template #icon><ArrowUp :size="14" /></template>
+            {{ localChecking ? t("library.updateCheck.checking") : t("library.updateCheck.check") }}
+            <FloatingTip :text="t('library.updateCheck.supportHint')" :width="240" />
+          </Button>
+          <Button size="sm" variant="secondary" :loading="loading" @click="() => fetchMods()">
+            <template #icon><RefreshCw :size="14" /></template>
+            {{ t("common.refresh") }}
+          </Button>
+          <Button size="sm" variant="solid" @click="handleImport">
+            <template #icon><Download :size="14" /></template>
+            {{ t("library.importMod") }}
+          </Button>
+        </div>
+      </template>
     </PageHeader>
 
     <!-- 搜索栏 + 筛选 -->
     <div class="relative mb-6">
-      <NInput
-        v-model:value="searchInput"
+      <Input
+        v-model="searchInput"
         :placeholder="t('library.searchPlaceholder')"
         clearable
         @clear="clearSearch"
-        @keydown.enter="applySearch"
+        @enter="applySearch"
       >
         <template #prefix>
-          <NIcon :size="16"><Search /></NIcon>
+          <Search :size="16" />
         </template>
         <template #suffix>
           <div class="flex items-center gap-0.5">
             <button
               v-if="activeFilterCount > 0"
+              type="button"
               class="filter-btn"
               @click="clearFilters"
               :title="t('library.filter.clear')"
             >
-              <NIcon :size="14"><X /></NIcon>
+              <X :size="14" />
             </button>
             <button
+              type="button"
               class="filter-btn"
               :class="{ active: showFilterPanel }"
               @click="showFilterPanel = !showFilterPanel"
             >
-              <NIcon :size="16"><Filter /></NIcon>
+              <Filter :size="16" />
             </button>
           </div>
         </template>
-      </NInput>
+      </Input>
 
       <!-- 浮动筛选面板 -->
       <Transition name="filter-dropdown">
@@ -724,37 +736,37 @@ watch(presetAppliedTick, () => {
                 {{ t("library.filter.show") }}
               </div>
               <div class="flex gap-3">
-                <NCheckbox v-model:checked="filterShowEnabled" size="small">
+                <Checkbox v-model="filterShowEnabled" size="sm">
                   <span class="text-xs">{{ t("library.filter.enabled") }}</span>
-                </NCheckbox>
-                <NCheckbox v-model:checked="filterShowDisabled" size="small">
+                </Checkbox>
+                <Checkbox v-model="filterShowDisabled" size="sm">
                   <span class="text-xs">{{ t("library.filter.disabled") }}</span>
-                </NCheckbox>
+                </Checkbox>
               </div>
             </div>
             <!-- 影响联机 -->
-            <NCheckbox v-model:checked="filterAffectsGameplay" size="small">
+            <Checkbox v-model="filterAffectsGameplay" size="sm">
               <span class="text-xs">{{ t("library.filter.affectsGameplay") }}</span>
-            </NCheckbox>
+            </Checkbox>
             <!-- 多版本冲突 -->
-            <NCheckbox v-model:checked="filterOnlyConflicts" size="small">
+            <Checkbox v-model="filterOnlyConflicts" size="sm">
               <span class="text-xs text-amber-500 font-medium">仅看多版本共存模组</span>
-            </NCheckbox>
+            </Checkbox>
             <!-- 标签 -->
             <div v-if="usedPresetTags.length > 0">
               <div class="text-xs font-medium mb-1.5 text-c-secondary">
                 {{ t("library.filter.tags") }}
               </div>
               <div class="flex flex-wrap gap-x-3 gap-y-1">
-                <NCheckbox
+                <Checkbox
                   v-for="tag in usedPresetTags"
                   :key="tag.id"
-                  :checked="filterTagIds.has(tag.id)"
-                  size="small"
-                  @update:checked="() => toggleFilterTag(tag.id)"
+                  :model-value="filterTagIds.has(tag.id)"
+                  size="sm"
+                  @update:model-value="() => toggleFilterTag(tag.id)"
                 >
                   <span class="text-xs">{{ tagStore.getTagLabel(tag.id, currentLocale) }}</span>
-                </NCheckbox>
+                </Checkbox>
               </div>
             </div>
             <span v-else class="text-xs italic text-c-muted">{{ t("library.filter.noTags") }}</span>
@@ -766,12 +778,10 @@ watch(presetAppliedTick, () => {
               <span class="text-xs text-c-muted">{{
                 t("library.filter.activeFilterCount", { n: activeFilterCount })
               }}</span>
-              <NButton text size="tiny" type="warning" @click="clearFilters">
-                <template #icon
-                  ><NIcon :size="12"><X /></NIcon
-                ></template>
+              <Button variant="ghost" size="xs" class="text-amber-500" @click="clearFilters">
+                <template #icon><X :size="12" /></template>
                 {{ t("library.filter.clear") }}
-              </NButton>
+              </Button>
             </div>
           </div>
         </div>
@@ -779,78 +789,75 @@ watch(presetAppliedTick, () => {
     </div>
 
     <!-- 多版本冲突全局横幅 -->
-    <div
-      v-if="modCacheStore.conflictCount > 0"
-      class="mb-4 flex items-center justify-between p-3 rounded-xl border transition-all duration-200"
-      :style="{
-        backgroundColor: 'color-mix(in srgb, var(--warning-color, #f59e0b) 10%, transparent)',
-        borderColor: 'color-mix(in srgb, var(--warning-color, #f59e0b) 30%, transparent)',
-      }"
-    >
-      <div class="flex items-center gap-2 text-sm text-c-primary">
-        <NIcon :size="18" class="text-amber-500 shrink-0"><AlertTriangle /></NIcon>
-        <span
-          >检测到
+    <Alert v-if="modCacheStore.conflictCount > 0" variant="warning" material="glass" class="mb-4">
+      <template #icon><AlertTriangle :size="18" class="text-amber-500" /></template>
+      <div class="flex items-center justify-between gap-4">
+        <span>
+          检测到
           <strong>{{ modCacheStore.conflictCount }}</strong>
-          个模组存在多版本共存冲突，可能导致游戏加载异常。</span
-        >
-      </div>
-      <div class="flex items-center gap-2">
-        <NButton
-          size="tiny"
-          :type="filterOnlyConflicts ? 'warning' : 'default'"
-          secondary
+          个模组存在多版本共存冲突，可能导致游戏加载异常。
+        </span>
+        <Button
+          size="xs"
+          :variant="filterOnlyConflicts ? 'solid' : 'secondary'"
           @click="filterOnlyConflicts = !filterOnlyConflicts"
         >
           {{ filterOnlyConflicts ? "显示全部模组" : "仅看冲突模组" }}
-        </NButton>
+        </Button>
       </div>
-    </div>
+    </Alert>
 
     <Transition name="preset-fade" mode="out-in">
       <div :key="presetAppliedTick">
         <div v-if="emptyReason === 'noGamePath'" class="py-16">
           <EmptyState
-            :icon="HardDrive"
             :title="t('library.empty.noGamePath')"
             :description="t('library.empty.noGamePathHint')"
-          />
+          >
+            <template #icon><HardDrive :size="40" /></template>
+          </EmptyState>
         </div>
         <div v-else-if="emptyReason === 'noMods'" class="py-16">
           <EmptyState
-            :icon="PackageOpen"
             :title="t('library.empty.noMods')"
             :description="t('library.empty.noModsHint')"
-          />
+          >
+            <template #icon><PackageOpen :size="40" /></template>
+          </EmptyState>
         </div>
         <div v-else-if="emptyReason === 'filtered'" class="py-16">
-          <EmptyState
-            :icon="Filter"
-            :title="t('library.empty.filterNoResults')"
-            actionText="清除筛选"
-            @action="clearFilters"
-          />
+          <EmptyState :title="t('library.empty.filterNoResults')">
+            <template #icon><Filter :size="40" /></template>
+            <template #actions>
+              <Button size="xs" variant="solid" @click="clearFilters">清除筛选</Button>
+            </template>
+          </EmptyState>
         </div>
         <div v-else-if="emptyReason === 'search'" class="py-16">
-          <EmptyState
-            :icon="Search"
-            :title="t('library.empty.searchNoMatch', { q: searchQuery })"
-            actionText="清除搜索"
-            @action="clearSearch"
-          />
+          <EmptyState :title="t('library.empty.searchNoMatch', { q: searchQuery })">
+            <template #icon><Search :size="40" /></template>
+            <template #actions>
+              <Button size="xs" variant="solid" @click="clearSearch">清除搜索</Button>
+            </template>
+          </EmptyState>
         </div>
 
         <template v-else>
-          <ListSection
-            v-if="filterShowEnabled"
-            :title="t('library.section.enabled')"
-            :count="filteredEnabled.length"
-            :action-label="
-              filteredEnabled.length > 0 && !loading ? t('library.disableAll') : undefined
-            "
-            :action-busy="batchBusy"
-            @action="disableAllMods"
-          >
+          <div v-if="filterShowEnabled" class="mb-6">
+            <SectionHeader :title="t('library.section.enabled')" class="mb-3">
+              <template #actions>
+                <Badge variant="neutral" size="xs">{{ filteredEnabled.length }}</Badge>
+                <Button
+                  v-if="filteredEnabled.length > 0 && !loading"
+                  size="xs"
+                  variant="secondary"
+                  :disabled="batchBusy"
+                  @click="disableAllMods"
+                >
+                  {{ t("library.disableAll") }}
+                </Button>
+              </template>
+            </SectionHeader>
             <div v-if="loading" class="flex flex-col gap-2">
               <SkeletonCard v-for="i in 3" :key="'skel-e-' + i" />
             </div>
@@ -860,7 +867,7 @@ watch(presetAppliedTick, () => {
               </p>
               <p v-else>{{ t("library.empty.noEnabledMods") }}</p>
             </div>
-            <NSpace v-if="filteredEnabled.length > 0" vertical :size="8">
+            <div v-if="filteredEnabled.length > 0">
               <TransitionGroup name="stagger" tag="div" class="flex flex-col gap-2">
                 <ModCard
                   v-for="mod in filteredEnabled"
@@ -879,29 +886,32 @@ watch(presetAppliedTick, () => {
                   @manage-versions="openVersionConflictModal"
                 />
               </TransitionGroup>
-            </NSpace>
-          </ListSection>
-
-          <ListSection
-            v-if="filterShowDisabled"
-            :title="t('library.section.disabled')"
-            :count="filteredDisabled.length"
-            :action-label="
-              filteredDisabled.length > 0 && !loading ? t('library.enableAll') : undefined
-            "
-            :action-busy="batchBusy"
-            @action="enableAllMods"
-          >
-            <div v-if="loading" class="flex flex-col gap-2">
-              <SkeletonCard v-for="i in 2" :key="'skel-d-' + i" />
             </div>
+          </div>
+
+          <div v-if="filterShowDisabled" class="mb-6">
+            <SectionHeader :title="t('library.section.disabled')" class="mb-3">
+              <template #actions>
+                <Badge variant="neutral" size="xs">{{ filteredDisabled.length }}</Badge>
+                <Button
+                  v-if="filteredDisabled.length > 0 && !loading"
+                  size="xs"
+                  variant="secondary"
+                  :disabled="batchBusy"
+                  @click="enableAllMods"
+                >
+                  {{ t("library.enableAll") }}
+                </Button>
+              </template>
+            </SectionHeader>
+            <div v-if="loading" class="flex flex-col gap-2"></div>
             <div v-else-if="filteredDisabled.length === 0" class="text-center py-8 text-c-muted">
               <p v-if="hasSearch || filterAffectsGameplay">
                 {{ t("library.empty.filterNoResults") }}
               </p>
               <p v-else>{{ t("library.empty.noDisabledMods") }}</p>
             </div>
-            <NSpace v-else vertical :size="8">
+            <div v-else>
               <TransitionGroup name="stagger" tag="div" class="flex flex-col gap-2">
                 <ModCard
                   v-for="mod in filteredDisabled"
@@ -920,15 +930,15 @@ watch(presetAppliedTick, () => {
                   @manage-versions="openVersionConflictModal"
                 />
               </TransitionGroup>
-            </NSpace>
-          </ListSection>
+            </div>
+          </div>
         </template>
       </div>
     </Transition>
 
     <!-- 导入冲突处理弹窗 -->
     <AppDialog v-model:show="showImportConflictDialog" :title="t('import.title')" width="520px">
-      <NSpace vertical :size="12">
+      <div class="flex flex-col gap-3">
         <p class="text-sm text-c-secondary">{{ t("import.conflict.detected") }}</p>
         <div
           v-for="mod in importPreviewData?.discoveredMods.filter((m) => m.status === 'conflict') ??
@@ -947,41 +957,44 @@ watch(presetAppliedTick, () => {
             </div>
           </div>
           <div class="flex gap-1.5 shrink-0 items-center">
-            <NButton
-              size="tiny"
-              :type="importResolutions[mod.modId] === 'skip' ? 'primary' : 'default'"
-              :quaternary="importResolutions[mod.modId] !== 'skip'"
+            <Button
+              size="xs"
+              :variant="importResolutions[mod.modId] === 'skip' ? 'solid' : 'ghost'"
               @click="setConflictResolution(mod.modId, 'skip')"
             >
               <template #icon>
-                <NIcon
+                <Check
                   :size="12"
                   :class="importResolutions[mod.modId] === 'skip' ? '' : 'invisible'"
-                  ><Check
-                /></NIcon>
+                />
               </template>
               {{ t("import.conflict.skip") }}
-            </NButton>
-            <NButton
-              size="tiny"
-              :type="importResolutions[mod.modId] === 'replace' ? 'warning' : 'default'"
-              :quaternary="importResolutions[mod.modId] !== 'replace'"
+            </Button>
+            <Button
+              size="xs"
+              :variant="importResolutions[mod.modId] === 'replace' ? 'danger' : 'ghost'"
               @click="setConflictResolution(mod.modId, 'replace')"
             >
               <template #icon>
-                <NIcon
+                <Check
                   :size="12"
                   :class="importResolutions[mod.modId] === 'replace' ? '' : 'invisible'"
-                  ><Check
-                /></NIcon>
+                />
               </template>
               {{ t("import.conflict.replace") }}
-            </NButton>
+            </Button>
           </div>
         </div>
         <div class="flex justify-end gap-2 pt-2">
-          <NButton @click="showImportConflictDialog = false">{{ t("common.cancel") }}</NButton>
-          <NButton type="primary" :loading="importBusy" @click="confirmImportWithConflicts">
+          <Button variant="ghost" size="sm" @click="showImportConflictDialog = false">{{
+            t("common.cancel")
+          }}</Button>
+          <Button
+            variant="solid"
+            size="sm"
+            :loading="importBusy"
+            @click="confirmImportWithConflicts"
+          >
             {{
               t("import.installWithCount", {
                 count:
@@ -990,9 +1003,9 @@ watch(presetAppliedTick, () => {
                   ).length ?? 0,
               })
             }}
-          </NButton>
+          </Button>
         </div>
-      </NSpace>
+      </div>
     </AppDialog>
 
     <!-- 预设管理弹窗 -->
@@ -1004,24 +1017,23 @@ watch(presetAppliedTick, () => {
       :title="t('library.saveAsPreset')"
       width="420px"
     >
-      <NSpace vertical :size="12">
+      <div class="flex flex-col gap-3">
         <div>
           <label class="text-sm text-c-secondary mb-1 block">{{
             t("library.savePreset.nameLabel")
           }}</label>
-          <NInput
-            v-model:value="saveAsPresetName"
+          <Input
+            v-model="saveAsPresetName"
             :placeholder="t('library.savePreset.namePlaceholder')"
-            @keyup.enter="handleSaveAsPreset"
+            @enter="handleSaveAsPreset"
           />
         </div>
         <div>
           <label class="text-sm text-c-secondary mb-1 block">{{
             t("profiles.form.description")
           }}</label>
-          <NInput
-            v-model:value="saveAsPresetDescription"
-            type="textarea"
+          <Textarea
+            v-model="saveAsPresetDescription"
             :placeholder="t('profiles.form.descriptionPlaceholder')"
             :rows="2"
           />
@@ -1030,23 +1042,25 @@ watch(presetAppliedTick, () => {
           {{ t("library.saveAsPresetHint", { n: enabledMods.length }) }}
         </div>
         <div class="flex justify-end gap-2">
-          <NButton @click="showSaveAsPresetDialog = false">{{ t("common.cancel") }}</NButton>
-          <NButton type="primary" :loading="savingAsPreset" @click="handleSaveAsPreset">
+          <Button variant="ghost" size="sm" @click="showSaveAsPresetDialog = false">{{
+            t("common.cancel")
+          }}</Button>
+          <Button variant="solid" size="sm" :loading="savingAsPreset" @click="handleSaveAsPreset">
             {{ t("common.save") }}
-          </NButton>
+          </Button>
         </div>
-      </NSpace>
+      </div>
     </AppDialog>
 
     <!-- Save Guard 警告弹窗 -->
     <AppDialog v-model:show="showSaveGuardDialog" width="440px">
       <template #header>
         <div class="flex items-center gap-2">
-          <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
+          <AlertTriangle :size="18" class="text-amber-500" />
           <span class="font-semibold">{{ t("library.saveGuard.title") }}</span>
         </div>
       </template>
-      <NSpace v-if="saveGuardInfo" vertical :size="8">
+      <div v-if="saveGuardInfo" class="flex flex-col gap-2">
         <p v-if="saveGuardInfo.saveGuard.pathSwitched" class="text-sm text-c-secondary">
           {{
             saveGuardInfo.saveGuard.direction === "modded_to_vanilla"
@@ -1063,20 +1077,18 @@ watch(presetAppliedTick, () => {
           }}
         </p>
         <div class="flex justify-end mt-2">
-          <NButton type="primary" size="small" @click="dismissSaveGuard">{{
+          <Button variant="solid" size="sm" @click="dismissSaveGuard">{{
             t("library.saveGuard.gotIt")
-          }}</NButton>
+          }}</Button>
         </div>
-      </NSpace>
+      </div>
     </AppDialog>
 
     <!-- 检查更新结果弹窗 -->
     <AppDialog v-model:show="showResultDialog" width="480px" :mask-closable="false">
       <template #header>
         <div class="flex items-center gap-2">
-          <NIcon :size="18" :color="resultDialogIconColor"
-            ><component :is="resultDialogIcon"
-          /></NIcon>
+          <component :is="resultDialogIcon" :size="18" :style="{ color: resultDialogIconColor }" />
           <span class="font-semibold">{{ resultDialogTitle }}</span>
         </div>
       </template>
@@ -1113,14 +1125,14 @@ watch(presetAppliedTick, () => {
                 }}</span>
               </div>
             </div>
-            <NButton
-              text
-              size="tiny"
-              style="color: var(--primary-color)"
+            <Button
+              variant="ghost"
+              size="xs"
+              class="text-primary-theme"
               @click="openUpdateUrl({ id: info.modId } as InstalledMod)"
             >
               {{ t("library.updateCheck.openNexus") }}
-            </NButton>
+            </Button>
           </div>
         </div>
 
@@ -1131,9 +1143,11 @@ watch(presetAppliedTick, () => {
       </template>
 
       <template #footer>
-        <NSpace justify="end">
-          <NButton size="small" @click="dismissResultDialog">{{ t("common.close") }}</NButton>
-        </NSpace>
+        <div class="flex justify-end">
+          <Button size="sm" variant="secondary" @click="dismissResultDialog">{{
+            t("common.close")
+          }}</Button>
+        </div>
       </template>
     </AppDialog>
 

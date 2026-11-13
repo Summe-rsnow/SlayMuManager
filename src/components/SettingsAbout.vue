@@ -2,11 +2,10 @@
 import { ref } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NButton, NIcon } from "naive-ui"
+import { Button, FormRow } from "@miuui/vue"
 import { Sparkles } from "@lucide/vue"
 import { version as APP_VERSION } from "@/../package.json"
 import SettingsSection from "./SettingsSection.vue"
-import SettingsRow from "./SettingsRow.vue"
 import ReleaseNotesDialog from "./ReleaseNotesDialog.vue"
 import { useReleaseNotes } from "@/composables/useReleaseNotes"
 
@@ -53,21 +52,21 @@ async function checkForUpdate() {
 <template>
   <SettingsSection :title="t('settings.about.title')">
     <!-- 版本与更新记录 -->
-    <SettingsRow :label="t('settings.about.releaseNotes')">
+    <FormRow :label="t('settings.about.releaseNotes')">
       <div class="flex items-center gap-3">
         <span class="text-xs font-mono text-c-primary">v{{ APP_VERSION }}</span>
-        <NButton text size="tiny" class="text-primary-theme" @click="openReleaseNotes">
+        <Button variant="ghost" size="xs" class="text-primary-theme" @click="openReleaseNotes">
           <template #icon>
-            <NIcon :size="14"><Sparkles /></NIcon>
+            <Sparkles :size="14" />
           </template>
           {{ t("settings.about.viewReleaseNotes") }}
-        </NButton>
+        </Button>
       </div>
-    </SettingsRow>
+    </FormRow>
 
     <!-- Bilibili -->
-    <SettingsRow>
-      <template #label>
+    <FormRow>
+      <template #lead>
         <span class="text-sm flex items-center gap-2 text-c-primary">
           <svg class="w-5 h-5" viewBox="51.2 51.2 921.6 921.6" fill="currentColor">
             <path
@@ -80,19 +79,19 @@ async function checkForUpdate() {
           {{ t("settings.about.bilibili") }}
         </span>
       </template>
-      <NButton
-        text
-        size="tiny"
+      <Button
+        variant="ghost"
+        size="xs"
         class="text-primary-theme"
         @click="openUrl('https://space.bilibili.com/5242608')"
       >
         {{ t("settings.about.open") }}
-      </NButton>
-    </SettingsRow>
+      </Button>
+    </FormRow>
 
     <!-- GitHub -->
-    <SettingsRow>
-      <template #label>
+    <FormRow>
+      <template #lead>
         <span class="text-sm flex items-center gap-2 text-c-primary">
           <svg class="w-5 h-5" viewBox="0 0 256 249" fill="currentColor">
             <path
@@ -105,26 +104,26 @@ async function checkForUpdate() {
           {{ t("settings.about.github") }}
         </span>
       </template>
-      <NButton
-        text
-        size="tiny"
+      <Button
+        variant="ghost"
+        size="xs"
         class="text-primary-theme"
         @click="openUrl('https://github.com/xcmm1543/SlayMuManager')"
       >
         {{ t("settings.about.open") }}
-      </NButton>
-    </SettingsRow>
+      </Button>
+    </FormRow>
 
-    <SettingsRow :label="t('settings.about.checkUpdate')">
-      <NButton
+    <FormRow :label="t('settings.about.checkUpdate')">
+      <Button
         v-if="updateStatus === 'idle'"
-        text
-        size="tiny"
+        variant="ghost"
+        size="xs"
         class="text-primary-theme"
         @click="checkForUpdate"
       >
         {{ t("settings.about.checkUpdate") }}
-      </NButton>
+      </Button>
       <span v-else-if="updateStatus === 'checking'" class="text-xs text-gray-400">
         {{ t("settings.about.checking") }}
       </span>
@@ -137,19 +136,19 @@ async function checkForUpdate() {
         <span class="text-xs text-primary-theme">{{
           t("settings.about.newVersion", { ver: `v${latestVersion}` })
         }}</span>
-        <NButton text size="tiny" class="text-primary-theme" @click="openUrl(updateUrl)">
+        <Button variant="ghost" size="xs" class="text-primary-theme" @click="openUrl(updateUrl)">
           {{ t("settings.about.open") }}
-        </NButton>
-        <NButton
-          text
-          size="tiny"
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
           class="text-primary-theme"
           @click="openUrl('https://pan.quark.cn/s/3bd89f2513a8')"
         >
           网盘下载
-        </NButton>
+        </Button>
       </div>
-    </SettingsRow>
+    </FormRow>
 
     <ReleaseNotesDialog v-model:show="showReleaseNotes" />
   </SettingsSection>

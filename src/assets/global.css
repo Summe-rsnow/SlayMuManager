@@ -9,91 +9,12 @@
 
 html,
 body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
   font-family: "OPPO Sans", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
-
-/* ============================================================
-   自定义滚动条 — 极薄主题色 scrollbar & 彻底移除上下三角箭头
-   ============================================================ */
-
-/* 1. 禁用标准 scrollbar-color 避免触发 Windows 原生带三角箭头的滚动条控件 */
-* {
-  scrollbar-width: auto;
-}
-
-/* 2. WebKit 滚动条基础尺寸 */
-*::-webkit-scrollbar,
-::-webkit-scrollbar {
-  width: 5px !important;
-  height: 5px !important;
-  background-color: transparent !important;
-}
-
-/* 3. 彻底隐藏与禁用所有三角箭头按钮 (包括所有状态与伪类) */
-*::-webkit-scrollbar-button,
-::-webkit-scrollbar-button,
-*::-webkit-scrollbar-button:single-button,
-::-webkit-scrollbar-button:single-button,
-*::-webkit-scrollbar-button:double-button,
-::-webkit-scrollbar-button:double-button,
-*::-webkit-scrollbar-button:vertical:decrement,
-::-webkit-scrollbar-button:vertical:decrement,
-*::-webkit-scrollbar-button:vertical:increment,
-::-webkit-scrollbar-button:vertical:increment,
-*::-webkit-scrollbar-button:horizontal:decrement,
-::-webkit-scrollbar-button:horizontal:decrement,
-*::-webkit-scrollbar-button:horizontal:increment,
-::-webkit-scrollbar-button:horizontal:increment,
-*::-webkit-scrollbar-button:start:decrement,
-::-webkit-scrollbar-button:start:decrement,
-*::-webkit-scrollbar-button:end:increment,
-::-webkit-scrollbar-button:end:increment,
-*::-webkit-scrollbar-button:start:increment,
-::-webkit-scrollbar-button:start:increment,
-*::-webkit-scrollbar-button:end:decrement,
-::-webkit-scrollbar-button:end:decrement {
-  display: none !important;
-  width: 0px !important;
-  height: 0px !important;
-  max-width: 0px !important;
-  max-height: 0px !important;
-  background: transparent !important;
-  border: none !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
-
-/* 4. 滚动条轨道 */
-*::-webkit-scrollbar-track,
-::-webkit-scrollbar-track,
-*::-webkit-scrollbar-track-piece,
-::-webkit-scrollbar-track-piece {
-  background: transparent !important;
-  border: none !important;
-}
-
-/* 5. 滚动条角落 */
-*::-webkit-scrollbar-corner,
-::-webkit-scrollbar-corner {
-  background: transparent !important;
-  display: none !important;
-}
-
-/* 6. 滚动条滑块 */
-*::-webkit-scrollbar-thumb,
-::-webkit-scrollbar-thumb {
-  background-color: color-mix(in srgb, var(--primary-color) 25%, transparent) !important;
-  border-radius: 9999px !important;
-  border: none !important;
-  transition: background-color 0.2s ease;
-}
-
-*::-webkit-scrollbar-thumb:hover,
-::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in srgb, var(--primary-color) 50%, transparent) !important;
-}
-
 /* 裁剪隐藏原生滚动条并为左侧/四周提供阴影弥散缓冲区（防止 overflow-y:auto 将左侧阴影刀切截断） */
 .scrollbar-hide {
   scrollbar-width: none;
@@ -448,55 +369,6 @@ body {
 }
 
 /* ============================================================
-   Naive UI 浮动气泡与提示框全局毛玻璃化 (Tooltip / Popover / Dropdown)
-   ============================================================ */
-
-.n-popover:not(.n-popover--raw),
-.n-tooltip,
-.n-popover-shared,
-.n-dropdown-menu,
-.n-select-menu {
-  -webkit-backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate)) !important;
-  backdrop-filter: blur(var(--glass-floating-blur)) saturate(var(--blur-saturate)) !important;
-  background-color: var(--glass-floating-bg) !important;
-  background: var(--glass-floating-bg) !important;
-  border: var(--glass-floating-border) !important;
-  border-radius: var(--glass-floating-radius) !important;
-  box-shadow: var(--shadow-glass-floating) !important;
-  color: var(--color-text-primary) !important;
-}
-
-.n-popover.n-tooltip,
-.n-tooltip {
-  max-width: 420px;
-  max-height: 280px;
-  overflow-y: auto;
-  word-break: break-word;
-  line-height: 1.5;
-  padding: 10px 14px !important;
-  scrollbar-width: none;
-}
-
-.n-popover.n-tooltip::-webkit-scrollbar,
-.n-tooltip::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-
-.n-popover-arrow-wrapper,
-.n-popover-arrow {
-  display: none !important;
-}
-
-.n-popover__content,
-.n-tooltip .n-popover__content {
-  font-size: 12px;
-  white-space: pre-wrap;
-  color: var(--color-text-primary) !important;
-}
-
-/* ============================================================
    基于 CSS 变量的主题辅助类（替代 UnoCSS 静态 primary）
    ============================================================ */
 
@@ -604,47 +476,4 @@ body {
 }
 .stagger-leave-to {
   opacity: 0;
-}
-
-/* 全局通用弹窗与抽屉毛玻璃遮罩规范 (Level 4: Modal Mask) */
-.n-modal-mask,
-.n-drawer-mask {
-  backdrop-filter: blur(var(--blur-backdrop)) saturate(var(--blur-saturate));
-  -webkit-backdrop-filter: blur(var(--blur-backdrop)) saturate(var(--blur-saturate));
-  background: transparent !important;
-  transition: backdrop-filter 0.25s ease;
-}
-
-.n-modal-mask.fade-in-transition-leave-active,
-.n-drawer-mask.fade-in-transition-leave-active {
-  backdrop-filter: blur(0px) saturate(var(--blur-saturate)) !important;
-  -webkit-backdrop-filter: blur(0px) saturate(var(--blur-saturate)) !important;
-}
-
-.mod-card {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-/* ============================================================
-   骨架屏 shimmer 动画
-   ============================================================ */
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-.skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--color-bg-secondary) 25%,
-    color-mix(in srgb, var(--primary-color) 5%, var(--color-bg-card)) 50%,
-    var(--color-bg-secondary) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease-in-out infinite;
-  border-radius: 6px;
 }

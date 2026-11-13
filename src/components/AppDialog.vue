@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { NCard, NModal, NButton, NSpace } from "naive-ui"
+import { computed } from "vue"
+import { Dialog, Button } from "@miuui/vue"
 import { useI18n } from "vue-i18n"
 
 const { t } = useI18n()
@@ -27,8 +28,15 @@ const emit = defineEmits<{
   (e: "cancel"): void
 }>()
 
-function onUpdateShow(v: boolean) {
-  if (!v) emit("update:show", false)
+const resolvedWidth = computed(() =>
+  typeof props.width === "number" ? `${props.width}px` : props.width || "520px",
+)
+
+function onUpdateOpen(v: boolean) {
+  if (!v) {
+    if (!props.maskClosable) return
+    emit("update:show", false)
+  }
 }
 
 function onCancel() {
@@ -38,53 +46,38 @@ function onCancel() {
 </script>
 
 <template>
-  <NModal :show="show" :mask-closable="maskClosable" @update:show="onUpdateShow">
-    <NCard
-      class="glass-modal overflow-hidden"
-      :style="{
-        width: typeof width === 'number' ? width + 'px' : width || '520px',
-        maxHeight: '85vh',
-        boxShadow: 'var(--shadow-glass-modal)',
-        borderRadius: 'var(--glass-modal-radius, 16px)',
-      }"
-      role="dialog"
-    >
-      <template #header>
-        <slot name="header">
-          <span class="text-lg font-semibold">{{ title }}</span>
-        </slot>
-      </template>
-      <slot />
-      <template v-if="$slots.footer" #footer>
-        <slot name="footer" />
-      </template>
-      <template v-else-if="showFooter" #footer>
-        <NSpace justify="end">
-          <NButton @click="onCancel">{{ cancelText || t("common.cancel") }}</NButton>
-          <NButton
-            :type="(confirmType as any) ?? 'primary'"
-            :loading="confirmLoading"
-            @click="emit('confirm')"
-            >{{ confirmText }}</NButton
-          >
-        </NSpace>
-      </template>
-    </NCard>
-  </NModal>
+  <Dialog
+    :open="show"
+    :width="resolvedWidth"
+    :hide-header="!title && !$slots.header"
+    material="glass"
+    :aria-label="title || 'Dialog'"
+    :styles="{ content: { maxHeight: '85vh', overflowY: 'auto' } }"
+    @update:open="onUpdateOpen"
+  >
+    <template v-if="title || $slots.header" #title>
+      <slot name="header">
+        <span class="text-lg font-semibold">{{ title }}</span>
+      </slot>
+    </template>
+    <slot />
+    <template v-if="$slots.footer" #footer>
+      <slot name="footer" />
+    </template>
+    <template v-else-if="showFooter" #footer>
+      <div class="flex items-center justify-end gap-2">
+        <Button variant="ghost" size="sm" @click="onCancel">{{
+          cancelText || t("common.cancel")
+        }}</Button>
+        <Button
+          :variant="confirmType === 'error' ? 'danger' : 'solid'"
+          size="sm"
+          :loading="confirmLoading"
+          @click="emit('confirm')"
+        >
+          {{ confirmText || t("common.confirm") }}
+        </Button>
+      </div>
+    </template>
+  </Dialog>
 </template>
-
-<style>
-.n-modal-mask,
-.n-drawer-mask {
-  backdrop-filter: blur(var(--blur-backdrop)) saturate(var(--blur-saturate));
-  -webkit-backdrop-filter: blur(var(--blur-backdrop)) saturate(var(--blur-saturate));
-  background: transparent !important;
-  transition: backdrop-filter 0.25s ease;
-}
-
-.n-modal-mask.fade-in-transition-leave-active,
-.n-drawer-mask.fade-in-transition-leave-active {
-  backdrop-filter: blur(0px) saturate(var(--blur-saturate)) !important;
-  -webkit-backdrop-filter: blur(0px) saturate(var(--blur-saturate)) !important;
-}
-</style>

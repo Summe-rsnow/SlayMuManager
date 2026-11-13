@@ -1,22 +1,21 @@
+<script setup lang="ts">
+import { Card, Skeleton } from "@miuui/vue"
+</script>
+
 <template>
-  <div
-    class="flex items-center justify-between p-3 rounded-xl border border-l-3"
-    :style="{
-      borderLeftColor: 'var(--color-text-muted)',
-      borderColor: 'var(--color-border)',
-      backgroundColor: 'var(--color-bg-secondary)',
-    }"
-  >
-    <div class="flex-1 min-w-0 space-y-2">
-      <div class="flex items-center gap-2">
-        <div class="skeleton-shimmer h-4 w-40" />
-        <div class="skeleton-shimmer h-2.5 w-12" />
+  <Card material="glass" padding="sm">
+    <div class="flex items-center justify-between">
+      <div class="flex-1 min-w-0 flex flex-col gap-2">
+        <div class="flex items-center gap-2">
+          <Skeleton variant="text" width="160px" height="16px" />
+          <Skeleton variant="text" width="48px" height="10px" />
+        </div>
+        <Skeleton variant="text" width="96px" height="10px" />
       </div>
-      <div class="skeleton-shimmer h-2.5 w-24" />
+      <div class="flex items-center gap-2 ml-4">
+        <Skeleton variant="rect" width="24px" height="24px" radius="sm" />
+        <Skeleton variant="rect" width="40px" height="20px" radius="sm" />
+      </div>
     </div>
-    <div class="flex items-center gap-2 ml-4">
-      <div class="skeleton-shimmer h-6 w-6 rounded" />
-      <div class="skeleton-shimmer h-5 w-10 rounded" />
-    </div>
-  </div>
+  </Card>
 </template>

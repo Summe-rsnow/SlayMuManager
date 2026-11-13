@@ -3,7 +3,6 @@
 // ============================================================
 
 import { ref, watch, computed, type Ref } from "vue"
-import { darkTheme, type GlobalTheme, type GlobalThemeOverrides } from "naive-ui"
 import { colorPalettes, type ThemeColorKey } from "./colors"
 import { useStorage } from "@/composables/useStorage"
 
@@ -33,6 +32,7 @@ function evaluateIsDark(): boolean {
 }
 
 function applyHtmlClass(dark: boolean) {
+  document.documentElement.dataset.theme = dark ? "dark" : "light"
   if (dark) {
     document.documentElement.classList.add("dark")
   } else {
@@ -43,115 +43,7 @@ function applyHtmlClass(dark: boolean) {
 // 计算当前有效暗色状态
 export const effectiveIsDark: Ref<boolean> = computed(() => isDark.value)
 
-// Naive UI 主题
-export const naiveTheme: Ref<GlobalTheme | null> = computed(() => (isDark.value ? darkTheme : null))
-
-// 动态 themeOverrides — 随主题色 + 暗色模式变化
-export const naiveThemeOverrides: Ref<GlobalThemeOverrides> = computed(() => {
-  const p = colorPalettes[themeColorKey.value]
-  return {
-    common: {
-      primaryColor: p.DEFAULT,
-      primaryColorHover: p.hover,
-      primaryColorPressed: p.pressed,
-      primaryColorSuppl: p.suppl,
-      borderRadius: "8px",
-      fontSize: "14px",
-      fontFamily: `"OPPO Sans", "PingFang SC", "Microsoft YaHei", sans-serif`,
-    },
-    Layout: {
-      siderBorderColor: "transparent",
-    },
-    Menu: {
-      itemTextColor: isDark.value ? "#d1d5db" : "#4b5563",
-      itemTextColorHover: p.DEFAULT,
-      itemTextColorActive: p.DEFAULT,
-      itemColorActive: isDark.value
-        ? `color-mix(in srgb, ${p.DEFAULT} 10%, transparent)`
-        : "#eef2ff",
-      itemColorActiveHover: isDark.value
-        ? `color-mix(in srgb, ${p.DEFAULT} 15%, transparent)`
-        : "#e0e7ff",
-      itemIconColor: isDark.value ? "#9ca3af" : "#9ca3af",
-      itemIconColorHover: p.DEFAULT,
-      itemIconColorActive: p.DEFAULT,
-      borderRadius: "8px",
-    },
-    Button: {
-      borderRadiusSmall: "8px",
-      borderRadiusMedium: "10px",
-      borderRadiusLarge: "12px",
-    },
-    Card: {
-      borderRadius: "14px",
-      paddingMedium: "20px",
-      titleFontSizeMedium: "15px",
-    },
-    Tag: {
-      borderRadius: "6px",
-      padding: "0 8px",
-      fontSizeSmall: "11px",
-      heightSmall: "22px",
-    },
-    Switch: {
-      railColor: isDark.value ? "#2a2a35" : "#d1d5db",
-      railColorActive: p.DEFAULT,
-    },
-    InternalSelection: {
-      borderRadius: "10px",
-      borderFocus: `1px solid ${p.DEFAULT}`,
-      boxShadowFocus: `0 0 0 2px color-mix(in srgb, ${p.DEFAULT} 15%, transparent)`,
-    },
-    Input: {
-      borderRadius: "10px",
-      borderFocus: `1px solid ${p.DEFAULT}`,
-      boxShadowFocus: `0 0 0 2px color-mix(in srgb, ${p.DEFAULT} 15%, transparent)`,
-    },
-    InternalSelectMenu: {
-      borderRadius: "14px",
-    },
-    Popover: {
-      borderRadius: "14px",
-      padding: "8px 12px",
-      color: "transparent",
-      boxShadow: "none",
-    },
-    Tooltip: {
-      borderRadius: "14px",
-      padding: "10px 14px",
-      fontSize: "12px",
-      color: "transparent",
-      textColor: isDark.value ? "#EDEDEF" : "#1f2937",
-      boxShadow: "none",
-    },
-    Tabs: {
-      tabGap: "24px",
-      tabFontSizeMedium: "14px",
-      tabFontWeightActive: "600",
-      barColor: p.DEFAULT,
-    },
-    Pagination: {
-      itemBorderRadius: "9999px",
-      itemColorActive: p.DEFAULT,
-      itemTextColorActive: "#fff",
-    },
-    Checkbox: {
-      borderRadius: "4px",
-      boxShadowFocus: `0 0 0 2px color-mix(in srgb, ${p.DEFAULT} 15%, transparent)`,
-    },
-    Message: {
-      borderRadius: "10px",
-      padding: "10px 16px",
-    },
-    Notification: {
-      borderRadius: "14px",
-      padding: "16px 20px",
-    },
-    Modal: {
-      borderRadius: "16px",
-    },
-  }
-})
+export const activeSeedColor = computed(() => colorPalettes[themeColorKey.value].DEFAULT)
 
 // --- 应用到 CSS 变量 ---
 function applyCssVariables() {

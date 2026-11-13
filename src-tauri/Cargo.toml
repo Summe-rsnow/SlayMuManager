@@ -1,6 +1,6 @@
 [package]
 name = "slaymumanager"
-version = "1.9.1"
+version = "1.10.0"
 description = "Slay the Spire 2 Mod Manager"
 authors = []
 edition = "2024"
@@ -11,28 +11,27 @@ name = "slaymumanager_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.6.2", features = [] }
+tauri-build = { version = "2.7.4", features = [] }
 
 [dependencies]
-tauri = { version = "2.11.2", features = [] }
+tauri = { version = "2.12.5", features = [] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
 chrono = { version = "0.4.44", features = ["serde"] }
 thiserror = "2.0.18"
-uuid = { version = "1.23.1", features = ["serde", "v4"] }
-rfd = "0.17.2"
-zip = "9.0.3"
+uuid = { version = "1.29.2", features = ["serde", "v4"] }
+rfd = "0.18.0"
+zip = "9.5.1"
 sevenz-rust = "0.6.1"
-reqwest = { version = "0.13.3", features = ["blocking", "json", "socks"] }
+reqwest = { version = "0.13.5", features = ["blocking", "json", "socks"] }
 dirs = "6.0"
 winreg = "0.56.0"
 sha1 = "0.11.0"
-notify = { version = "8.2.0", default-features = false, features = ["macos_fsevent"] }
-lru = "0.18.0"
+notify = { version = "8.2.2", default-features = false, features = ["macos_fsevent"] }
+lru = "0.19.0"
 rars = "0.1.0"
 steamworks = { version = "0.13.1" }
 parking_lot = "0.12"
-
 [profile.release]
 codegen-units = 16
 lto = "thin"

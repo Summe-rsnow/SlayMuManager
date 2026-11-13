@@ -2,7 +2,7 @@
 import { ref } from "vue"
 import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
-import { NIcon, NPopover } from "naive-ui"
+import { Tooltip } from "@miuui/vue"
 import { Languages } from "@lucide/vue"
 import { translateText } from "@/utils/translate"
 import { currentLocale } from "@/i18n"
@@ -43,7 +43,7 @@ function toggleTranslation() {
   <div v-if="text && currentLocale === 'zh-CN'" class="flex flex-wrap items-start gap-x-1.5 mt-1">
     <template v-if="translatedText">
       <button class="translate-toggle" @click="toggleTranslation">
-        <NIcon :size="12"><Languages /></NIcon>
+        <Languages :size="12" />
         {{ showTranslation ? t("discover.showOriginal") : t("discover.translate") }}
       </button>
       <div v-if="showTranslation" class="w-full mt-0.5">
@@ -53,21 +53,21 @@ function toggleTranslation() {
     <span v-else-if="translating" class="text-xs text-c-muted">{{
       t("discover.translating")
     }}</span>
-    <NPopover
+    <Tooltip
       v-else
-      trigger="hover"
-      placement="top"
-      :width="240"
+      side="top"
+      material="glass"
       :disabled="!showTranslateQuotaTip"
+      :styles="{ content: { maxWidth: '240px' } }"
     >
       <template #trigger>
         <button class="translate-toggle" @click="handleTranslate">
-          <NIcon :size="12"><Languages /></NIcon>
+          <Languages :size="12" />
           {{ t("discover.translate") }}
         </button>
       </template>
       <span class="text-xs">{{ t("discover.translateQuota") }}</span>
-    </NPopover>
+    </Tooltip>
   </div>
 </template>
 

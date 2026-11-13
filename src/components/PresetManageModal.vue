@@ -3,7 +3,18 @@ import { ref, computed, onMounted, watch } from "vue"
 import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { NButton, NTag, NIcon, NSpace, NInput, NCheckbox, useMessage } from "naive-ui"
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  EmptyState,
+  Input,
+  LoadingOverlay,
+  Textarea,
+  useToast,
+} from "@miuui/vue"
 import { Plus, FolderHeart, Download, Search } from "@lucide/vue"
 import type {
   ModProfile,
@@ -14,10 +25,8 @@ import type {
 } from "@/types"
 import { useSidebarStore } from "@/stores/useSidebarStore"
 import { useExportStore } from "@/stores/useExportStore"
-import EmptyState from "@/components/EmptyState.vue"
 import AppDialog from "@/components/AppDialog.vue"
 import PresetCard from "./PresetCard.vue"
-import LoadingOverlay from "@/components/LoadingOverlay.vue"
 
 const props = defineProps<{
   show: boolean
@@ -29,7 +38,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-const message = useMessage()
+const { toast } = useToast()
 
 // --- 状态 ---
 const profiles = ref<ModProfile[]>([])
@@ -120,7 +129,7 @@ async function loadProfiles() {
     const result = await invoke<ModProfile[]>("list_profiles")
     profiles.value = result
   } catch (e: unknown) {
-    message.error(`${t("profiles.error.loadFailed")}: ${String(e)}`)
+    toast({ title: `${t("profiles.error.loadFailed")}: ${String(e)}`, variant: "error" })
   }
 }
 
@@ -147,7 +156,7 @@ function openEdit(profile: ModProfile) {
 async function handleSave() {
   const name = formName.value.trim()
   if (!name) {
-    message.warning(t("profiles.warning.nameRequired"))
+    toast({ title: t("profiles.warning.nameRequired"), variant: "warning" })
     return
   }
   const ids = selectedModIds.value
@@ -161,20 +170,20 @@ async function handleSave() {
         description: formDescription.value.trim() || null,
         modIds: ids,
       })
-      message.success(t("profiles.success.updated"))
+      toast({ title: t("profiles.success.updated"), variant: "success" })
     } else {
       await invoke("create_profile", {
         name,
         description: formDescription.value.trim() || null,
         modIds: ids,
       })
-      message.success(t("profiles.success.created"))
+      toast({ title: t("profiles.success.created"), variant: "success" })
     }
     showCreateDialog.value = false
     await loadProfiles()
     loadQuickPresets()
   } catch (e: unknown) {
-    message.error(`${t("profiles.error.saveFailed")}: ${String(e)}`)
+    toast({ title: `${t("profiles.error.saveFailed")}: ${String(e)}`, variant: "error" })
   } finally {
     loading.value = false
   }
@@ -183,11 +192,11 @@ async function handleSave() {
 async function handleDelete(profile: ModProfile) {
   try {
     await invoke("delete_profile", { id: profile.id })
-    message.success(t("profiles.success.deleted", { name: profile.name }))
+    toast({ title: t("profiles.success.deleted", { name: profile.name }), variant: "success" })
     await loadProfiles()
     loadQuickPresets()
   } catch (e: unknown) {
-    message.error(`${t("profiles.error.deleteFailed")}: ${String(e)}`)
+    toast({ title: `${t("profiles.error.deleteFailed")}: ${String(e)}`, variant: "error" })
   }
 }
 
@@ -202,7 +211,7 @@ async function handleApply(profile: ModProfile) {
     loadQuickPresets()
     emit("applied", profile)
   } catch (e: unknown) {
-    message.error(`${t("profiles.error.applyFailed")}: ${String(e)}`)
+    toast({ title: `${t("profiles.error.applyFailed")}: ${String(e)}`, variant: "error" })
   } finally {
     loading.value = false
   }
@@ -220,9 +229,9 @@ async function handleExport(profile: ModProfile) {
       profileId: profile.id,
       outputPath: path,
     })
-    message.success(t("profiles.success.exported", { path }))
+    toast({ title: t("profiles.success.exported", { path }), variant: "success" })
   } catch (e: unknown) {
-    message.error(`${t("profiles.error.exportFailed")}: ${String(e)}`)
+    toast({ title: `${t("profiles.error.exportFailed")}: ${String(e)}`, variant: "error" })
   } finally {
     exportingId.value = null
   }
@@ -245,7 +254,7 @@ async function startImport() {
     bundleResolutions.value = resolutions
     showImportDialog.value = true
   } catch (e: unknown) {
-    message.error(`${t("profiles.error.importPreviewFailed")}: ${String(e)}`)
+    toast({ title: `${t("profiles.error.importPreviewFailed")}: ${String(e)}`, variant: "error" })
   } finally {
     loading.value = false
   }
@@ -262,14 +271,17 @@ async function confirmImport() {
     })
     showImportDialog.value = false
     bundlePreview.value = null
-    message.success(t("profiles.success.bundleImported", { n: result.enabledModIds.length }))
+    toast({
+      title: t("profiles.success.bundleImported", { n: result.enabledModIds.length }),
+      variant: "success",
+    })
     activePresetName.value = result.profile.name
     await loadProfiles()
     loadQuickPresets()
     presetAppliedTick.value++
     emit("applied", result.profile)
   } catch (e: unknown) {
-    message.error(`${t("profiles.error.importFailed")}: ${String(e)}`)
+    toast({ title: `${t("profiles.error.importFailed")}: ${String(e)}`, variant: "error" })
   } finally {
     loading.value = false
   }
@@ -296,22 +308,18 @@ onMounted(() => {
     <template #header>
       <div class="flex items-center justify-between w-full pr-4">
         <div class="flex items-center gap-2">
-          <NIcon :size="20" class="text-primary-theme"><FolderHeart /></NIcon>
+          <FolderHeart :size="20" class="text-primary-theme" />
           <span class="text-base font-bold text-c-primary">{{ t("profiles.manageTitle") }}</span>
         </div>
         <div class="flex items-center gap-2">
-          <NButton size="small" secondary @click="startImport">
-            <template #icon
-              ><NIcon :size="14"><Download /></NIcon
-            ></template>
+          <Button size="sm" variant="secondary" @click="startImport">
+            <template #icon><Download :size="14" /></template>
             {{ t("profiles.importBundle") }}
-          </NButton>
-          <NButton size="small" type="primary" @click="openCreate">
-            <template #icon
-              ><NIcon :size="14"><Plus /></NIcon
-            ></template>
+          </Button>
+          <Button size="sm" variant="solid" @click="openCreate">
+            <template #icon><Plus :size="14" /></template>
             {{ t("profiles.create") }}
-          </NButton>
+          </Button>
         </div>
       </div>
     </template>
@@ -332,29 +340,29 @@ onMounted(() => {
         />
       </div>
 
-      <EmptyState
-        v-else
-        :icon="FolderHeart"
-        :title="t('profiles.empty.noProfiles')"
-        :description="t('profiles.empty.noProfilesHint')"
-        bordered
-      />
+      <Card v-else material="glass" padding="sm">
+        <EmptyState
+          :title="t('profiles.empty.noProfiles')"
+          :description="t('profiles.empty.noProfilesHint')"
+        >
+          <template #icon><FolderHeart :size="36" /></template>
+        </EmptyState>
+      </Card>
     </div>
 
     <!-- 创建/编辑预设对话框 -->
     <AppDialog v-model:show="showCreateDialog" :title="formTitle" width="500px">
-      <NSpace vertical :size="12">
+      <div class="flex flex-col gap-3">
         <div>
           <label class="text-sm text-c-secondary mb-1 block">{{ t("profiles.form.name") }}</label>
-          <NInput v-model:value="formName" :placeholder="t('profiles.form.namePlaceholder')" />
+          <Input v-model="formName" :placeholder="t('profiles.form.namePlaceholder')" />
         </div>
         <div>
           <label class="text-sm text-c-secondary mb-1 block">{{
             t("profiles.form.description")
           }}</label>
-          <NInput
-            v-model:value="formDescription"
-            type="textarea"
+          <Textarea
+            v-model="formDescription"
             :placeholder="t('profiles.form.descriptionPlaceholder')"
             :rows="2"
           />
@@ -362,57 +370,43 @@ onMounted(() => {
         <div>
           <label class="text-sm text-c-secondary mb-1 flex items-center gap-2">
             {{ t("profiles.form.modList") }}
-            <NTag
-              size="tiny"
-              :bordered="false"
-              :type="selectedModIds.length > 0 ? 'info' : 'default'"
-            >
+            <Badge size="xs" :variant="selectedModIds.length > 0 ? 'info' : 'neutral'">
               {{ t("profiles.form.selectedCount", { n: selectedModIds.length }) }}
-            </NTag>
+            </Badge>
           </label>
 
-          <NInput
-            v-model:value="modSearchQuery"
+          <Input
+            v-model="modSearchQuery"
             :placeholder="t('profiles.form.searchMods')"
-            size="small"
+            size="sm"
             clearable
             class="mb-2"
           >
-            <template #prefix
-              ><NIcon :size="14"><Search /></NIcon
-            ></template>
-          </NInput>
+            <template #prefix><Search :size="14" /></template>
+          </Input>
 
           <div class="max-h-56 overflow-y-auto border border-c-default rounded-lg p-2 space-y-1">
             <div v-if="loadingMods" class="text-center py-4 text-xs text-c-muted">
               {{ t("profiles.form.loadingMods") }}
             </div>
             <template v-else>
-              <NCheckbox
+              <Checkbox
                 v-for="mod in filteredModsForPicker"
                 :key="mod.id"
-                :checked="mod.source === 'workshop' || selectedModIds.includes(mod.id)"
+                :model-value="mod.source === 'workshop' || selectedModIds.includes(mod.id)"
                 :disabled="mod.source === 'workshop'"
-                size="small"
+                size="sm"
                 class="w-full"
-                @update:checked="(v: boolean) => toggleModSelection(mod.id, v)"
+                @update:model-value="(v: boolean) => toggleModSelection(mod.id, v)"
               >
-                <span class="text-xs">
-                  {{ mod.name }}
-                  <span v-if="mod.version" class="text-c-muted font-mono ml-1">{{
-                    mod.version
-                  }}</span>
-                  <NTag
-                    v-if="mod.source === 'workshop'"
-                    type="info"
-                    size="tiny"
-                    :bordered="false"
-                    class="ml-1"
-                  >
+                <span class="text-xs inline-flex items-center gap-1 flex-wrap">
+                  <span>{{ mod.name }}</span>
+                  <span v-if="mod.version" class="text-c-muted font-mono">{{ mod.version }}</span>
+                  <Badge v-if="mod.source === 'workshop'" variant="info" size="xs">
                     {{ t("library.mod.workshop") }}
-                  </NTag>
+                  </Badge>
                 </span>
-              </NCheckbox>
+              </Checkbox>
               <div
                 v-if="filteredModsForPicker.length === 0 && !loadingMods"
                 class="text-center py-4 text-xs text-c-muted"
@@ -422,23 +416,25 @@ onMounted(() => {
             </template>
           </div>
 
-          <NSpace :size="4" class="mt-2">
-            <NButton size="tiny" text @click="selectAllMods">
+          <div class="flex items-center gap-2 mt-2">
+            <Button size="xs" variant="ghost" @click="selectAllMods">
               {{ t("profiles.form.selectAll") }}
-            </NButton>
-            <NButton size="tiny" text @click="deselectAllMods">
+            </Button>
+            <Button size="xs" variant="ghost" @click="deselectAllMods">
               {{ t("profiles.form.deselectAll") }}
-            </NButton>
-          </NSpace>
+            </Button>
+          </div>
         </div>
-      </NSpace>
+      </div>
       <template #footer>
-        <NSpace justify="end">
-          <NButton @click="showCreateDialog = false">{{ t("common.cancel") }}</NButton>
-          <NButton type="primary" :loading="loading" @click="handleSave">
+        <div class="flex items-center justify-end gap-2">
+          <Button variant="ghost" size="sm" @click="showCreateDialog = false">{{
+            t("common.cancel")
+          }}</Button>
+          <Button variant="solid" size="sm" :loading="loading" @click="handleSave">
             {{ editingId ? t("profiles.form.updateBtn") : t("profiles.form.createBtn") }}
-          </NButton>
-        </NSpace>
+          </Button>
+        </div>
       </template>
     </AppDialog>
 
@@ -449,31 +445,25 @@ onMounted(() => {
           {{ t("profiles.apply.applied", { name: applyResult.profile.name }) }}
         </span>
       </template>
-      <NSpace vertical :size="8">
+      <div class="flex flex-col gap-2">
         <div v-if="applyResult.enabledModIds.length > 0" class="flex items-center gap-2 text-sm">
-          <NTag type="success" size="small" :bordered="false"
-            >+{{ applyResult.enabledModIds.length }}</NTag
-          >
+          <Badge variant="success" size="sm">+{{ applyResult.enabledModIds.length }}</Badge>
           <span class="text-c-secondary">{{ t("profiles.apply.enabled") }}</span>
         </div>
         <div v-if="applyResult.disabledModIds.length > 0" class="flex items-center gap-2 text-sm">
-          <NTag type="default" size="small" :bordered="false"
-            >-{{ applyResult.disabledModIds.length }}</NTag
-          >
+          <Badge variant="neutral" size="sm">-{{ applyResult.disabledModIds.length }}</Badge>
           <span class="text-c-secondary">{{ t("profiles.apply.disabled") }}</span>
         </div>
         <div v-if="applyResult.missingModIds.length > 0" class="flex items-center gap-2 text-sm">
-          <NTag type="warning" size="small" :bordered="false"
-            >!{{ applyResult.missingModIds.length }}</NTag
-          >
+          <Badge variant="warning" size="sm">!{{ applyResult.missingModIds.length }}</Badge>
           <span class="text-c-secondary">{{ t("profiles.apply.missing") }}</span>
         </div>
-      </NSpace>
+      </div>
       <template #footer>
         <div class="flex justify-end">
-          <NButton type="primary" size="small" @click="showApplyDialog = false">
+          <Button variant="solid" size="sm" @click="showApplyDialog = false">
             {{ t("profiles.apply.ok") }}
-          </NButton>
+          </Button>
         </div>
       </template>
     </AppDialog>
@@ -495,36 +485,34 @@ onMounted(() => {
         }}
       </div>
 
-      <div
+      <Alert
         v-if="bundlePreview.conflicts.length > 0"
-        class="mb-3 p-3 rounded-lg bg-c-warning border border-c-warning"
+        variant="warning"
+        material="glass"
+        :title="t('profiles.importDialog.conflictCount', { n: bundlePreview.conflicts.length })"
+        class="mb-3"
       >
-        <p class="text-sm font-medium text-c-warning mb-2">
-          {{ t("profiles.importDialog.conflictCount", { n: bundlePreview.conflicts.length }) }}
-        </p>
-        <div
-          v-for="c in bundlePreview.conflicts"
-          :key="c.modId"
-          class="text-xs text-c-warning mb-1"
-        >
-          · {{ c.name }}: {{ c.reason }}
+        <div class="space-y-1 text-xs">
+          <div v-for="c in bundlePreview.conflicts" :key="c.modId">
+            · {{ c.name }}: {{ c.reason }}
+          </div>
+          <div class="pt-1 text-c-secondary">{{ t("profiles.importDialog.conflictHint") }}</div>
         </div>
-        <div class="mt-2 text-xs text-c-secondary">
-          {{ t("profiles.importDialog.conflictHint") }}
-        </div>
-      </div>
+      </Alert>
 
       <div v-if="bundlePreview.missingIds.length > 0" class="mb-3 text-xs text-c-secondary">
         {{ t("profiles.importDialog.missingHint", { n: bundlePreview.missingIds.length }) }}
       </div>
 
       <template #footer>
-        <NSpace justify="end">
-          <NButton @click="showImportDialog = false">{{ t("common.cancel") }}</NButton>
-          <NButton type="primary" :loading="loading" @click="confirmImport">
+        <div class="flex items-center justify-end gap-2">
+          <Button variant="ghost" size="sm" @click="showImportDialog = false">{{
+            t("common.cancel")
+          }}</Button>
+          <Button variant="solid" size="sm" :loading="loading" @click="confirmImport">
             {{ t("profiles.importDialog.importBtn") }}
-          </NButton>
-        </NSpace>
+          </Button>
+        </div>
       </template>
     </AppDialog>
 

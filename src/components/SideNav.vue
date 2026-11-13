@@ -1,18 +1,9 @@
 <script setup lang="ts">
-import { h, computed, ref, onMounted, onUnmounted } from "vue"
+import { computed, ref, onMounted, onUnmounted, type Component } from "vue"
 import { storeToRefs } from "pinia"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
-import {
-  useMessage,
-  useDialog,
-  NMenu,
-  NIcon,
-  NSelect,
-  NButton,
-  NSpace,
-  type MenuOption,
-} from "naive-ui"
+import { Alert, Button, Select, useConfirm, useToast } from "@miuui/vue"
 import {
   Library,
   Compass,
@@ -28,8 +19,8 @@ import { useHighlightStore } from "@/stores/useHighlightStore"
 import AppDialog from "@/components/AppDialog.vue"
 
 const { t } = useI18n()
-const message = useMessage()
-const dialog = useDialog()
+const { toast } = useToast()
+const { confirm } = useConfirm()
 const route = useRoute()
 const router = useRouter()
 
@@ -51,7 +42,6 @@ const {
 } = store
 
 const showPresetPanel = ref(false)
-const presetMenuOpen = ref(false)
 let presetPanelTimer: ReturnType<typeof setTimeout> | null = null
 const PRESET_HOVER_DELAY = 100 // ms
 
@@ -64,77 +54,65 @@ function onPresetEnter() {
 }
 
 function onPresetLeave() {
-  if (presetMenuOpen.value) return
+  if (document.querySelector('.miu-select__content[data-state="open"]')) return
   presetPanelTimer = setTimeout(() => {
     showPresetPanel.value = false
     presetPanelTimer = null
   }, PRESET_HOVER_DELAY)
 }
 
-async function onPresetSelect(val: string) {
-  presetMenuOpen.value = false
+async function onPresetSelect(val: string | number) {
   showPresetPanel.value = false
-  const result = await handleQuickPreset(val)
+  const result = await handleQuickPreset(String(val))
   if (result.ok) {
-    message.success(t("library.success.presetApplied", { name: result.label }))
+    toast({ title: t("library.success.presetApplied", { name: result.label }), variant: "success" })
   } else {
-    message.error(`${t("profiles.error.applyFailed")}: ${result.error}`)
+    toast({ title: `${t("profiles.error.applyFailed")}: ${result.error}`, variant: "error" })
   }
 }
 
 async function onLaunchGame() {
   const result = await handleLaunchGame()
   if (result.ok) {
-    message.success(t("library.success.gameLaunched"))
+    toast({ title: t("library.success.gameLaunched"), variant: "success" })
   } else if (result.needsGamePath) {
-    dialog.warning({
+    const accepted = await confirm({
       title: t("settings.prompt.gamePathRequired"),
-      content: t("settings.prompt.gamePathRequiredDesc"),
-      positiveText: t("settings.prompt.goToSettings"),
-      negativeText: t("common.cancel"),
-      onPositiveClick: () => {
-        useHighlightStore().highlight("game-path")
-        router.push("/settings")
-      },
-      maskClosable: true,
+      description: t("settings.prompt.gamePathRequiredDesc"),
+      confirmLabel: t("settings.prompt.goToSettings"),
+      cancelLabel: t("common.cancel"),
     })
+    if (accepted) {
+      useHighlightStore().highlight("game-path")
+      router.push("/settings")
+    }
   } else if (result.alreadyRunning) {
-    message.warning(t("library.info.gameAlreadyRunning"))
+    toast({ title: t("library.info.gameAlreadyRunning"), variant: "warning" })
   } else if (result.error) {
-    message.error(t("library.error.launchFailed", { e: result.error }))
+    toast({ title: t("library.error.launchFailed", { e: result.error }), variant: "error" })
   }
 }
 
 async function onLaunchAnyway() {
   const result = await handleLaunchAnyway()
   if (result.ok) {
-    message.success(t("library.success.gameLaunched"))
+    toast({ title: t("library.success.gameLaunched"), variant: "success" })
   } else if (result.error) {
-    message.error(t("library.error.launchFailed", { e: result.error }))
+    toast({ title: t("library.error.launchFailed", { e: result.error }), variant: "error" })
   }
 }
 
-const menuOptions = computed<MenuOption[]>(() => [
-  {
-    label: t("nav.library"),
-    key: "/",
-    icon: () => h(NIcon, null, { default: () => h(Library, { size: 18 }) }),
-  },
-  {
-    label: t("nav.discover"),
-    key: "/discover",
-    icon: () => h(NIcon, null, { default: () => h(Compass, { size: 18 }) }),
-  },
-  {
-    label: t("nav.saves"),
-    key: "/saves",
-    icon: () => h(NIcon, null, { default: () => h(Save, { size: 18 }) }),
-  },
-  {
-    label: t("nav.settings"),
-    key: "/settings",
-    icon: () => h(NIcon, null, { default: () => h(Settings, { size: 18 }) }),
-  },
+interface NavItem {
+  key: string
+  label: string
+  icon: Component
+}
+
+const menuOptions = computed<NavItem[]>(() => [
+  { label: t("nav.library"), key: "/", icon: Library },
+  { label: t("nav.discover"), key: "/discover", icon: Compass },
+  { label: t("nav.saves"), key: "/saves", icon: Save },
+  { label: t("nav.settings"), key: "/settings", icon: Settings },
 ])
 
 const activeKey = computed(() => {
@@ -176,15 +154,24 @@ onUnmounted(() => {
           boxShadow: 'var(--shadow-glass-floating)',
         }"
       >
-        <div class="flex-1 overflow-y-auto p-3 pb-0">
-          <NMenu
-            :value="activeKey"
-            :options="menuOptions"
-            :indent="16"
-            :default-expanded-keys="[]"
-            @update:value="handleUpdateValue"
-          />
-        </div>
+        <nav class="flex-1 overflow-y-auto p-2.5 flex flex-col gap-1" :aria-label="t('nav.menu')">
+          <button
+            v-for="item in menuOptions"
+            :key="item.key"
+            type="button"
+            class="side-nav-item flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium text-left cursor-pointer border-0 bg-transparent transition-all duration-200"
+            :class="
+              activeKey === item.key
+                ? 'side-nav-item--active text-primary-theme'
+                : 'text-c-secondary hover:text-primary-theme'
+            "
+            :aria-current="activeKey === item.key ? 'page' : undefined"
+            @click="handleUpdateValue(item.key)"
+          >
+            <component :is="item.icon" :size="18" class="flex-shrink-0" />
+            <span>{{ item.label }}</span>
+          </button>
+        </nav>
       </div>
     </Transition>
 
@@ -205,13 +192,13 @@ onUnmounted(() => {
       <div
         class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75"
       >
-        <NIcon :size="24" color="#fff"><Menu /></NIcon>
+        <Menu :size="24" color="#fff" />
       </div>
       <!-- 展开态 -->
       <div
         class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100"
       >
-        <NIcon :size="24" color="#fff" class="flex-shrink-0"><Menu /></NIcon>
+        <Menu :size="24" color="#fff" class="flex-shrink-0" />
         <span class="text-[17px] font-medium whitespace-nowrap text-white">{{
           t("nav.menu")
         }}</span>
@@ -232,18 +219,12 @@ onUnmounted(() => {
           }"
         >
           <div class="p-3">
-            <NSelect
-              v-model:value="quickPresetId"
+            <Select
+              :model-value="quickPresetId ?? undefined"
               :options="quickPresetOptions"
-              size="small"
+              size="sm"
               :disabled="quickPresetOptions.length === 0"
-              placement="top"
-              @update:value="onPresetSelect"
-              @update:show="
-                (show: boolean) => {
-                  presetMenuOpen = show
-                }
-              "
+              @update:model-value="onPresetSelect"
             />
           </div>
         </div>
@@ -266,19 +247,19 @@ onUnmounted(() => {
         <div
           class="absolute inset-0 flex items-center justify-center transition-all duration-300 ease-out opacity-100 scale-100 group-hover:opacity-0 group-hover:scale-75"
         >
-          <NIcon :size="24" :color="'var(--primary-color)'">
-            <Play v-if="!launchingGame" />
-            <LoaderCircle v-else class="animate-spin" />
-          </NIcon>
+          <span class="text-primary-theme flex items-center justify-center">
+            <Play v-if="!launchingGame" :size="24" />
+            <LoaderCircle v-else :size="24" class="animate-spin" />
+          </span>
         </div>
         <!-- 展开态 -->
         <div
           class="absolute inset-0 flex items-center gap-3 px-4 transition-all duration-300 ease-out opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100"
         >
-          <NIcon :size="24" :color="'var(--primary-color)'" class="flex-shrink-0">
-            <Play v-if="!launchingGame" />
-            <LoaderCircle v-else class="animate-spin" />
-          </NIcon>
+          <span class="text-primary-theme flex-shrink-0 flex items-center justify-center">
+            <Play v-if="!launchingGame" :size="24" />
+            <LoaderCircle v-else :size="24" class="animate-spin" />
+          </span>
           <span class="text-[17px] font-medium whitespace-nowrap">{{ t("library.launch") }}</span>
         </div>
       </button>
@@ -300,67 +281,55 @@ onUnmounted(() => {
   >
     <template #header>
       <div class="flex items-center gap-2">
-        <NIcon :size="18" color="#f0a020"><AlertTriangle /></NIcon>
+        <AlertTriangle :size="18" class="text-amber-500" />
         <span class="font-semibold">{{ t("library.launchMismatch.title") }}</span>
       </div>
     </template>
-    <NSpace v-if="launchMismatchStatus" vertical :size="8">
+    <div v-if="launchMismatchStatus" class="flex flex-col gap-2">
       <p class="text-sm text-c-secondary">{{ t("library.launchMismatch.warning") }}</p>
-      <div class="text-xs text-c-secondary bg-c-warning rounded p-2 space-y-1">
-        <div class="flex justify-between" v-if="launchMismatchStatus.differentCount > 0">
-          <span>{{
-            t("saves.cloud.mismatch.different", { n: launchMismatchStatus.differentCount })
-          }}</span>
+      <Alert variant="warning" material="glass">
+        <template #icon><AlertTriangle :size="16" /></template>
+        <div class="text-xs space-y-1">
+          <div v-if="launchMismatchStatus.differentCount > 0">
+            {{ t("saves.cloud.mismatch.different", { n: launchMismatchStatus.differentCount }) }}
+          </div>
+          <div v-if="launchMismatchStatus.localOnlyCount > 0">
+            {{ t("saves.cloud.mismatch.localOnly", { n: launchMismatchStatus.localOnlyCount }) }}
+          </div>
+          <div v-if="launchMismatchStatus.cloudOnlyCount > 0">
+            {{ t("saves.cloud.mismatch.cloudOnly", { n: launchMismatchStatus.cloudOnlyCount }) }}
+          </div>
         </div>
-        <div class="flex justify-between" v-if="launchMismatchStatus.localOnlyCount > 0">
-          <span>{{
-            t("saves.cloud.mismatch.localOnly", { n: launchMismatchStatus.localOnlyCount })
-          }}</span>
-        </div>
-        <div class="flex justify-between" v-if="launchMismatchStatus.cloudOnlyCount > 0">
-          <span>{{
-            t("saves.cloud.mismatch.cloudOnly", { n: launchMismatchStatus.cloudOnlyCount })
-          }}</span>
-        </div>
-      </div>
+      </Alert>
       <div class="flex justify-between mt-2 gap-2">
-        <NButton secondary size="small" @click="handleGoToSaves">
+        <Button variant="secondary" size="sm" @click="handleGoToSaves">
           {{ t("library.launchMismatch.goToSaves") }}
-        </NButton>
-        <NButton type="warning" size="small" @click="onLaunchAnyway">
+        </Button>
+        <Button variant="solid" size="sm" @click="onLaunchAnyway">
           {{ t("library.launchMismatch.forceLaunch") }}
-        </NButton>
+        </Button>
       </div>
-    </NSpace>
+    </div>
   </AppDialog>
 
   <!-- ============ End AppDialogs ============ -->
 </template>
 
 <style scoped>
-/* 去除 NMenu 选中项的左侧默认指示条 */
-:deep(.n-menu-item-content::before) {
-  display: none !important;
-}
-
 /* 菜单项左侧光源效果 —— 主题色自左向右渐变辉光 */
-:deep(.n-menu-item-content) {
-  position: relative;
-  transition: all 0.2s ease;
-}
-:deep(.n-menu-item-content:hover) {
+.side-nav-item:hover {
   background: linear-gradient(
     to right,
     color-mix(in srgb, var(--primary-color) 6%, transparent),
     transparent 80%
-  ) !important;
+  );
 }
-:deep(.n-menu-item-content--selected) {
+.side-nav-item--active {
   background: linear-gradient(
     to right,
     color-mix(in srgb, var(--primary-color) 14%, transparent),
     transparent 65%
-  ) !important;
+  );
 }
 
 /* 菜单面板展开/收起过渡动画 */

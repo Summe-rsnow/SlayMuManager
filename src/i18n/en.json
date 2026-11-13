@@ -686,6 +686,22 @@
       "fix": "Fix",
       "opt": "Optimized"
     },
+    "v1_10_0": {
+      "title": "Full μui Design System Migration, Unified Motion & Dynamic Wallpaper Theme",
+      "highlights": [
+        "Migrated the entire UI to the @miuui design system and OKLCH semantic token architecture, removing legacy wrappers and duplicate CSS",
+        "Unified spring motion language across all controls with sliding indicators, card glow lift, and consistent feedback even when Windows disables system animations",
+        "Upgraded custom wallpaper cropping to export transparent padding that adapts dynamically to light/dark themes, alongside updated frontend and Rust dependencies"
+      ],
+      "changes": [
+        "Adopted @miuui/vue, @miuui/tokens, and @miuui/materials across AppBar, SideNav, cards, dialogs, drawers, switches, selects, pagination, tooltips, and skeletons",
+        "Unified spring interaction motion across all components, adding card hover glow/lift, overlay transitions, and subtle empty-state floating motion",
+        "Upgraded custom wallpaper cropping to export transparent margins and dynamically follow active light/dark theme gradients in preview and app background",
+        "Streamlined global styles and removed 8 obsolete local wrapper components while polishing Library, Discover, Saves, and Settings layouts",
+        "Fixed duplicate native title tooltip overlapping with custom tooltips and refined PageHeader divider spacing",
+        "Updated frontend packages (Vue, Vite, Tauri CLI, Vue Router, UnoCSS, Lucide, Oxlint) and Rust crates (Tauri 2.12, Zip 9.5, Reqwest, etc.)"
+      ]
+    },
     "v1_9_1": {
       "title": "Preset Card Library Alignment & Discover Floating Pagination & Skeletons",
       "highlights": [

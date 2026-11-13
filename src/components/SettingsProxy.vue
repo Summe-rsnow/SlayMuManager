@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
-import { useMessage } from "naive-ui"
+import { Input, Button, useToast } from "@miuui/vue"
 import { invoke } from "@tauri-apps/api/core"
-import { NInput, NButton, NIcon, NSpace } from "naive-ui"
 import { Globe } from "@lucide/vue"
 import type { AppBootstrap } from "../types"
 import SettingsSection from "./SettingsSection.vue"
 
 const { t } = useI18n()
-const message = useMessage()
+const { toast } = useToast()
 
 const proxyUrl = ref("")
 const proxyTesting = ref(false)
@@ -22,27 +21,27 @@ onMounted(async () => {
 async function saveProxy() {
   try {
     await invoke("update_proxy_url", { url: proxyUrl.value || null })
-    message.success(t("settings.success.proxySaved"))
+    toast({ title: t("settings.success.proxySaved"), variant: "success" })
   } catch (e: unknown) {
-    message.error(t("settings.error.saveFailed", { e }))
+    toast({ title: t("settings.error.saveFailed", { e }), variant: "error" })
   }
 }
 
 async function testProxy() {
   if (!proxyUrl.value.trim()) {
-    message.warning(t("settings.warning.proxyUrlRequired"))
+    toast({ title: t("settings.warning.proxyUrlRequired"), variant: "warning" })
     return
   }
   proxyTesting.value = true
   try {
     const ok = await invoke<boolean>("test_proxy", { url: proxyUrl.value.trim() })
-    message[ok ? "success" : "error"](
-      ok ? t("settings.success.proxyOk") : t("settings.error.proxyFail"),
-    )
+    toast({
+      title: ok ? t("settings.success.proxyOk") : t("settings.error.proxyFail"),
+      variant: ok ? "success" : "error",
+    })
   } catch (e: unknown) {
-    message.error(t("settings.error.testFailed", { e }))
+    toast({ title: t("settings.error.testFailed", { e }), variant: "error" })
   } finally {
-    proxyTesting.value = false
   }
 }
 </script>
@@ -50,17 +49,15 @@ async function testProxy() {
 <template>
   <SettingsSection :title="t('settings.proxy.title')">
     <div class="flex gap-2">
-      <NInput v-model:value="proxyUrl" placeholder="http://127.0.0.1:7890" clearable>
-        <template #prefix
-          ><NIcon :size="16"><Globe /></NIcon
-        ></template>
-      </NInput>
-      <NButton secondary @click="saveProxy">{{ t("common.save") }}</NButton>
+      <Input v-model="proxyUrl" placeholder="http://127.0.0.1:7890" clearable class="flex-1">
+        <template #prefix><Globe :size="16" /></template>
+      </Input>
+      <Button variant="secondary" @click="saveProxy">{{ t("common.save") }}</Button>
     </div>
-    <NSpace>
-      <NButton secondary size="small" :loading="proxyTesting" @click="testProxy">
+    <div class="flex items-center gap-2">
+      <Button variant="secondary" size="sm" :loading="proxyTesting" @click="testProxy">
         {{ t("settings.proxy.testConnection") }}
-      </NButton>
-    </NSpace>
+      </Button>
+    </div>
   </SettingsSection>
 </template>

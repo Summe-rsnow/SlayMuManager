@@ -2,17 +2,7 @@
 import { ref, computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { currentLocale } from "@/i18n"
-import {
-  NTag,
-  NButton,
-  NIcon,
-  NSwitch,
-  NPopover,
-  NCheckbox,
-  NSpace,
-  NInput,
-  NTooltip,
-} from "naive-ui"
+import { Badge, Button, Card, Pill, Switch, Popover, Checkbox, Textarea, Tooltip } from "@miuui/vue"
 import { FolderOpen, Trash2, Plus, StickyNote, Copy, Check, Layers } from "@lucide/vue"
 import IconBtn from "./IconBtn.vue"
 import ConfirmBtn from "./ConfirmBtn.vue"
@@ -57,15 +47,6 @@ function saveNote(modId: string) {
 }
 
 // --- 动态卡片样式（Level 1: Surface 玻璃质感）---
-const cardStyle = computed(() => ({
-  backgroundColor: "var(--glass-surface-bg)",
-  backdropFilter: "blur(var(--glass-surface-blur)) saturate(var(--blur-saturate))",
-  WebkitBackdropFilter: "blur(var(--glass-surface-blur)) saturate(var(--blur-saturate))",
-  borderColor: "var(--glass-surface-border)",
-  boxShadow: "var(--shadow-glass-surface)",
-  transform: "translateZ(0)",
-}))
-
 const copied = ref(false)
 let copyTimer: ReturnType<typeof setTimeout> | null = null
 async function copyModId() {
@@ -83,215 +64,209 @@ async function copyModId() {
 </script>
 
 <template>
-  <div
-    class="group mod-card flex items-center justify-between p-3.5 rounded-xl border transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-1"
-    :style="cardStyle"
+  <Card
+    material="glass"
+    interactive
+    padding="sm"
+    class="group"
     :class="[{ 'pointer-events-none opacity-60': busy }]"
   >
-    <div class="flex-1 min-w-0" style="position: relative; z-index: 2">
-      <!-- 名称 + 版本 + 标签 -->
-      <div class="flex items-center gap-1.5 flex-wrap">
-        <NTooltip trigger="hover" placement="top">
-          <template #trigger>
-            <span class="font-semibold text-[15px] truncate max-w-[320px] text-c-primary">
-              {{ mod.name }}
-            </span>
-          </template>
-          {{ mod.name }}
-        </NTooltip>
-        <span
-          class="bg-c-secondary/50 px-1.5 py-0.5 rounded-md text-xs text-c-muted font-mono truncate"
-          >{{ mod.version ?? "—" }}</span
-        >
-        <span
-          v-if="hasUpdate && updateInfo?.remoteVersion"
-          class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-bold leading-none cursor-pointer transition-transform hover:scale-105 active:scale-95 animate-pulse"
-          :style="{
-            backgroundColor: 'color-mix(in srgb, var(--primary-color) 18%, transparent)',
-            color: 'var(--primary-color)',
-            border: '1px solid color-mix(in srgb, var(--primary-color) 35%, transparent)',
-          }"
-          :title="'v' + updateInfo!.remoteVersion + ' 可用'"
-          @click="emit('openUpdateUrl', mod)"
-        >
-          ↑ {{ updateInfo!.remoteVersion }}
-        </span>
-        <NTag v-if="mod.source === 'workshop'" type="info" size="tiny" :bordered="false">
-          {{ t("library.mod.workshop") }}
-        </NTag>
-        <NTag v-if="mod.affectsGameplay" type="warning" size="tiny" :bordered="false">
-          {{ t("library.mod.affectsGameplay") }}
-        </NTag>
-        <!-- 多版本共存警告标签 -->
-        <NTooltip v-if="hasConflict" trigger="hover" placement="top">
-          <template #trigger>
-            <NTag
-              type="warning"
-              size="tiny"
-              :bordered="false"
-              class="cursor-pointer font-bold animate-pulse hover:opacity-80"
-              @click.stop="emit('manageVersions', mod)"
-            >
-              ⚠️ 多版本共存 ({{ conflictCount }})
-            </NTag>
-          </template>
-          检测到此模组安装了 {{ conflictCount }} 个不同版本，点击打开版本保留管理面板
-        </NTooltip>
-        <NTag
-          v-for="tagId in getTags(mod.id)"
-          :key="tagId"
-          size="tiny"
-          :bordered="false"
-          :type="isPresetTag(tagId) ? 'info' : 'default'"
-          closable
-          @close="() => toggleTag(mod.id, tagId)"
-        >
-          {{ getTagLabel(tagId, currentLocale) }}
-        </NTag>
-      </div>
-
-      <!-- 作者 + 文件夹 -->
-      <div class="text-xs text-c-muted mt-0.5">
-        {{ mod.author ?? t("library.mod.unknownAuthor") }} · {{ mod.folderName }}
-      </div>
-
-      <!-- 备注内容（有备注时显示为淡色一行） -->
-      <div v-if="hasNote(mod.id)" class="mt-0.5 text-xs text-c-muted truncate">
-        <NIcon :size="12" class="inline-block mr-0.5 align-middle"><StickyNote /></NIcon>
-        <span class="align-middle">{{ getNote(mod.id) }}</span>
-      </div>
-    </div>
-
-    <!-- 操作按钮 -->
-    <div
-      class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4 opacity-60 group-hover:opacity-100 transition-opacity duration-200"
-    >
-      <IconBtn :icon="Plus" :tip="t('library.mod.selectTag')">
-        <template #trigger="{ disabled: d }">
-          <NPopover trigger="click" placement="bottom-end">
+    <div class="flex items-center justify-between">
+      <div class="flex-1 min-w-0">
+        <!-- 名称 + 版本 + 标签 -->
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <Tooltip side="top" material="glass">
             <template #trigger>
-              <NButton text size="tiny" :disabled="d">
-                <template #icon
-                  ><NIcon :size="14"><Plus /></NIcon
-                ></template>
-              </NButton>
+              <span class="font-semibold text-[15px] truncate max-w-[320px] text-c-primary">
+                {{ mod.name }}
+              </span>
             </template>
-            <div class="w-52">
-              <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.selectTag") }}</div>
-              <NSpace vertical :size="4">
-                <NCheckbox
-                  v-for="t in PRESET_TAGS"
-                  :key="t.id"
-                  size="small"
-                  :checked="getTags(mod.id).includes(t.id)"
-                  @update:checked="() => toggleTag(mod.id, t.id)"
-                >
-                  <span class="text-xs">{{ getTagLabel(t.id, currentLocale) }}</span>
-                </NCheckbox>
-              </NSpace>
-            </div>
-          </NPopover>
-        </template>
-      </IconBtn>
-
-      <IconBtn :icon="StickyNote" :tip="t('library.mod.note')">
-        <template #trigger="{ disabled: d }">
-          <NPopover
-            trigger="click"
-            placement="bottom"
-            @update:show="(v: boolean) => v && openNotePopover(mod.id)"
+            {{ mod.name }}
+          </Tooltip>
+          <span
+            class="bg-c-secondary/50 px-1.5 py-0.5 rounded-md text-xs text-c-muted font-mono truncate"
+            >{{ mod.version ?? "—" }}</span
           >
+          <span
+            v-if="hasUpdate && updateInfo?.remoteVersion"
+            class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[11px] font-bold leading-none cursor-pointer transition-transform hover:scale-105 active:scale-95 animate-pulse"
+            :style="{
+              backgroundColor: 'color-mix(in srgb, var(--primary-color) 18%, transparent)',
+              color: 'var(--primary-color)',
+              border: '1px solid color-mix(in srgb, var(--primary-color) 35%, transparent)',
+            }"
+            :title="'v' + updateInfo!.remoteVersion + ' 可用'"
+            @click="emit('openUpdateUrl', mod)"
+          >
+            ↑ {{ updateInfo!.remoteVersion }}
+          </span>
+          <Badge v-if="mod.source === 'workshop'" variant="info" size="xs">
+            {{ t("library.mod.workshop") }}
+          </Badge>
+          <Badge v-if="mod.affectsGameplay" variant="warning" size="xs">
+            {{ t("library.mod.affectsGameplay") }}
+          </Badge>
+          <!-- 多版本共存警告标签 -->
+          <Tooltip v-if="hasConflict" side="top" material="glass">
             <template #trigger>
-              <NButton text size="tiny" :disabled="d">
-                <template #icon
-                  ><NIcon :size="14"><StickyNote /></NIcon
-                ></template>
-              </NButton>
+              <span
+                class="inline-flex items-center cursor-pointer"
+                @click.stop="emit('manageVersions', mod)"
+              >
+                <Badge variant="warning" size="xs" class="font-bold animate-pulse hover:opacity-80">
+                  ⚠️ 多版本共存 ({{ conflictCount }})
+                </Badge>
+              </span>
             </template>
-            <div class="w-56">
-              <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.note") }}</div>
-              <NInput
-                :value="noteDraft"
-                type="textarea"
-                size="small"
-                :placeholder="t('library.mod.notePlaceholder')"
-                :autosize="{ minRows: 2, maxRows: 6 }"
-                @update:value="(v: string) => (noteDraft = v)"
-                @blur="saveNote(mod.id)"
-              />
-            </div>
-          </NPopover>
-        </template>
-      </IconBtn>
+            检测到此模组安装了 {{ conflictCount }} 个不同版本，点击打开版本保留管理面板
+          </Tooltip>
+          <Pill
+            v-for="tagId in getTags(mod.id)"
+            :key="tagId"
+            size="sm"
+            variant="tag"
+            :active="isPresetTag(tagId)"
+            :label="getTagLabel(tagId, currentLocale)"
+            removable
+            @remove="toggleTag(mod.id, tagId)"
+          />
+        </div>
 
-      <IconBtn
-        v-if="hasConflict"
-        :icon="Layers"
-        tip="多版本管理与保留"
-        @click="emit('manageVersions', mod)"
-      />
+        <!-- 作者 + 文件夹 -->
+        <div class="text-xs text-c-muted mt-0.5">
+          {{ mod.author ?? t("library.mod.unknownAuthor") }} · {{ mod.folderName }}
+        </div>
 
-      <IconBtn
-        :icon="FolderOpen"
-        :tip="t('library.mod.openFolder')"
-        @click="emit('openFolder', mod)"
-      />
+        <!-- 备注内容（有备注时显示为淡色一行） -->
+        <div v-if="hasNote(mod.id)" class="mt-0.5 text-xs text-c-muted truncate">
+          <StickyNote :size="12" class="inline-block mr-0.5 align-middle" />
+          <span class="align-middle">{{ getNote(mod.id) }}</span>
+        </div>
+      </div>
 
-      <ConfirmBtn
-        v-if="mod.source !== 'workshop'"
-        :icon="Trash2"
-        :tip="t('library.mod.uninstall')"
-        :confirmText="t('library.mod.confirmUninstall', { name: mod.name })"
-        @confirm="emit('uninstall', mod)"
-      />
-
-      <ConfirmBtn
-        v-if="mod.source === 'workshop' && mod.workshopId"
-        :icon="Trash2"
-        :tip="t('library.mod.unsubscribe')"
-        :confirmText="t('library.mod.confirmUnsubscribe', { name: mod.name })"
-        @confirm="emit('unsubscribe', mod.workshopId!)"
-      />
-      <IconBtn
-        :icon="copied ? Check : Copy"
-        :tip="copied ? t('library.mod.copied') : t('library.mod.copyId')"
-        @click="copyModId"
-      />
-      <FloatingTip
-        v-if="mod.source === 'workshop'"
-        :text="t('library.mod.workshopHint')"
-        placement="left"
-        :width="200"
+      <!-- 操作按钮 -->
+      <div
+        class="mod-actions flex items-center gap-2 flex-shrink-0 ml-4 opacity-60 group-hover:opacity-100 transition-opacity duration-200"
       >
-        <template #default>
-          <NSwitch :value="enabled" :disabled="true" />
-        </template>
-      </FloatingTip>
-      <NSwitch
-        v-else
-        :value="enabled"
-        :disabled="busy || toggleDisabled"
-        @update:value="() => emit('toggle', mod)"
-      />
-    </div>
-  </div>
-</template>
+        <IconBtn :icon="Plus" :tip="t('library.mod.selectTag')">
+          <template #trigger="{ disabled: d }">
+            <Popover side="bottom" align="end" material="glass">
+              <template #trigger>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  icon-only
+                  :aria-label="t('library.mod.selectTag')"
+                  :disabled="d"
+                >
+                  <Plus :size="14" />
+                </Button>
+              </template>
+              <div class="w-52">
+                <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.selectTag") }}</div>
+                <div class="flex flex-col gap-1.5">
+                  <Checkbox
+                    v-for="tItem in PRESET_TAGS"
+                    :key="tItem.id"
+                    size="sm"
+                    :model-value="getTags(mod.id).includes(tItem.id)"
+                    :label="getTagLabel(tItem.id, currentLocale)"
+                    @update:model-value="() => toggleTag(mod.id, tItem.id)"
+                  />
+                </div>
+              </div>
+            </Popover>
+          </template>
+        </IconBtn>
 
-<style scoped>
-.mod-card {
-  transform: translateZ(0);
-  transition:
-    box-shadow 0.2s ease,
-    border-color 0.2s ease,
-    background-color 0.2s ease;
-}
-.mod-card:hover {
-  background-color: var(--glass-surface-bg-hover) !important;
-  box-shadow: var(--shadow-card-hover), var(--shadow-glow) !important;
-  border-color: color-mix(
-    in srgb,
-    var(--primary-color) 35%,
-    var(--glass-surface-border)
-  ) !important;
-}
-</style>
+        <IconBtn :icon="StickyNote" :tip="t('library.mod.note')">
+          <template #trigger="{ disabled: d }">
+            <Popover
+              side="bottom"
+              align="center"
+              material="glass"
+              @update:open="(v: boolean) => v && openNotePopover(mod.id)"
+            >
+              <template #trigger>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  icon-only
+                  :aria-label="t('library.mod.note')"
+                  :disabled="d"
+                >
+                  <StickyNote :size="14" />
+                </Button>
+              </template>
+              <div class="w-56">
+                <div class="text-xs text-c-secondary mb-2">{{ t("library.mod.note") }}</div>
+                <Textarea
+                  :model-value="noteDraft"
+                  size="sm"
+                  :placeholder="t('library.mod.notePlaceholder')"
+                  :rows="2"
+                  auto-resize
+                  :auto-resize-max-height="140"
+                  @update:model-value="(v: string) => (noteDraft = v)"
+                  @blur="saveNote(mod.id)"
+                />
+              </div>
+            </Popover>
+          </template>
+        </IconBtn>
+
+        <IconBtn
+          v-if="hasConflict"
+          :icon="Layers"
+          tip="多版本管理与保留"
+          @click="emit('manageVersions', mod)"
+        />
+
+        <IconBtn
+          :icon="FolderOpen"
+          :tip="t('library.mod.openFolder')"
+          @click="emit('openFolder', mod)"
+        />
+
+        <ConfirmBtn
+          v-if="mod.source !== 'workshop'"
+          :icon="Trash2"
+          :tip="t('library.mod.uninstall')"
+          :confirmText="t('library.mod.confirmUninstall', { name: mod.name })"
+          @confirm="emit('uninstall', mod)"
+        />
+
+        <ConfirmBtn
+          v-if="mod.source === 'workshop' && mod.workshopId"
+          :icon="Trash2"
+          :tip="t('library.mod.unsubscribe')"
+          :confirmText="t('library.mod.confirmUnsubscribe', { name: mod.name })"
+          @confirm="emit('unsubscribe', mod.workshopId!)"
+        />
+        <IconBtn
+          :icon="copied ? Check : Copy"
+          :tip="copied ? t('library.mod.copied') : t('library.mod.copyId')"
+          @click="copyModId"
+        />
+        <FloatingTip
+          v-if="mod.source === 'workshop'"
+          :text="t('library.mod.workshopHint')"
+          placement="left"
+          :width="200"
+        >
+          <template #default>
+            <Switch :model-value="enabled" :disabled="true" size="sm" :aria-label="mod.name" />
+          </template>
+        </FloatingTip>
+        <Switch
+          v-else
+          :model-value="enabled"
+          :disabled="busy || toggleDisabled"
+          size="sm"
+          :aria-label="mod.name"
+          @update:model-value="() => emit('toggle', mod)"
+        />
+      </div>
+    </div>
+  </Card>
+</template>

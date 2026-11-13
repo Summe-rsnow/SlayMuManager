@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n"
 import { storeToRefs } from "pinia"
-import { NSwitch, NRadioGroup, NRadio } from "naive-ui"
+import { computed } from "vue"
+import { FormRow, RadioGroup, Switch } from "@miuui/vue"
 import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
 import SettingsSection from "./SettingsSection.vue"
-import SettingsRow from "./SettingsRow.vue"
 import FloatingTip from "./FloatingTip.vue"
 
 const { t } = useI18n()
@@ -23,26 +23,41 @@ const {
   setDiscoverViewMode,
   setParseWorkshopBBCode,
 } = discoverPrefStore
-</script>
 
+const viewModeOptions = computed(() => [
+  { value: "grid", label: t("settings.discover.viewModeGrid") },
+  { value: "split", label: t("settings.discover.viewModeSplit") },
+])
+
+const columnOptions = [
+  { value: 1, label: "1" },
+  { value: 2, label: "2" },
+  { value: 3, label: "3" },
+  { value: 4, label: "4" },
+]
+</script>
 <template>
   <SettingsSection :title="t('settings.discover.title')">
-    <SettingsRow :label="t('settings.discover.viewMode')">
-      <NRadioGroup :value="discoverViewMode" size="small" @update:value="setDiscoverViewMode">
-        <NRadio value="grid">{{ t("settings.discover.viewModeGrid") }}</NRadio>
-        <NRadio value="split">{{ t("settings.discover.viewModeSplit") }}</NRadio>
-      </NRadioGroup>
-    </SettingsRow>
-    <SettingsRow v-if="discoverViewMode === 'grid'" :label="t('settings.discover.columnCount')">
-      <NRadioGroup :value="discoverColumns" size="small" @update:value="setDiscoverColumns">
-        <NRadio :value="1">1</NRadio>
-        <NRadio :value="2">2</NRadio>
-        <NRadio :value="3">3</NRadio>
-        <NRadio :value="4">4</NRadio>
-      </NRadioGroup>
-    </SettingsRow>
-    <SettingsRow>
-      <template #label>
+    <FormRow :label="t('settings.discover.viewMode')">
+      <RadioGroup
+        :model-value="discoverViewMode"
+        :options="viewModeOptions"
+        orientation="horizontal"
+        size="sm"
+        @update:model-value="(v: string | number) => setDiscoverViewMode(v as 'grid' | 'split')"
+      />
+    </FormRow>
+    <FormRow v-if="discoverViewMode === 'grid'" :label="t('settings.discover.columnCount')">
+      <RadioGroup
+        :model-value="discoverColumns"
+        :options="columnOptions"
+        orientation="horizontal"
+        size="sm"
+        @update:model-value="(v: string | number) => setDiscoverColumns(Number(v) as 1 | 2 | 3 | 4)"
+      />
+    </FormRow>
+    <FormRow>
+      <template #lead>
         <FloatingTip
           :label="t('settings.discover.prefetch')"
           :text="t('settings.discover.prefetchDesc')"
@@ -50,10 +65,10 @@ const {
           :width="240"
         />
       </template>
-      <NSwitch :value="prefetchEnabled" @update:value="setPrefetchEnabled" />
-    </SettingsRow>
-    <SettingsRow>
-      <template #label>
+      <Switch :model-value="prefetchEnabled" size="sm" @update:model-value="setPrefetchEnabled" />
+    </FormRow>
+    <FormRow>
+      <template #lead>
         <FloatingTip
           :label="t('settings.discover.parseBBCode')"
           :text="t('settings.discover.parseBBCodeDesc')"
@@ -61,10 +76,18 @@ const {
           :width="280"
         />
       </template>
-      <NSwitch :value="parseWorkshopBBCode" @update:value="setParseWorkshopBBCode" />
-    </SettingsRow>
-    <SettingsRow :label="t('settings.discover.translateQuotaTip')">
-      <NSwitch :value="showTranslateQuotaTip" @update:value="setShowTranslateQuotaTip" />
-    </SettingsRow>
+      <Switch
+        :model-value="parseWorkshopBBCode"
+        size="sm"
+        @update:model-value="setParseWorkshopBBCode"
+      />
+    </FormRow>
+    <FormRow :label="t('settings.discover.translateQuotaTip')">
+      <Switch
+        :model-value="showTranslateQuotaTip"
+        size="sm"
+        @update:model-value="setShowTranslateQuotaTip"
+      />
+    </FormRow>
   </SettingsSection>
 </template>

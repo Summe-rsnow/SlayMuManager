@@ -38,12 +38,12 @@
 |------|------|
 | 桌面框架 | Tauri 2.0 |
 | 前端 | Vue 3 (Composition API) + Vite 8 |
-| 样式 | UnoCSS + Naive UI |
+| 样式 | UnoCSS + μui (@miuui/vue + Reka UI) |
 | 图标 | Lucide Vue Next |
 | 状态管理 | Pinia (stores) + Composables |
 | 路由 | Vue Router 5 |
 | 国际化 | Vue I18n |
-| 后端 | Rust (edition 2024, rust-version 1.94.1) |
+| 后端 | Rust (edition 2024, rust-version 1.96.0) |
 | 包管理 | pnpm |
 
 ### 后端依赖
