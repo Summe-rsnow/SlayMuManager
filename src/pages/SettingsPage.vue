@@ -2,7 +2,7 @@
 import { watch, nextTick } from "vue"
 import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
-import { PageHeader } from "@miuui/vue"
+import { PageHeader } from "@xcmm1543/miuui-vue"
 import { useHighlightStore } from "@/stores/useHighlightStore"
 import SettingsGamePath from "@/components/SettingsGamePath.vue"
 import SettingsLaunch from "@/components/SettingsLaunch.vue"

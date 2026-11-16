@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
-import { AppBar, ThemeProvider, Button, Checkbox, Badge } from "@miuui/vue"
+import { AppBar, ThemeProvider, Button, Checkbox, Badge } from "@xcmm1543/miuui-vue"
 import { Minus, Square, X, PackageOpen, Download } from "@lucide/vue"
 import { currentLocale } from "./i18n"
 import { activeSeedColor, effectiveIsDark } from "./theme"

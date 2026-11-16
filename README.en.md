@@ -38,7 +38,7 @@ A cross-platform desktop app built with **Tauri 2.0 + Vue 3 + Rust**, providing 
 |-------|-----------|
 | Desktop Framework | Tauri 2.0 |
 | Frontend | Vue 3 (Composition API) + Vite 8 |
-| Styling | UnoCSS + μui (@miuui/vue + Reka UI) |
+| Styling | UnoCSS + μui (@xcmm1543/miuui-vue + Reka UI) |
 | Icons | Lucide Vue Next |
 | State Management | Pinia (stores) + Composables |
 | Router | Vue Router 5 |

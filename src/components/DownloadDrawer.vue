@@ -2,7 +2,7 @@
 import { computed, ref } from "vue"
 import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
-import { Badge, Button, Card, Drawer, EmptyState, Progress, Tabs, useToast } from "@miuui/vue"
+import { Badge, Button, Card, Drawer, EmptyState, Progress, Tabs, useToast } from "@xcmm1543/miuui-vue"
 import {
   Download,
   Pause,

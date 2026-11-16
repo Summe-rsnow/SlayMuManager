@@ -1,7 +1,7 @@
 {
   "name": "slaymumanager",
   "private": true,
-  "version": "1.10.1",
+  "version": "1.10.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,12 +16,12 @@
   },
   "dependencies": {
     "@lucide/vue": "^1.72.0",
-    "@miuui/core": "link:../../miuui/miuui/packages/core",
-    "@miuui/icons": "link:../../miuui/miuui/packages/icons",
-    "@miuui/materials": "link:../../miuui/miuui/packages/materials",
-    "@miuui/motions": "link:../../miuui/miuui/packages/motions",
-    "@miuui/tokens": "link:../../miuui/miuui/packages/tokens",
-    "@miuui/vue": "link:../../miuui/miuui/packages/vue",
+    "@xcmm1543/miuui-core": "^0.5.6",
+    "@xcmm1543/miuui-icons": "^0.5.6",
+    "@xcmm1543/miuui-materials": "^0.5.6",
+    "@xcmm1543/miuui-motions": "^0.5.6",
+    "@xcmm1543/miuui-tokens": "^0.5.6",
+    "@xcmm1543/miuui-vue": "^0.5.6",
     "@tauri-apps/api": "^2.12.4",
     "pinia": "^4.1.0",
     "reka-ui": "^2.11.0",

@@ -1,7 +1,7 @@
 import { ref } from "vue"
 import { storeToRefs } from "pinia"
 import { invoke } from "@tauri-apps/api/core"
-import { useToast } from "@miuui/vue"
+import { useToast } from "@xcmm1543/miuui-vue"
 import { useI18n } from "vue-i18n"
 import type { InstalledMod, ModToggleResult } from "../types"
 import { useSidebarStore } from "@/stores/useSidebarStore"

@@ -2,7 +2,7 @@
 import { computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { storeToRefs } from "pinia"
-import { Button, Badge, Card, EmptyState, Image } from "@miuui/vue"
+import { Button, Badge, Card, EmptyState, Image } from "@xcmm1543/miuui-vue"
 import {
   ThumbsUp,
   ArrowDown,

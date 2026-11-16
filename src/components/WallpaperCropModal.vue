@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from "vue"
 import { useI18n } from "vue-i18n"
-import { Button, Slider, RadioGroup } from "@miuui/vue"
+import { Button, Slider, RadioGroup } from "@xcmm1543/miuui-vue"
 import { ZoomIn, ZoomOut, RotateCcw, Maximize2, Minimize2, Crop } from "@lucide/vue"
 import AppDialog from "./AppDialog.vue"
 
@@ -303,7 +303,7 @@ async function onConfirm() {
         </div>
       </div>
 
-      <!-- 操作控制面板：复用 @miuui/vue 组件 -->
+      <!-- 操作控制面板：复用 @xcmm1543/miuui-vue 组件 -->
       <div class="flex flex-col gap-3.5 px-1 pt-1">
         <!-- 比例与底色行（仅裁切模式显示） -->
         <div v-if="mode === 'crop'" class="flex items-center justify-between gap-4 flex-wrap">

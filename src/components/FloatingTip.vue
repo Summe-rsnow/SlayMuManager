@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, useSlots } from "vue"
-import { Tooltip, TruncateText } from "@miuui/vue"
+import { Tooltip, TruncateText } from "@xcmm1543/miuui-vue"
 import { HelpCircle } from "@lucide/vue"
 
 const props = withDefaults(

@@ -2,7 +2,7 @@
 import { ref, watch } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { Alert, Badge, Button, Card, EmptyState, Spinner, useToast } from "@miuui/vue"
+import { Alert, Badge, Button, Card, EmptyState, Spinner, useToast } from "@xcmm1543/miuui-vue"
 import { Download, ExternalLink, HardDrive, Sparkles, AlertCircle } from "@lucide/vue"
 import type { NexusModFile, AppBootstrap } from "@/types"
 import { useDownloadStore } from "@/stores/useDownloadStore"

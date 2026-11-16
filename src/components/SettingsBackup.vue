@@ -2,7 +2,7 @@
 import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { FormRow, NumberInput, Switch } from "@miuui/vue"
+import { FormRow, NumberInput, Switch } from "@xcmm1543/miuui-vue"
 import type { AppBootstrap } from "../types"
 import SettingsSection from "./SettingsSection.vue"
 import FloatingTip from "./FloatingTip.vue"

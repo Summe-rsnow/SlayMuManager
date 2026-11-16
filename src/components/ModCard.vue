@@ -2,7 +2,7 @@
 import { ref, computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { currentLocale } from "@/i18n"
-import { Badge, Button, Card, Pill, Switch, Popover, Checkbox, Textarea, Tooltip } from "@miuui/vue"
+import { Badge, Button, Card, Pill, Switch, Popover, Checkbox, Textarea, Tooltip } from "@xcmm1543/miuui-vue"
 import { FolderOpen, Trash2, Plus, StickyNote, Copy, Check, Layers } from "@lucide/vue"
 import IconBtn from "./IconBtn.vue"
 import ConfirmBtn from "./ConfirmBtn.vue"

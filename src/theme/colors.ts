@@ -1,8 +1,8 @@
 // ============================================================
-// 预设主题色板（由 @miuui/tokens OKLCH 引擎生成）
+// 预设主题色板（由 @xcmm1543/miuui-tokens OKLCH 引擎生成）
 // ============================================================
 
-import { generateScale } from "@miuui/tokens"
+import { generateScale } from "@xcmm1543/miuui-tokens"
 
 export interface ColorPalette {
   DEFAULT: string

@@ -3,7 +3,7 @@ import { computed, ref, onMounted, onUnmounted, type Component } from "vue"
 import { storeToRefs } from "pinia"
 import { useRoute, useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
-import { Alert, Button, Select, useConfirm, useToast } from "@miuui/vue"
+import { Alert, Button, Select, useConfirm, useToast } from "@xcmm1543/miuui-vue"
 import {
   Library,
   Compass,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n"
-import { Dialog, Badge, Button } from "@miuui/vue"
+import { Dialog, Badge, Button } from "@xcmm1543/miuui-vue"
 import { Sparkles, Calendar, PartyPopper, CheckCircle2, Wrench, Zap, Palette } from "@lucide/vue"
 import { releaseNotesConfig } from "@/data/releaseNotes"
 

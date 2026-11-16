@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n"
-import { Badge, Card, Switch, Tooltip } from "@miuui/vue"
+import { Badge, Card, Switch, Tooltip } from "@xcmm1543/miuui-vue"
 import { Download, Edit3, Trash2, Sparkles } from "@lucide/vue"
 import IconBtn from "./IconBtn.vue"
 import ConfirmBtn from "./ConfirmBtn.vue"

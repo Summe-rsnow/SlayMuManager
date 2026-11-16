@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from "vue"
-import { Button, Popconfirm } from "@miuui/vue"
+import { Button, Popconfirm } from "@xcmm1543/miuui-vue"
 import FloatingTip from "./FloatingTip.vue"
 
 defineProps<{

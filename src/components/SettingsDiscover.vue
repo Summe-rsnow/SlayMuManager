@@ -2,7 +2,7 @@
 import { useI18n } from "vue-i18n"
 import { storeToRefs } from "pinia"
 import { computed } from "vue"
-import { FormRow, RadioGroup, Switch } from "@miuui/vue"
+import { FormRow, RadioGroup, Switch } from "@xcmm1543/miuui-vue"
 import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
 import SettingsSection from "./SettingsSection.vue"
 import FloatingTip from "./FloatingTip.vue"

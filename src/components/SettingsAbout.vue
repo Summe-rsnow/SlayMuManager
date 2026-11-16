@@ -2,7 +2,7 @@
 import { ref } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { Button, FormRow } from "@miuui/vue"
+import { Button, FormRow } from "@xcmm1543/miuui-vue"
 import { Sparkles } from "@lucide/vue"
 import { version as APP_VERSION } from "@/../package.json"
 import SettingsSection from "./SettingsSection.vue"

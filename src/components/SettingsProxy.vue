@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
-import { Input, Button, useToast } from "@miuui/vue"
+import { Input, Button, useToast } from "@xcmm1543/miuui-vue"
 import { invoke } from "@tauri-apps/api/core"
 import { Globe } from "@lucide/vue"
 import type { AppBootstrap } from "../types"

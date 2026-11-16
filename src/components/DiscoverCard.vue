@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from "vue"
-import { Card, Image } from "@miuui/vue"
+import { Card, Image } from "@xcmm1543/miuui-vue"
 import { PackageOpen } from "@lucide/vue"
 import FloatingTip from "./FloatingTip.vue"
 import ModTranslateBlock from "./ModTranslateBlock.vue"

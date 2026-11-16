@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue"
+import { ref, computed, watch, onMounted, onActivated, onDeactivated } from "vue"
 import { storeToRefs } from "pinia"
 import { useRouter, useRoute } from "vue-router"
 import { useI18n } from "vue-i18n"
@@ -16,7 +16,7 @@ import {
   Select,
   useConfirm,
   useToast,
-} from "@miuui/vue"
+} from "@xcmm1543/miuui-vue"
 import {
   Search,
   ExternalLink,
@@ -43,6 +43,7 @@ import { useDiscoverPrefStore } from "@/stores/useDiscoverPrefStore"
 import { useSearchPrefetch } from "@/composables/useSearchPrefetch"
 import { useHighlightStore } from "@/stores/useHighlightStore"
 import { useModCacheStore } from "@/stores/useModCacheStore"
+import { yieldToMain, scheduleBackgroundTask } from "@/utils/scheduler"
 import DiscoverCard from "@/components/DiscoverCard.vue"
 import SkeletonDiscoverCard from "@/components/SkeletonDiscoverCard.vue"
 import SkeletonDiscoverSplitView from "@/components/SkeletonDiscoverSplitView.vue"
@@ -122,12 +123,38 @@ function distributeMasonry<T>(
   return buckets
 }
 
+const isRouteActive = ref(true)
+let nexusReqSeq = 0
+let workshopReqSeq = 0
+let workshopTabSeq = 0
+
+const CARD_RENDER_CHUNK = 12
+const renderedNexusCount = ref(CARD_RENDER_CHUNK)
+const renderedWorkshopCount = ref(CARD_RENDER_CHUNK)
+
+async function hydrateCards(total: number, targetRef: { value: number }, isCurrent: () => boolean) {
+  targetRef.value = Math.min(total, CARD_RENDER_CHUNK)
+  while (targetRef.value < total) {
+    await yieldToMain()
+    if (!isActive.value || !isCurrent()) return
+    targetRef.value = Math.min(total, targetRef.value + CARD_RENDER_CHUNK)
+  }
+}
+
 const nexusMasonryColumns = computed(() =>
-  distributeMasonry(nexusResults.value, colCount.value, (m) => m.summary),
+  distributeMasonry(
+    nexusResults.value.slice(0, renderedNexusCount.value),
+    colCount.value,
+    (m) => m.summary,
+  ),
 )
 
 const workshopMasonryColumns = computed(() =>
-  distributeMasonry(workshopResults.value, colCount.value, (m) => m.description),
+  distributeMasonry(
+    workshopResults.value.slice(0, renderedWorkshopCount.value),
+    colCount.value,
+    (m) => m.description,
+  ),
 )
 
 // --- 视图与数据源分段选项 ---
@@ -226,22 +253,35 @@ watch(
 )
 
 function switchNexusTab() {
+  workshopTabSeq++
   tab.value = "nexus"
   setDiscoverSourceTab("nexus")
   const q = { ...route.query }
   delete q.tab
   router.replace({ query: q })
+  if (!nexusSearched.value && !nexusLoading.value) {
+    void searchNexus()
+  }
 }
 
 async function switchWorkshopTab() {
+  const tabSeq = ++workshopTabSeq
   tab.value = "workshop"
   setDiscoverSourceTab("workshop")
   router.replace({ query: { ...route.query, tab: "workshop" } })
   if (!workshopSearched.value) {
+    workshopLoading.value = true
     try {
       const running = await invoke<boolean>("check_steam_status")
-      if (!isActive.value) return
+      if (!isActive.value || tabSeq !== workshopTabSeq || tab.value !== "workshop") {
+        if (isActive.value && !workshopSearched.value) {
+          workshopLoading.value = false
+        }
+        return
+      }
       if (!running) {
+        workshopLoading.value = false
+        if (!isRouteActive.value) return
         await confirm({
           title: t("discover.workshop.tab"),
           description: t("discover.workshop.needSteam"),
@@ -250,9 +290,13 @@ async function switchWorkshopTab() {
         })
         return
       }
-      searchWorkshop()
+      void searchWorkshop()
     } catch {
-      if (isActive.value) searchWorkshop()
+      if (isActive.value && tabSeq === workshopTabSeq && tab.value === "workshop") {
+        void searchWorkshop()
+      } else if (isActive.value && !workshopSearched.value) {
+        workshopLoading.value = false
+      }
     }
   }
 }
@@ -354,6 +398,7 @@ watch(
 const hasApiKey = ref(true)
 
 async function searchNexus(pg?: number, ignoreCache?: boolean) {
+  const reqId = ++nexusReqSeq
   nexusLoading.value = true
   nexusSearched.value = true
   const pageNum = pg ?? nexusPage.value
@@ -369,7 +414,11 @@ async function searchNexus(pg?: number, ignoreCache?: boolean) {
       nexusPage.value = pageNum
       nexusLoading.value = false
       nexusInitialLoading.value = false
-      nexusFetchSilent(q, sb, pageNum, ps)
+      void hydrateCards(cached.items.length, renderedNexusCount, () => reqId === nexusReqSeq)
+      scheduleBackgroundTask(() => {
+        if (!isActive.value || !isRouteActive.value || reqId !== nexusReqSeq) return
+        void nexusFetchSilent(q, sb, pageNum, ps)
+      })
       return
     }
   }
@@ -381,24 +430,32 @@ async function searchNexus(pg?: number, ignoreCache?: boolean) {
       pageSize: ps,
       sortBy: sb,
     })
-    if (!isActive.value) return
+    nexusCache.setCache(q, sb, pageNum, ps, result.items, result.totalCount)
+    if (!isActive.value || reqId !== nexusReqSeq) return
+
     nexusResults.value = result.items
     nexusTotalCount.value = result.totalCount
     nexusPage.value = pageNum
     nexusInitialLoading.value = false
-    nexusCache.setCache(q, sb, pageNum, ps, result.items, result.totalCount)
+    void hydrateCards(result.items.length, renderedNexusCount, () => reqId === nexusReqSeq)
 
     if (prefetchEnabled.value) {
-      nexusPrefetchAdjacent(q, sb, pageNum, ps)
+      scheduleBackgroundTask(() => {
+        if (!isActive.value || !isRouteActive.value || reqId !== nexusReqSeq) return
+        nexusPrefetchAdjacent(q, sb, pageNum, ps)
+      })
     }
   } catch (e: unknown) {
-    if (!isActive.value) return
+    if (!isActive.value || reqId !== nexusReqSeq) return
     console.error("Nexus search error:", e)
-    toast({ title: String(e), variant: "error" })
+    if (isRouteActive.value && tab.value === "nexus") {
+      toast({ title: String(e), variant: "error" })
+    }
     nexusResults.value = []
+    renderedNexusCount.value = 0
     nexusInitialLoading.value = false
   } finally {
-    if (isActive.value) nexusLoading.value = false
+    if (isActive.value && reqId === nexusReqSeq) nexusLoading.value = false
   }
 }
 
@@ -458,6 +515,7 @@ function refreshWorkshop() {
 }
 
 async function searchWorkshop(pg?: number, ignoreCache?: boolean) {
+  const reqId = ++workshopReqSeq
   workshopLoading.value = true
   workshopSearched.value = true
   const pageNum = pg ?? workshopPage.value
@@ -473,7 +531,11 @@ async function searchWorkshop(pg?: number, ignoreCache?: boolean) {
       workshopTotalCount.value = cached.totalCount
       workshopPage.value = pageNum
       workshopLoading.value = false
-      workshopFetchSilent(q, sb, pageNum, ps)
+      void hydrateCards(cached.items.length, renderedWorkshopCount, () => reqId === workshopReqSeq)
+      scheduleBackgroundTask(() => {
+        if (!isActive.value || !isRouteActive.value || reqId !== workshopReqSeq) return
+        void workshopFetchSilent(q, sb, pageNum, ps)
+      })
       return
     }
   }
@@ -485,19 +547,30 @@ async function searchWorkshop(pg?: number, ignoreCache?: boolean) {
       pageSize: ps,
       sortBy: sb,
     })
+    workshopCache.setCache(q, sb, pageNum, ps, result.items, result.totalCount)
+    if (!isActive.value || reqId !== workshopReqSeq) return
+
     workshopResults.value = result.items
     workshopTotalCount.value = result.totalCount
     workshopPage.value = pageNum
-    workshopCache.setCache(q, sb, pageNum, ps, result.items, result.totalCount)
+    void hydrateCards(result.items.length, renderedWorkshopCount, () => reqId === workshopReqSeq)
 
     if (prefetchEnabled.value) {
-      workshopPrefetchAdjacent(q, sb, pageNum, ps)
+      scheduleBackgroundTask(() => {
+        if (!isActive.value || !isRouteActive.value || reqId !== workshopReqSeq) return
+        workshopPrefetchAdjacent(q, sb, pageNum, ps)
+      })
     }
   } catch (e: unknown) {
+    if (!isActive.value || reqId !== workshopReqSeq) return
     console.error("Workshop search error:", e)
-    toast({ title: String(e), variant: "error" })
+    if (isRouteActive.value && tab.value === "workshop") {
+      toast({ title: String(e), variant: "error" })
+    }
   } finally {
-    workshopLoading.value = false
+    if (isActive.value && reqId === workshopReqSeq) {
+      workshopLoading.value = false
+    }
   }
 }
 
@@ -523,7 +596,11 @@ function formatCount(n: number): string {
 
 // --- 生命周期 ---
 
-onMounted(() => {
+onMounted(async () => {
+  // 让当前帧先完成路由切换与骨架渲染，再异步发起后端请求
+  await yieldToMain()
+  if (!isActive.value) return
+
   // 获取 bootstrap（API key 信息，不阻塞搜索）
   invoke<AppBootstrap>("get_app_bootstrap")
     .then((bootstrap) => {
@@ -535,10 +612,23 @@ onMounted(() => {
 
   // 初始加载：如果保存的标签是 workshop，启动工坊检查与搜索；否则搜索 Nexus
   if (tab.value === "workshop") {
-    switchWorkshopTab()
+    void switchWorkshopTab()
   } else {
-    searchNexus()
+    void searchNexus()
   }
+})
+
+onActivated(() => {
+  isRouteActive.value = true
+  if (tab.value === "workshop" && !workshopSearched.value && !workshopLoading.value) {
+    void switchWorkshopTab()
+  } else if (tab.value === "nexus" && !nexusSearched.value && !nexusLoading.value) {
+    void searchNexus()
+  }
+})
+
+onDeactivated(() => {
+  isRouteActive.value = false
 })
 
 // --- 用户操作入口：未配置 API Key 时弹窗引导 ---
@@ -641,7 +731,10 @@ function handleUserRefresh() {
 
       <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
         <!-- 初始加载骨架屏 -->
-        <div v-if="nexusInitialLoading" class="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div
+          v-if="nexusInitialLoading || (nexusLoading && nexusResults.length === 0)"
+          class="flex-1 min-h-0 flex flex-col overflow-hidden"
+        >
           <div class="flex items-center justify-between mb-3 flex-shrink-0">
             <div class="h-5 w-28 rounded bg-c-secondary/40 animate-pulse" />
           </div>
@@ -651,7 +744,10 @@ function handleUserRefresh() {
             :class="gridColsClass"
             class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
           >
-            <SkeletonDiscoverCard v-for="i in nexusPageSize" :key="'skel-init-' + i" />
+            <SkeletonDiscoverCard
+              v-for="i in Math.min(nexusPageSize, 12)"
+              :key="'skel-init-' + i"
+            />
           </div>
         </div>
         <!-- 结果列表 -->
@@ -665,19 +761,6 @@ function handleUserRefresh() {
             </span>
           </div>
 
-          <div
-            v-if="nexusLoading && nexusResults.length === 0"
-            class="flex-1 min-h-0 flex flex-col overflow-hidden"
-          >
-            <SkeletonDiscoverSplitView v-if="discoverViewMode === 'split'" />
-            <div
-              v-else
-              :class="gridColsClass"
-              class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
-            >
-              <SkeletonDiscoverCard v-for="i in nexusPageSize" :key="'skel-nx-' + i" />
-            </div>
-          </div>
           <div
             v-if="discoverViewMode === 'grid'"
             :class="gridColsClass"
@@ -790,7 +873,7 @@ function handleUserRefresh() {
           :class="gridColsClass"
           class="flex-1 min-h-0 overflow-y-auto scrollbar-hide pb-24"
         >
-          <SkeletonDiscoverCard v-for="i in workshopPageSize" :key="'skel-ws-' + i" />
+          <SkeletonDiscoverCard v-for="i in Math.min(workshopPageSize, 12)" :key="'skel-ws-' + i" />
         </div>
       </div>
       <div

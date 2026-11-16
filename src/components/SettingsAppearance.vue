@@ -2,7 +2,7 @@
 import { ref, computed, onMounted } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { Button, FormRow, RadioGroup, Select, Slider, useToast } from "@miuui/vue"
+import { Button, FormRow, RadioGroup, Select, Slider, useToast } from "@xcmm1543/miuui-vue"
 import { Image, RotateCcw, Crop } from "@lucide/vue"
 import { setLocale } from "@/i18n"
 import {

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use steamworks::{AppIDs, AppId, Client, PublishedFileId, UGCQueryType, UGCType};
 
 static STEAM_LOCK: Mutex<()> = Mutex::new(());
+static STEAM_WORKER_LOCK: Mutex<()> = Mutex::new(());
 
 pub fn is_steam_running() -> bool {
     crate::integrations::steam::get_active_steam_account_id().is_some()
@@ -142,6 +143,7 @@ pub fn search_workshop(
     sort_by: &str,
 ) -> Result<WorkshopSearchResult, String> {
     ensure_steam_ready()?;
+    let _worker_lock = STEAM_WORKER_LOCK.lock();
     let current_exe = std::env::current_exe().map_err(|e| format!("获取程序路径失败: {}", e))?;
     let mut cmd = std::process::Command::new(current_exe);
     let query_param = if query.is_empty() { "__EMPTY__" } else { query };
@@ -288,6 +290,7 @@ pub fn run_steam_worker(args: &[String]) {
 /// 主 GUI 进程绝不被 Steam 绑定为游戏运行进程，解决误判运行和强杀主程序问题。
 fn execute_worker(action: &str, id: u64) -> Result<(), String> {
     ensure_steam_ready()?;
+    let _worker_lock = STEAM_WORKER_LOCK.lock();
     let current_exe = std::env::current_exe().map_err(|e| format!("获取程序路径失败: {}", e))?;
     let mut cmd = std::process::Command::new(current_exe);
     cmd.args(["--steam-worker", action, &id.to_string()]);

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n"
-import { Badge, Button, Card, Popconfirm } from "@miuui/vue"
+import { Badge, Button, Card, Popconfirm } from "@xcmm1543/miuui-vue"
 import { Clock, Upload, Database, Trash2 } from "@lucide/vue"
 import { currentLocale } from "@/i18n"
 import type { SaveSlot } from "../types"

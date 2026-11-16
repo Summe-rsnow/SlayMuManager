@@ -2,7 +2,7 @@
 import { ref, computed } from "vue"
 import { useI18n } from "vue-i18n"
 import { invoke } from "@tauri-apps/api/core"
-import { Alert, Button, Badge, Tooltip, useToast, useConfirm } from "@miuui/vue"
+import { Alert, Button, Badge, Tooltip, useToast, useConfirm } from "@xcmm1543/miuui-vue"
 import { Trash2, FolderOpen, ShieldCheck, ArrowRightLeft, AlertTriangle, Check } from "@lucide/vue"
 import AppDialog from "./AppDialog.vue"
 import ConfirmBtn from "./ConfirmBtn.vue"

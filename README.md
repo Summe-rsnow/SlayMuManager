@@ -38,7 +38,7 @@
 |------|------|
 | 桌面框架 | Tauri 2.0 |
 | 前端 | Vue 3 (Composition API) + Vite 8 |
-| 样式 | UnoCSS + μui (@miuui/vue + Reka UI) |
+| 样式 | UnoCSS + μui (@xcmm1543/miuui-vue + Reka UI) |
 | 图标 | Lucide Vue Next |
 | 状态管理 | Pinia (stores) + Composables |
 | 路由 | Vue Router 5 |

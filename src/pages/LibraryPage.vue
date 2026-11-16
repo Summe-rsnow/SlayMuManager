@@ -20,7 +20,7 @@ import {
   Textarea,
   useConfirm,
   useToast,
-} from "@miuui/vue"
+} from "@xcmm1543/miuui-vue"
 import {
   Search,
   Download,

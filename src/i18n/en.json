@@ -686,6 +686,19 @@
       "fix": "Fix",
       "opt": "Optimized"
     },
+    "v1_10_2": {
+      "title": "Full Async IO Overhaul: Non-Blocking Discover & Saves, Remote miuui Packages",
+      "highlights": [
+        "Made Discover page (Nexus & Steam Workshop) fetching, card hydration, and prefetching fully asynchronous so loading never blocks UI interaction or tab switching",
+        "Offloaded blocking backend disk and network IO across Saves, Library, Profiles, archives, and wallpapers to background worker threads"
+      ],
+      "changes": [
+        "Converted Discover search, Steam Workshop worker queries, Nexus download/files, and translation commands to async spawn_blocking execution",
+        "Offloaded Saves slot scanning, backup/restore/sync, mod toggling/uninstallation, archive extraction, and custom wallpaper IO to background threads",
+        "Added main-thread yielding (scheduler.yield), background-priority prefetch scheduling, chunked card rendering, and request sequence guards on Discover and Saves pages",
+        "Migrated UI dependencies from local workspace links to published npm packages xcmm1543/miuui-* (v0.5.6)"
+      ]
+    },
     "v1_10_1": {
       "title": "Fix Release Notes & Update Dialog Rendering, Tooltip Scrollbar & Drawer Backdrop",
       "highlights": [

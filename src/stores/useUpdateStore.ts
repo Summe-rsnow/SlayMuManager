@@ -2,7 +2,7 @@ import { defineStore } from "pinia"
 import { ref } from "vue"
 import { invoke } from "@tauri-apps/api/core"
 import { listen } from "@tauri-apps/api/event"
-import { useToast } from "@miuui/vue"
+import { useToast } from "@xcmm1543/miuui-vue"
 import { useI18n } from "vue-i18n"
 import type { ModUpdateInfo, InstalledMod } from "../types"
 

@@ -1,4 +1,4 @@
-use crate::app::state::{AppState, SaveSyncPair};
+use crate::app::state::{AppSettings, AppState, SaveSyncPair};
 use crate::domain::mod_entity::{
     BatchImportPreview, BatchInstallResult, ConflictResolution, InstalledMod, ModToggleResult,
 };
@@ -66,10 +66,7 @@ pub struct GameInstall {
 // 5.1 启动与初始化
 // =========================================================================
 
-#[tauri::command]
-pub fn get_app_bootstrap(state: State<AppState>) -> AppBootstrap {
-    let settings = state.settings.read().unwrap();
-
+fn build_app_bootstrap(settings: &AppSettings) -> AppBootstrap {
     // 优先检查 exe 文件存在（游戏是否安装），再检查 mods（Mod 管理是否就绪）
     let game_dir_valid = settings
         .game_root_dir
@@ -125,52 +122,67 @@ pub fn get_app_bootstrap(state: State<AppState>) -> AppBootstrap {
 }
 
 #[tauri::command]
-pub fn detect_game_install(state: State<AppState>) -> Option<GameInstall> {
-    // 1. 先检查设置中已有的路径（验证 exe 存在）
-    let has_no_config = {
-        let settings = state.settings.read().unwrap();
-        if let Some(ref saved) = settings.game_root_dir {
-            let p = Path::new(saved);
-            if game_service::contains_game_executable(p) {
-                return Some(GameInstall {
-                    root_dir: saved.clone(),
-                    found_from: "Settings".to_string(),
-                });
-            }
-        }
-        settings.game_root_dir.is_none()
-    };
-
-    // 2. 自动扫描
-    let results = game_service::auto_detect_game_install();
-    if let Some((path, source)) = results.into_iter().next() {
-        let root_dir = path.to_string_lossy().to_string();
-
-        // 首次自动检测到 → 自动写入 settings.json（参照原项目做法）
-        if has_no_config {
-            let mut w = state.settings.write().unwrap();
-            w.game_root_dir = Some(root_dir.clone());
-            let _ = settings_repo::save_settings(&w);
-        }
-
-        return Some(GameInstall {
-            root_dir,
-            found_from: source,
-        });
-    }
-
-    None
+pub async fn get_app_bootstrap(state: State<'_, AppState>) -> Result<AppBootstrap, String> {
+    let settings = state.settings.read().unwrap().clone();
+    tauri::async_runtime::spawn_blocking(move || build_app_bootstrap(&settings))
+        .await
+        .map_err(|e| format!("后台任务失败: {}", e))
 }
 
 #[tauri::command]
-pub fn update_game_root_dir(root_dir: String, state: State<AppState>) -> AppBootstrap {
-    {
+pub async fn detect_game_install(state: State<'_, AppState>) -> Result<Option<GameInstall>, String> {
+    // 1. 先检查设置中已有的路径（验证 exe 存在）
+    let (saved_dir, has_no_config) = {
+        let settings = state.settings.read().unwrap();
+        (settings.game_root_dir.clone(), settings.game_root_dir.is_none())
+    };
+
+    let detected = tauri::async_runtime::spawn_blocking(move || {
+        if let Some(ref saved) = saved_dir {
+            let p = Path::new(saved);
+            if game_service::contains_game_executable(p) {
+                return Some((saved.clone(), "Settings".to_string(), false));
+            }
+        }
+
+        let results = game_service::auto_detect_game_install();
+        results.into_iter().next().map(|(path, source)| {
+            (path.to_string_lossy().to_string(), source, has_no_config)
+        })
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))?;
+
+    if let Some((root_dir, found_from, should_save)) = detected {
+        // 首次自动检测到 → 自动写入 settings.json（参照原项目做法）
+        if should_save {
+            let mut w = state.settings.write().unwrap();
+            if w.game_root_dir.is_none() {
+                w.game_root_dir = Some(root_dir.clone());
+                let _ = settings_repo::save_settings(&w);
+            }
+        }
+        return Ok(Some(GameInstall { root_dir, found_from }));
+    }
+
+    Ok(None)
+}
+
+#[tauri::command]
+pub async fn update_game_root_dir(
+    root_dir: String,
+    state: State<'_, AppState>,
+) -> Result<AppBootstrap, String> {
+    let settings = {
         let mut settings = state.settings.write().unwrap();
         settings.game_root_dir = if root_dir.is_empty() { None } else { Some(root_dir) };
         // 持久化
         let _ = settings_repo::save_settings(&settings);
-    }
-    get_app_bootstrap(state)
+        settings.clone()
+    };
+    tauri::async_runtime::spawn_blocking(move || build_app_bootstrap(&settings))
+        .await
+        .map_err(|e| format!("后台任务失败: {}", e))
 }
 
 #[tauri::command]
@@ -186,36 +198,40 @@ pub fn update_app_locale(locale: String, state: State<AppState>) {
 
 /// 检查游戏进程是否正在运行
 #[tauri::command]
-pub fn is_game_running() -> bool {
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("tasklist")
-            .args(["/FI", "IMAGENAME eq SlayTheSpire2.exe", "/NH"])
-            .output()
-            .ok()
-            .is_some_and(|o| {
-                let out = String::from_utf8_lossy(&o.stdout);
-                out.contains("SlayTheSpire2.exe")
-            })
-    }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("pgrep")
-            .arg("-x")
-            .arg("SlayTheSpire2")
-            .output()
-            .ok()
-            .map_or(false, |o| o.status.success())
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("pgrep")
-            .arg("-x")
-            .arg("SlayTheSpire2")
-            .output()
-            .ok()
-            .map_or(false, |o| o.status.success())
-    }
+pub async fn is_game_running() -> bool {
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(target_os = "windows")]
+        {
+            std::process::Command::new("tasklist")
+                .args(["/FI", "IMAGENAME eq SlayTheSpire2.exe", "/NH"])
+                .output()
+                .ok()
+                .is_some_and(|o| {
+                    let out = String::from_utf8_lossy(&o.stdout);
+                    out.contains("SlayTheSpire2.exe")
+                })
+        }
+        #[cfg(target_os = "macos")]
+        {
+            std::process::Command::new("pgrep")
+                .arg("-x")
+                .arg("SlayTheSpire2")
+                .output()
+                .ok()
+                .map_or(false, |o| o.status.success())
+        }
+        #[cfg(target_os = "linux")]
+        {
+            std::process::Command::new("pgrep")
+                .arg("-x")
+                .arg("SlayTheSpire2")
+                .output()
+                .ok()
+                .map_or(false, |o| o.status.success())
+        }
+    })
+    .await
+    .unwrap_or(false)
 }
 
 #[tauri::command]
@@ -397,27 +413,53 @@ fn remove_mod_from_active_profile(mod_id: &str, active_name: &str) {
         }
 }
 
+fn require_game_root(state: &AppState) -> Result<String, String> {
+    let settings = state.settings.read().unwrap();
+    settings
+        .game_root_dir
+        .clone()
+        .ok_or_else(|| "游戏目录未设置".to_string())
+}
+
+async fn run_blocking<T, F>(f: F) -> Result<T, String>
+where
+    T: Send + 'static,
+    F: FnOnce() -> T + Send + 'static,
+{
+    tauri::async_runtime::spawn_blocking(f)
+        .await
+        .map_err(|e| format!("后台任务失败: {}", e))
+}
+
 /// 内部辅助：提取 enable_mod / disable_mod 的公共逻辑
-fn toggle_mod_internal(
+async fn toggle_mod_internal(
     state: &AppState,
-    mod_id: &str,
-    toggle_fn: impl FnOnce(&Path, &str, &[SaveSyncPair], bool) -> Result<ModToggleResult, AppError>,
-    modify_profile: impl FnOnce(&str, &str),
+    mod_id: String,
+    toggle_fn: fn(&Path, &str, &[SaveSyncPair], bool) -> Result<ModToggleResult, AppError>,
+    modify_profile: fn(&str, &str),
     action_label: &str,
 ) -> Result<ModToggleResult, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    let sync_pairs = settings.save_sync_pairs.clone();
-    let backup_on_switch = settings.backup_on_path_switch;
+    let (game_root, sync_pairs, backup_on_switch, active_name) = {
+        let settings = state.settings.read().unwrap();
+        let game_root = settings
+            .game_root_dir
+            .clone()
+            .ok_or("游戏目录未设置")?;
+        (
+            game_root,
+            settings.save_sync_pairs.clone(),
+            settings.backup_on_path_switch,
+            settings.active_profile_name.clone(),
+        )
+    };
 
-    let result = toggle_fn(Path::new(game_root), mod_id, &sync_pairs, backup_on_switch)?;
-
-    let active_name = settings.active_profile_name.clone();
-    drop(settings);
-    modify_profile(mod_id, &active_name);
+    let result = run_blocking(move || {
+        let res = toggle_fn(Path::new(&game_root), &mod_id, &sync_pairs, backup_on_switch)
+            .map_err(|e| e.to_string())?;
+        modify_profile(&mod_id, &active_name);
+        Ok::<_, String>(res)
+    })
+    .await??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -435,66 +477,70 @@ fn toggle_mod_internal(
 // =========================================================================
 
 #[tauri::command]
-pub fn list_installed_mods(state: State<AppState>) -> Result<Vec<InstalledMod>, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    Ok(mod_service::scan_enabled_mods(Path::new(game_root)))
+pub async fn list_installed_mods(state: State<'_, AppState>) -> Result<Vec<InstalledMod>, String> {
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || mod_service::scan_enabled_mods(Path::new(&game_root))).await
 }
 
 #[tauri::command]
-pub fn list_disabled_mods(state: State<AppState>) -> Result<Vec<InstalledMod>, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    let root = Path::new(game_root);
-
-    if !game_service::has_mods_dir(root) {
-        return Ok(Vec::new());
-    }
-
-    Ok(mod_service::scan_disabled_mods(root))
+pub async fn list_disabled_mods(state: State<'_, AppState>) -> Result<Vec<InstalledMod>, String> {
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || {
+        let root = Path::new(&game_root);
+        if !game_service::has_mods_dir(root) {
+            return Vec::new();
+        }
+        mod_service::scan_disabled_mods(root)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn enable_mod(mod_id: String, state: State<AppState>) -> Result<ModToggleResult, String> {
+pub async fn enable_mod(
+    mod_id: String,
+    state: State<'_, AppState>,
+) -> Result<ModToggleResult, String> {
     toggle_mod_internal(
         &state,
-        &mod_id,
+        mod_id,
         mod_service::enable_mod,
         add_mod_to_active_profile,
         "启用",
     )
+    .await
 }
 
 #[tauri::command]
-pub fn disable_mod(mod_id: String, state: State<AppState>) -> Result<ModToggleResult, String> {
+pub async fn disable_mod(
+    mod_id: String,
+    state: State<'_, AppState>,
+) -> Result<ModToggleResult, String> {
     toggle_mod_internal(
         &state,
-        &mod_id,
+        mod_id,
         mod_service::disable_mod,
         remove_mod_from_active_profile,
         "禁用",
     )
+    .await
 }
 
 #[tauri::command]
-pub fn uninstall_mod(mod_id: String, state: State<AppState>) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+pub async fn uninstall_mod(mod_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let game_root = require_game_root(&state)?;
+    let mod_id_clone = mod_id.clone();
 
-    mod_service::uninstall_mod(Path::new(game_root), &mod_id)?;
-    // 清理文件哈希
-    let _ = crate::repositories::mod_hashes_repo::remove_mod_hashes(&mod_id);
-    // 清除更新缓存
-    updates_cache_repo::clear_updates_cache();
+    run_blocking(move || {
+        mod_service::uninstall_mod(Path::new(&game_root), &mod_id_clone)
+            .map_err(|e| e.to_string())?;
+        // 清理文件哈希
+        let _ = crate::repositories::mod_hashes_repo::remove_mod_hashes(&mod_id_clone);
+        // 清除更新缓存
+        updates_cache_repo::clear_updates_cache();
+        Ok::<_, String>(())
+    })
+    .await??;
+
     if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
         *cache_lock = None;
     }
@@ -511,72 +557,77 @@ pub fn uninstall_mod(mod_id: String, state: State<AppState>) -> Result<(), Strin
 }
 
 #[tauri::command]
-pub fn open_mod_folder(mod_id: String, state: State<AppState>) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+pub async fn open_mod_folder(mod_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let game_root = require_game_root(&state)?;
 
-    // 先尝试本地目录
-    let plugins_dir = Path::new(game_root).join("mods");
-    let disabled_dir = Path::new(game_root).join("mods_disabled");
+    run_blocking(move || {
+        // 先尝试本地目录
+        let plugins_dir = Path::new(&game_root).join("mods");
+        let disabled_dir = Path::new(&game_root).join("mods_disabled");
 
-    let mod_folder = match mod_service::find_mod_folder(&plugins_dir, &mod_id)
-        .or_else(|_| mod_service::find_mod_folder(&disabled_dir, &mod_id))
-    {
-        Ok(p) => p,
-        Err(_) => {
-            // 回退：在已启用的 mod 列表中按 id 查找（含创意工坊）
-            let all = mod_service::scan_enabled_mods(Path::new(game_root));
-            let m = all.iter().find(|m| m.id == mod_id)
-                .ok_or_else(|| format!("Mod 未找到: {}", mod_id))?;
-            std::path::PathBuf::from(&m.install_dir)
+        let mod_folder = match mod_service::find_mod_folder(&plugins_dir, &mod_id)
+            .or_else(|_| mod_service::find_mod_folder(&disabled_dir, &mod_id))
+        {
+            Ok(p) => p,
+            Err(_) => {
+                // 回退：在已启用的 mod 列表中按 id 查找（含创意工坊）
+                let all = mod_service::scan_enabled_mods(Path::new(&game_root));
+                let m = all
+                    .iter()
+                    .find(|m| m.id == mod_id)
+                    .ok_or_else(|| format!("Mod 未找到: {}", mod_id))?;
+                std::path::PathBuf::from(&m.install_dir)
+            }
+        };
+
+        #[cfg(target_os = "windows")]
+        {
+            std::process::Command::new("explorer")
+                .arg(&mod_folder)
+                .spawn()
+                .map_err(|e| format!("打开文件夹失败: {}", e))?;
         }
-    };
+        #[cfg(target_os = "macos")]
+        {
+            std::process::Command::new("open")
+                .arg(&mod_folder)
+                .spawn()
+                .map_err(|e| format!("打开文件夹失败: {}", e))?;
+        }
+        #[cfg(target_os = "linux")]
+        {
+            std::process::Command::new("xdg-open")
+                .arg(&mod_folder)
+                .spawn()
+                .map_err(|e| format!("打开文件夹失败: {}", e))?;
+        }
 
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(&mod_folder)
-            .spawn()
-            .map_err(|e| format!("打开文件夹失败: {}", e))?;
-    }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&mod_folder)
-            .spawn()
-            .map_err(|e| format!("打开文件夹失败: {}", e))?;
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&mod_folder)
-            .spawn()
-            .map_err(|e| format!("打开文件夹失败: {}", e))?;
-    }
-
-    Ok(())
+        Ok(())
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn uninstall_mod_instance(
+pub async fn uninstall_mod_instance(
     install_dir: String,
     mod_id: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let game_root = require_game_root(&state)?;
+    let install_dir_clone = install_dir.clone();
+    let mod_id_clone = mod_id.clone();
 
-    mod_service::uninstall_mod_by_path(Path::new(game_root), &install_dir)?;
-    // 清理文件哈希
-    let _ = crate::repositories::mod_hashes_repo::remove_mod_hashes(&mod_id);
-    // 清除更新缓存
-    updates_cache_repo::clear_updates_cache();
+    run_blocking(move || {
+        mod_service::uninstall_mod_by_path(Path::new(&game_root), &install_dir_clone)
+            .map_err(|e| e.to_string())?;
+        // 清理文件哈希
+        let _ = crate::repositories::mod_hashes_repo::remove_mod_hashes(&mod_id_clone);
+        // 清除更新缓存
+        updates_cache_repo::clear_updates_cache();
+        Ok::<_, String>(())
+    })
+    .await??;
+
     if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
         *cache_lock = None;
     }
@@ -593,61 +644,70 @@ pub fn uninstall_mod_instance(
 }
 
 #[tauri::command]
-pub fn open_mod_folder_by_path(install_dir: String) -> Result<(), String> {
-    let path = std::path::PathBuf::from(&install_dir);
-    if !path.exists() {
-        return Err(format!("目录不存在: {}", install_dir));
-    }
+pub async fn open_mod_folder_by_path(install_dir: String) -> Result<(), String> {
+    run_blocking(move || {
+        let path = std::path::PathBuf::from(&install_dir);
+        if !path.exists() {
+            return Err(format!("目录不存在: {}", install_dir));
+        }
 
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| format!("打开文件夹失败: {}", e))?;
-    }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| format!("打开文件夹失败: {}", e))?;
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&path)
-            .spawn()
-            .map_err(|e| format!("打开文件夹失败: {}", e))?;
-    }
+        #[cfg(target_os = "windows")]
+        {
+            std::process::Command::new("explorer")
+                .arg(&path)
+                .spawn()
+                .map_err(|e| format!("打开文件夹失败: {}", e))?;
+        }
+        #[cfg(target_os = "macos")]
+        {
+            std::process::Command::new("open")
+                .arg(&path)
+                .spawn()
+                .map_err(|e| format!("打开文件夹失败: {}", e))?;
+        }
+        #[cfg(target_os = "linux")]
+        {
+            std::process::Command::new("xdg-open")
+                .arg(&path)
+                .spawn()
+                .map_err(|e| format!("打开文件夹失败: {}", e))?;
+        }
 
-    Ok(())
+        Ok(())
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn keep_mod_version_and_clean_others(
+pub async fn keep_mod_version_and_clean_others(
     install_dir: String,
     mod_id: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<u32, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let (game_root, active_name) = {
+        let settings = state.settings.read().unwrap();
+        let game_root = settings
+            .game_root_dir
+            .clone()
+            .ok_or("游戏目录未设置")?;
+        (game_root, settings.active_profile_name.clone())
+    };
+    let mod_id_clone = mod_id.clone();
 
-    let count = mod_service::keep_mod_version_and_clean_others(
-        Path::new(game_root),
-        &install_dir,
-        &mod_id,
-    )?;
+    let count = run_blocking(move || {
+        let count = mod_service::keep_mod_version_and_clean_others(
+            Path::new(&game_root),
+            &install_dir,
+            &mod_id_clone,
+        )
+        .map_err(|e| e.to_string())?;
+        // 确保 active profile 包含此 mod_id
+        add_mod_to_active_profile(&mod_id_clone, &active_name);
+        updates_cache_repo::clear_updates_cache();
+        Ok::<_, String>(count)
+    })
+    .await??;
 
-    // 确保 active profile 包含此 mod_id
-    let active_name = settings.active_profile_name.clone();
-    drop(settings);
-    add_mod_to_active_profile(&mod_id, &active_name);
-
-    updates_cache_repo::clear_updates_cache();
     if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
         *cache_lock = None;
     }
@@ -664,22 +724,33 @@ pub fn keep_mod_version_and_clean_others(
 }
 
 #[tauri::command]
-pub fn switch_active_mod_version(
+pub async fn switch_active_mod_version(
     install_dir: String,
     mod_id: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let (game_root, active_name) = {
+        let settings = state.settings.read().unwrap();
+        let game_root = settings
+            .game_root_dir
+            .clone()
+            .ok_or("游戏目录未设置")?;
+        (game_root, settings.active_profile_name.clone())
+    };
+    let install_dir_clone = install_dir.clone();
+    let mod_id_clone = mod_id.clone();
 
-    mod_service::switch_active_mod_version(Path::new(game_root), &install_dir, &mod_id)?;
-
-    let active_name = settings.active_profile_name.clone();
-    drop(settings);
-    add_mod_to_active_profile(&mod_id, &active_name);
+    run_blocking(move || {
+        mod_service::switch_active_mod_version(
+            Path::new(&game_root),
+            &install_dir_clone,
+            &mod_id_clone,
+        )
+        .map_err(|e| e.to_string())?;
+        add_mod_to_active_profile(&mod_id_clone, &active_name);
+        Ok::<_, String>(())
+    })
+    .await??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -692,52 +763,51 @@ pub fn switch_active_mod_version(
     Ok(())
 }
 
-
 #[tauri::command]
-pub fn open_mods_directory(state: State<AppState>) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+pub async fn open_mods_directory(state: State<'_, AppState>) -> Result<(), String> {
+    let game_root = require_game_root(&state)?;
 
-    let plugins = game_service::mods_dir(Path::new(game_root));
-    std::fs::create_dir_all(&plugins).map_err(|e| format!("创建目录失败: {}", e))?;
+    run_blocking(move || {
+        let plugins = game_service::mods_dir(Path::new(&game_root));
+        std::fs::create_dir_all(&plugins).map_err(|e| format!("创建目录失败: {}", e))?;
 
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(&plugins)
-            .spawn()
-            .map_err(|e| format!("打开文件夹失败: {}", e))?;
-    }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&plugins)
-            .spawn()
-            .map_err(|e| format!("打开文件夹失败: {}", e))?;
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&plugins)
-            .spawn()
-            .map_err(|e| format!("打开文件夹失败: {}", e))?;
-    }
+        #[cfg(target_os = "windows")]
+        {
+            std::process::Command::new("explorer")
+                .arg(&plugins)
+                .spawn()
+                .map_err(|e| format!("打开文件夹失败: {}", e))?;
+        }
+        #[cfg(target_os = "macos")]
+        {
+            std::process::Command::new("open")
+                .arg(&plugins)
+                .spawn()
+                .map_err(|e| format!("打开文件夹失败: {}", e))?;
+        }
+        #[cfg(target_os = "linux")]
+        {
+            std::process::Command::new("xdg-open")
+                .arg(&plugins)
+                .spawn()
+                .map_err(|e| format!("打开文件夹失败: {}", e))?;
+        }
 
-    Ok(())
+        Ok(())
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn get_mod_files(mod_id: String, state: State<AppState>) -> Result<Vec<String>, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    mod_service::get_mod_files(Path::new(game_root), &mod_id).map_err(|e| e.to_string())
+pub async fn get_mod_files(
+    mod_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<String>, String> {
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || {
+        mod_service::get_mod_files(Path::new(&game_root), &mod_id).map_err(|e| e.to_string())
+    })
+    .await?
 }
 
 // =========================================================================
@@ -777,51 +847,48 @@ pub async fn pick_game_folder() -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
-pub fn preview_install_archive(
+pub async fn preview_install_archive(
     archive_path: String,
     enable_after_install: bool,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<BatchImportPreview, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    let preview = install_archive_workflow::preview_archive(
-        Path::new(&archive_path),
-        Path::new(game_root),
-    )
-    ?;
-
+    let game_root = require_game_root(&state)?;
     let _ = enable_after_install;
 
-    Ok(preview)
+    run_blocking(move || {
+        install_archive_workflow::preview_archive(
+            Path::new(&archive_path),
+            Path::new(&game_root),
+        )
+        .map_err(|e| e.to_string())
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn install_archive(
+pub async fn install_archive(
     archive_path: String,
     enable_after_install: bool,
     replace_existing: bool,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<Vec<InstalledMod>, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let game_root = require_game_root(&state)?;
+    let archive_path_clone = archive_path.clone();
 
-    let installed = install_archive_workflow::execute_install(
-        Path::new(&archive_path),
-        Path::new(game_root),
-        enable_after_install,
-        replace_existing,
-    )
-    ?;
+    let installed = run_blocking(move || {
+        let installed = install_archive_workflow::execute_install(
+            Path::new(&archive_path_clone),
+            Path::new(&game_root),
+            enable_after_install,
+            replace_existing,
+        )
+        .map_err(|e| e.to_string())?;
+        // 清除更新缓存
+        updates_cache_repo::clear_updates_cache();
+        Ok::<_, String>(installed)
+    })
+    .await??;
 
-    // 清除更新缓存
-    updates_cache_repo::clear_updates_cache();
     if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
         *cache_lock = None;
     }
@@ -840,41 +907,46 @@ pub fn install_archive(
 }
 
 #[tauri::command]
-pub fn process_import_targets(
+pub async fn process_import_targets(
     paths: Vec<String>,
     enable_now: bool,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<BatchImportPreview, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    let preview = install_archive_workflow::batch_preview(&paths, Path::new(game_root))
-        ?;
-
+    let game_root = require_game_root(&state)?;
     let _ = enable_now;
-    Ok(preview)
+
+    run_blocking(move || {
+        install_archive_workflow::batch_preview(&paths, Path::new(&game_root))
+            .map_err(|e| e.to_string())
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn batch_install_mods(
+pub async fn batch_install_mods(
     app_handle: tauri::AppHandle,
     paths: Vec<String>,
     enable_now: bool,
     has_conflicts: bool,
     selected_ids: Vec<String>,
     resolutions: Vec<(String, String)>, // (modId, "skip"|"replace")
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<BatchInstallResult, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let (game_root, backup_on_path_switch, sync_pairs) = {
+        let settings = state.settings.read().unwrap();
+        let game_root = settings
+            .game_root_dir
+            .clone()
+            .ok_or("游戏目录未设置")?;
+        (
+            game_root,
+            settings.backup_on_path_switch,
+            settings.save_sync_pairs.clone(),
+        )
+    };
 
     let _ = has_conflicts;
+    let paths_len = paths.len();
 
     // 转换解析策略
     let parsed_resolutions: Vec<(String, ConflictResolution)> = resolutions
@@ -889,28 +961,32 @@ pub fn batch_install_mods(
         })
         .collect();
 
-    let result = install_archive_workflow::batch_install(
-        &app_handle,
-        &paths,
-        Path::new(game_root),
-        enable_now,
-        &parsed_resolutions,
-        &selected_ids,
-    )
-    ?;
+    let result = run_blocking(move || {
+        let result = install_archive_workflow::batch_install(
+            &app_handle,
+            &paths,
+            Path::new(&game_root),
+            enable_now,
+            &parsed_resolutions,
+            &selected_ids,
+        )
+        .map_err(|e| e.to_string())?;
 
-    // Save Guard：从 0 个 Mod → N 个 Mod 时自动触发存档备份 + 同步
-    if enable_now && result.success_count > 0 && settings.backup_on_path_switch {
-        let sync_pairs = settings.save_sync_pairs.clone();
-        let installed_count = mod_service::scan_enabled_mods(Path::new(game_root)).len();
-        // 仅当安装前 mods/ 为空时才触发（first-time activation）
-        if installed_count == result.success_count as usize {
-            let _ = save_service::sync_saves(Path::new(game_root), &sync_pairs);
+        // Save Guard：从 0 个 Mod → N 个 Mod 时自动触发存档备份 + 同步
+        if enable_now && result.success_count > 0 && backup_on_path_switch {
+            let installed_count = mod_service::scan_enabled_mods(Path::new(&game_root)).len();
+            // 仅当安装前 mods/ 为空时才触发（first-time activation）
+            if installed_count == result.success_count as usize {
+                let _ = save_service::sync_saves(Path::new(&game_root), &sync_pairs);
+            }
         }
-    }
 
-    // 清除更新缓存
-    updates_cache_repo::clear_updates_cache();
+        // 清除更新缓存
+        updates_cache_repo::clear_updates_cache();
+        Ok::<_, String>(result)
+    })
+    .await??;
+
     if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
         *cache_lock = None;
     }
@@ -923,7 +999,7 @@ pub fn batch_install_mods(
             "批量导入: {} 成功, {} 失败",
             result.success_count, result.failure_count
         ),
-        detail: Some(format!("共 {} 个目标", paths.len())),
+        detail: Some(format!("共 {} 个目标", paths_len)),
         created_at: chrono::Utc::now().to_rfc3339(),
     });
 
@@ -935,19 +1011,21 @@ pub fn batch_install_mods(
 // =========================================================================
 
 #[tauri::command]
-pub fn list_profiles() -> Vec<ModProfile> {
-    profile_service::list_profiles()
+pub async fn list_profiles() -> Result<Vec<ModProfile>, String> {
+    run_blocking(profile_service::list_profiles).await
 }
 
 #[tauri::command]
-pub fn create_profile(
+pub async fn create_profile(
     name: String,
     description: Option<String>,
     mod_ids: Vec<String>,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<ModProfile, String> {
-    let profile = profile_service::create_profile(name, description, mod_ids)
-        ?;
+    let profile = run_blocking(move || {
+        profile_service::create_profile(name, description, mod_ids).map_err(|e| e.to_string())
+    })
+    .await??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -961,15 +1039,17 @@ pub fn create_profile(
 }
 
 #[tauri::command]
-pub fn update_profile(
+pub async fn update_profile(
     id: String,
     name: String,
     description: Option<String>,
     mod_ids: Vec<String>,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<ModProfile, String> {
-    let profile = profile_service::update_profile(id, name, description, mod_ids)
-        ?;
+    let profile = run_blocking(move || {
+        profile_service::update_profile(id, name, description, mod_ids).map_err(|e| e.to_string())
+    })
+    .await??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -983,20 +1063,21 @@ pub fn update_profile(
 }
 
 #[tauri::command]
-pub fn delete_profile(id: String, state: State<AppState>) -> Result<(), String> {
+pub async fn delete_profile(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let locale = state.settings.read().unwrap().locale.clone();
-    profile_service::delete_profile(&id, &locale)?;
+    let id_clone = id.clone();
+
+    let profiles = run_blocking(move || {
+        profile_service::delete_profile(&id_clone, &locale).map_err(|e| e.to_string())?;
+        Ok::<_, String>(profile_service::list_profiles())
+    })
+    .await??;
 
     // 如果这是最后一个预设，delete_profile 会自动生成默认预设，自动应用它
-    let profiles = profile_service::list_profiles();
     if profiles.len() == 1 {
         let default_p = &profiles[0];
-        let settings = state.settings.read().unwrap();
-        if settings.active_profile_name != default_p.name
-            && settings.active_profile_name == id
-        {
-            drop(settings);
-            let mut w = state.settings.write().unwrap();
+        let mut w = state.settings.write().unwrap();
+        if w.active_profile_name != default_p.name && w.active_profile_name == id {
             w.active_profile_name = default_p.name.clone();
             let _ = crate::repositories::settings_repo::save_settings(&w);
         }
@@ -1014,21 +1095,26 @@ pub fn delete_profile(id: String, state: State<AppState>) -> Result<(), String> 
 }
 
 #[tauri::command]
-pub fn apply_profile(id: String, state: State<AppState>) -> Result<ApplyProfileResult, String> {
+pub async fn apply_profile(
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<ApplyProfileResult, String> {
     let (game_root, sync_pairs, backup_on_switch) = {
         let settings = state.settings.read().unwrap();
         let game_root = settings
             .game_root_dir
-            .as_ref()
-            .ok_or("游戏目录未设置")?
-            .clone();
+            .clone()
+            .ok_or("游戏目录未设置")?;
         let sync_pairs = settings.save_sync_pairs.clone();
         let backup_on_switch = settings.backup_on_path_switch;
         (game_root, sync_pairs, backup_on_switch)
     };
 
-    let result = profile_service::apply_profile(&id, Path::new(&game_root), &sync_pairs, backup_on_switch)
-        ?;
+    let result = run_blocking(move || {
+        profile_service::apply_profile(&id, Path::new(&game_root), &sync_pairs, backup_on_switch)
+            .map_err(|e| e.to_string())
+    })
+    .await??;
 
     // 同步内存中的 active_profile_name，确保 get_app_bootstrap 返回最新值
     {
@@ -1077,44 +1163,50 @@ pub async fn export_preset_bundle(
 }
 
 #[tauri::command]
-pub fn preview_preset_bundle(
+pub async fn preview_preset_bundle(
     bundle_path: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<profile_service::BundlePreview, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    profile_service::preview_bundle(&bundle_path, Path::new(game_root))
-        .map_err(|e| e.to_string())
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || {
+        profile_service::preview_bundle(&bundle_path, Path::new(&game_root))
+            .map_err(|e| e.to_string())
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn confirm_import_preset_bundle(
+pub async fn confirm_import_preset_bundle(
     bundle_path: String,
     apply_profile: bool,
     resolutions: Vec<(String, String)>,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<ApplyProfileResult, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let (game_root, sync_pairs, backup_on_switch) = {
+        let settings = state.settings.read().unwrap();
+        let game_root = settings
+            .game_root_dir
+            .clone()
+            .ok_or("游戏目录未设置")?;
+        (
+            game_root,
+            settings.save_sync_pairs.clone(),
+            settings.backup_on_path_switch,
+        )
+    };
 
-    let sync_pairs = settings.save_sync_pairs.clone();
-    let backup_on_switch = settings.backup_on_path_switch;
-    profile_service::import_bundle(
-        &bundle_path,
-        Path::new(game_root),
-        apply_profile,
-        &resolutions,
-        &sync_pairs,
-        backup_on_switch,
-    )
-    .map_err(|e| e.to_string())
+    run_blocking(move || {
+        profile_service::import_bundle(
+            &bundle_path,
+            Path::new(&game_root),
+            apply_profile,
+            &resolutions,
+            &sync_pairs,
+            backup_on_switch,
+        )
+        .map_err(|e| e.to_string())
+    })
+    .await?
 }
 
 #[tauri::command]
@@ -1147,47 +1239,39 @@ pub async fn pick_preset_bundle() -> Result<Option<String>, String> {
 // =========================================================================
 
 #[tauri::command]
-pub fn list_save_slots(state: State<AppState>) -> Result<Vec<SaveSlot>, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    Ok(save_service::list_save_slots(Path::new(game_root)))
+pub async fn list_save_slots(state: State<'_, AppState>) -> Result<Vec<SaveSlot>, String> {
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || save_service::list_save_slots(Path::new(&game_root))).await
 }
 
 #[tauri::command]
-pub fn preview_save_transfer(
+pub async fn preview_save_transfer(
     source: SaveSlotRef,
     target: SaveSlotRef,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<SaveTransferPreview, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    Ok(save_service::preview_save_transfer(
-        Path::new(game_root),
-        &source,
-        &target,
-    ))
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || {
+        save_service::preview_save_transfer(Path::new(&game_root), &source, &target)
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn transfer_save(
+pub async fn transfer_save(
     source: SaveSlotRef,
     target: SaveSlotRef,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<SaveBackupEntry, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let game_root = require_game_root(&state)?;
+    let source_clone = source.clone();
+    let target_clone = target.clone();
 
-    let result = save_service::transfer_save(Path::new(game_root), &source, &target)
-        ?;
+    let result = run_blocking(move || {
+        save_service::transfer_save(Path::new(&game_root), &source_clone, &target_clone)
+            .map_err(|e| e.to_string())
+    })
+    .await??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1204,63 +1288,59 @@ pub fn transfer_save(
 }
 
 #[tauri::command]
-pub fn create_save_backup(
+pub async fn create_save_backup(
     steam_user_id: String,
     kind: SaveKind,
     slot_index: u32,
     reason: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<SaveBackupEntry, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    save_service::create_save_backup(
-        Path::new(game_root),
-        &steam_user_id,
-        &kind,
-        slot_index,
-        &reason,
-    )
-    .map_err(|e| e.to_string())
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || {
+        save_service::create_save_backup(
+            Path::new(&game_root),
+            &steam_user_id,
+            &kind,
+            slot_index,
+            &reason,
+        )
+        .map_err(|e| e.to_string())
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn list_save_backups(
+pub async fn list_save_backups(
     steam_user_id: Option<String>,
     kind: Option<SaveKind>,
     slot_index: Option<u32>,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<Vec<SaveBackupEntry>, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    Ok(save_service::list_save_backups(
-        Path::new(game_root),
-        steam_user_id.as_deref(),
-        kind.as_ref(),
-        slot_index,
-    ))
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || {
+        save_service::list_save_backups(
+            Path::new(&game_root),
+            steam_user_id.as_deref(),
+            kind.as_ref(),
+            slot_index,
+        )
+    })
+    .await
 }
 
 #[tauri::command]
-pub fn restore_save_backup(
+pub async fn restore_save_backup(
     backup_id: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let game_root = require_game_root(&state)?;
+    let backup_id_clone = backup_id.clone();
 
-    save_service::restore_save_backup(Path::new(game_root), &backup_id)
-        ?;
+    run_blocking(move || {
+        save_service::restore_save_backup(Path::new(&game_root), &backup_id_clone)
+            .map_err(|e| e.to_string())
+    })
+    .await??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1274,63 +1354,61 @@ pub fn restore_save_backup(
 }
 
 #[tauri::command]
-pub fn delete_save_backup(
+pub async fn delete_save_backup(
     backup_id: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    save_service::delete_save_backup(Path::new(game_root), &backup_id)
-        .map_err(|e| e.to_string())
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || {
+        save_service::delete_save_backup(Path::new(&game_root), &backup_id)
+            .map_err(|e| e.to_string())
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn upgrade_backup_manual_flag(
+pub async fn upgrade_backup_manual_flag(
     backup_id: String,
     manual: bool,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-
-    save_service::upgrade_backup_manual_flag(Path::new(game_root), &backup_id, manual)
-        .map_err(|e| e.to_string())
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || {
+        save_service::upgrade_backup_manual_flag(Path::new(&game_root), &backup_id, manual)
+            .map_err(|e| e.to_string())
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn restore_save_backup_to_slot(
+pub async fn restore_save_backup_to_slot(
     backup_id: String,
     target_steam_user_id: String,
     target_kind: String, // "vanilla" | "modded"
     target_slot_index: u32,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let game_root = require_game_root(&state)?;
+    let backup_id_clone = backup_id.clone();
+    let target_steam_user_id_clone = target_steam_user_id.clone();
+    let target_kind_clone = target_kind.clone();
 
-    let kind = match target_kind.as_str() {
-        "modded" => SaveKind::Modded,
-        _ => SaveKind::Vanilla,
-    };
+    run_blocking(move || {
+        let kind = match target_kind_clone.as_str() {
+            "modded" => SaveKind::Modded,
+            _ => SaveKind::Vanilla,
+        };
 
-    save_service::restore_save_backup_to_slot(
-        Path::new(game_root),
-        &backup_id,
-        &target_steam_user_id,
-        &kind,
-        target_slot_index,
-    )
-    ?;
+        save_service::restore_save_backup_to_slot(
+            Path::new(&game_root),
+            &backup_id_clone,
+            &target_steam_user_id_clone,
+            &kind,
+            target_slot_index,
+        )
+        .map_err(|e| e.to_string())
+    })
+    .await??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1347,25 +1425,31 @@ pub fn restore_save_backup_to_slot(
 }
 
 #[tauri::command]
-pub fn delete_save_slot(
+pub async fn delete_save_slot(
     steam_user_id: String,
     kind: String,
     slot_index: u32,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+    let game_root = require_game_root(&state)?;
+    let steam_user_id_clone = steam_user_id.clone();
+    let kind_clone = kind.clone();
 
-    let save_kind = match kind.as_str() {
-        "modded" => SaveKind::Modded,
-        _ => SaveKind::Vanilla,
-    };
+    run_blocking(move || {
+        let save_kind = match kind_clone.as_str() {
+            "modded" => SaveKind::Modded,
+            _ => SaveKind::Vanilla,
+        };
 
-    save_service::delete_save_slot(Path::new(game_root), &steam_user_id, &save_kind, slot_index)
-        ?;
+        save_service::delete_save_slot(
+            Path::new(&game_root),
+            &steam_user_id_clone,
+            &save_kind,
+            slot_index,
+        )
+        .map_err(|e| e.to_string())
+    })
+    .await??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1398,22 +1482,27 @@ pub fn update_save_sync_pairs(
 }
 
 #[tauri::command]
-pub fn sync_saves(state: State<AppState>) -> Result<SaveSyncResult, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    let pairs = settings.save_sync_pairs.clone();
+pub async fn sync_saves(state: State<'_, AppState>) -> Result<SaveSyncResult, String> {
+    let (game_root, pairs) = {
+        let settings = state.settings.read().unwrap();
+        let game_root = settings
+            .game_root_dir
+            .clone()
+            .ok_or("游戏目录未设置")?;
+        (game_root, settings.save_sync_pairs.clone())
+    };
+    let pairs_len = pairs.len();
 
-    let result = save_service::sync_saves(Path::new(game_root), &pairs)
-        ?;
+    let result = run_blocking(move || {
+        save_service::sync_saves(Path::new(&game_root), &pairs).map_err(|e| e.to_string())
+    })
+    .await??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
         category: "save".to_string(),
         title: format!("存档同步: {} 对已同步", result.synced_count),
-        detail: Some(format!("共 {} 对配对", pairs.len())),
+        detail: Some(format!("共 {} 对配对", pairs_len)),
         created_at: chrono::Utc::now().to_rfc3339(),
     });
 
@@ -1533,23 +1622,23 @@ pub async fn descend_from_cloud_full(state: State<'_, AppState>) -> Result<(), S
 }
 
 #[tauri::command]
-pub fn get_backup_artifact_status(state: State<AppState>) -> Result<bool, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    backup_service::get_backup_artifact_status(Path::new(game_root)).map_err(|e| e.to_string())
+pub async fn get_backup_artifact_status(state: State<'_, AppState>) -> Result<bool, String> {
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || {
+        backup_service::get_backup_artifact_status(Path::new(&game_root))
+            .map_err(|e| e.to_string())
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn cleanup_backup_artifacts(state: State<AppState>) -> Result<(), String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
-    backup_service::cleanup_backup_artifacts(Path::new(game_root)).map_err(|e| e.to_string())
+pub async fn cleanup_backup_artifacts(state: State<'_, AppState>) -> Result<(), String> {
+    let game_root = require_game_root(&state)?;
+    run_blocking(move || {
+        backup_service::cleanup_backup_artifacts(Path::new(&game_root))
+            .map_err(|e| e.to_string())
+    })
+    .await?
 }
 
 // =========================================================================
@@ -1557,7 +1646,7 @@ pub fn cleanup_backup_artifacts(state: State<AppState>) -> Result<(), String> {
 // =========================================================================
 
 #[tauri::command]
-pub fn search_remote_mods(
+pub async fn search_remote_mods(
     query: String,
     page: Option<u32>,
     page_size: Option<u32>,
@@ -1566,13 +1655,14 @@ pub fn search_remote_mods(
     sort_by: Option<String>,
 ) -> Result<RemoteModSearchResult, String> {
     let size = page_size.or(pageSize).unwrap_or(12);
-    discover_service::search_remote_mods(
-        &query,
-        page.unwrap_or(1),
-        size,
-        &sort_by.unwrap_or_else(|| "latest_added".to_string()),
-    )
-    .map_err(|e| e.to_string())
+    let page_num = page.unwrap_or(1);
+    let sort = sort_by.unwrap_or_else(|| "latest_added".to_string());
+    tauri::async_runtime::spawn_blocking(move || {
+        discover_service::search_remote_mods(&query, page_num, size, &sort)
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))?
 }
 
 // =========================================================================
@@ -1580,12 +1670,14 @@ pub fn search_remote_mods(
 // =========================================================================
 
 #[tauri::command]
-pub fn check_steam_status() -> bool {
-    crate::integrations::workshop::is_steam_running()
+pub async fn check_steam_status() -> bool {
+    tauri::async_runtime::spawn_blocking(crate::integrations::workshop::is_steam_running)
+        .await
+        .unwrap_or(false)
 }
 
 #[tauri::command]
-pub fn search_workshop(
+pub async fn search_workshop(
     query: String,
     page: u32,
     page_size: Option<u32>,
@@ -1594,32 +1686,53 @@ pub fn search_workshop(
     sort_by: String,
 ) -> Result<crate::domain::workshop_mod::WorkshopSearchResult, String> {
     let size = page_size.or(pageSize).unwrap_or(12);
-    crate::integrations::workshop::search_workshop(&query, page, size, &sort_by)
-}
-#[tauri::command]
-pub fn subscribe_workshop_mod(published_file_id: u64) -> Result<(), String> {
-    crate::integrations::workshop::subscribe_mod(published_file_id)
-}
-
-#[tauri::command]
-pub fn unsubscribe_workshop_mod(published_file_id: u64) -> Result<(), String> {
-    crate::integrations::workshop::unsubscribe_mod(published_file_id)
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::integrations::workshop::search_workshop(&query, page, size, &sort_by)
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))?
 }
 
 #[tauri::command]
-pub fn check_mod_updates(state: State<AppState>) -> Result<Vec<ModUpdateInfo>, String> {
-    let settings = state.settings.read().unwrap();
-    let game_root = settings
-        .game_root_dir
-        .as_ref()
-        .ok_or("游戏目录未设置")?;
+pub async fn subscribe_workshop_mod(published_file_id: u64) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::integrations::workshop::subscribe_mod(published_file_id)
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))?
+}
+
+#[tauri::command]
+pub async fn unsubscribe_workshop_mod(published_file_id: u64) -> Result<(), String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::integrations::workshop::unsubscribe_mod(published_file_id)
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))?
+}
+
+#[tauri::command]
+pub async fn check_mod_updates(state: State<'_, AppState>) -> Result<Vec<ModUpdateInfo>, String> {
+    let game_root = {
+        let settings = state.settings.read().unwrap();
+        settings
+            .game_root_dir
+            .clone()
+            .ok_or("游戏目录未设置")?
+    };
     // 清理旧缓存，确保全新数据
-    updates_cache_repo::clear_updates_cache();
     if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
         *cache_lock = None;
     }
-    let results = update_check::check_mod_updates(std::path::Path::new(game_root))
-        .map_err(|e| e.to_string())?;
+
+    let results = tauri::async_runtime::spawn_blocking(move || {
+        updates_cache_repo::clear_updates_cache();
+        update_check::check_mod_updates(std::path::Path::new(&game_root))
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))??;
+
     // 写入磁盘缓存
     let cache = ModUpdateCheckCache {
         results: results.clone(),
@@ -1627,7 +1740,11 @@ pub fn check_mod_updates(state: State<AppState>) -> Result<Vec<ModUpdateInfo>, S
         total_mods: results.len(),
         updated_mods: results.iter().filter(|r| r.has_update).count(),
     };
-    let _ = updates_cache_repo::save_updates_cache(&cache);
+    let cache_for_disk = cache.clone();
+    let _ = tauri::async_runtime::spawn_blocking(move || {
+        let _ = updates_cache_repo::save_updates_cache(&cache_for_disk);
+    })
+    .await;
     // 更新内存缓存
     if let Ok(mut cache_lock) = state.mod_updates_cache.write() {
         *cache_lock = Some(cache);
@@ -1736,11 +1853,11 @@ pub fn start_mod_update_check(
 // =========================================================================
 
 #[tauri::command]
-pub fn update_nexus_api_key(
+pub async fn update_nexus_api_key(
     api_key: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<crate::integrations::nexus_client::NexusUserInfo, String> {
-    let clean_key = api_key.trim();
+    let clean_key = api_key.trim().to_string();
     if clean_key.is_empty() {
         let mut settings = state.settings.write().unwrap();
         settings.nexus_api_key = None;
@@ -1755,12 +1872,17 @@ pub fn update_nexus_api_key(
         s.proxy_url.clone()
     };
 
-    let user_info = crate::integrations::nexus_client::validate_user(clean_key, proxy.as_deref())
-        .map_err(|e| e.to_string())?;
+    let key_for_req = clean_key.clone();
+    let user_info = tauri::async_runtime::spawn_blocking(move || {
+        crate::integrations::nexus_client::validate_user(&key_for_req, proxy.as_deref())
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))??;
 
     {
         let mut settings = state.settings.write().unwrap();
-        settings.nexus_api_key = Some(clean_key.to_string());
+        settings.nexus_api_key = Some(clean_key);
         settings.nexus_is_premium = user_info.is_premium;
         settings.nexus_user_name = Some(user_info.name.clone());
         let _ = settings_repo::save_settings(&settings);
@@ -1770,8 +1892,8 @@ pub fn update_nexus_api_key(
 }
 
 #[tauri::command]
-pub fn validate_nexus_api_key(
-    state: State<AppState>,
+pub async fn validate_nexus_api_key(
+    state: State<'_, AppState>,
 ) -> Result<crate::integrations::nexus_client::NexusUserInfo, String> {
     let (key, proxy) = {
         let s = state.settings.read().unwrap();
@@ -1779,8 +1901,12 @@ pub fn validate_nexus_api_key(
     };
 
     let key = key.ok_or_else(|| "未配置 Nexus API Key".to_string())?;
-    let user_info = crate::integrations::nexus_client::validate_user(&key, proxy.as_deref())
-        .map_err(|e| e.to_string())?;
+    let user_info = tauri::async_runtime::spawn_blocking(move || {
+        crate::integrations::nexus_client::validate_user(&key, proxy.as_deref())
+            .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))??;
 
     {
         let mut settings = state.settings.write().unwrap();
@@ -1793,9 +1919,9 @@ pub fn validate_nexus_api_key(
 }
 
 #[tauri::command]
-pub fn get_nexus_mod_files(
+pub async fn get_nexus_mod_files(
     mod_id: u32,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<Vec<crate::integrations::nexus_client::NexusModFile>, String> {
     let (key, proxy) = {
         let s = state.settings.read().unwrap();
@@ -1803,20 +1929,24 @@ pub fn get_nexus_mod_files(
     };
 
     let key = key.ok_or_else(|| "请先在「设置」中配置 Nexus API Key".to_string())?;
-    crate::integrations::nexus_client::get_mod_files(
-        &key,
-        proxy.as_deref(),
-        "slaythespire2",
-        mod_id,
-    )
-    .map_err(|e| e.to_string())
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::integrations::nexus_client::get_mod_files(
+            &key,
+            proxy.as_deref(),
+            "slaythespire2",
+            mod_id,
+        )
+        .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))?
 }
 
 #[tauri::command]
-pub fn get_nexus_download_link(
+pub async fn get_nexus_download_link(
     mod_id: u32,
     file_id: u64,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<String, String> {
     let (key, proxy) = {
         let s = state.settings.read().unwrap();
@@ -1824,24 +1954,28 @@ pub fn get_nexus_download_link(
     };
 
     let key = key.ok_or_else(|| "请先在「设置」中配置 Nexus API Key".to_string())?;
-    crate::integrations::nexus_client::get_download_link(
-        &key,
-        proxy.as_deref(),
-        "slaythespire2",
-        mod_id,
-        file_id,
-    )
-    .map_err(|e| e.to_string())
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::integrations::nexus_client::get_download_link(
+            &key,
+            proxy.as_deref(),
+            "slaythespire2",
+            mod_id,
+            file_id,
+        )
+        .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))?
 }
 
 #[tauri::command]
-pub fn start_nexus_download(
+pub async fn start_nexus_download(
     app_handle: tauri::AppHandle,
     mod_id: u32,
     file_id: u64,
     mod_name: String,
     file_name: String,
-    state: State<AppState>,
+    state: State<'_, AppState>,
 ) -> Result<download_service::DownloadTask, String> {
     let (key, proxy) = {
         let s = state.settings.read().unwrap();
@@ -1849,24 +1983,30 @@ pub fn start_nexus_download(
     };
 
     let key = key.ok_or_else(|| "请先在「设置」中配置 Nexus API Key".to_string())?;
-    let download_url = crate::integrations::nexus_client::get_download_link(
-        &key,
-        proxy.as_deref(),
-        "slaythespire2",
-        mod_id,
-        file_id,
-    )
-    .map_err(|e| e.to_string())?;
+    let mod_name_clone = mod_name.clone();
+    let file_name_clone = file_name.clone();
+    let task = tauri::async_runtime::spawn_blocking(move || -> Result<download_service::DownloadTask, String> {
+        let download_url = crate::integrations::nexus_client::get_download_link(
+            &key,
+            proxy.as_deref(),
+            "slaythespire2",
+            mod_id,
+            file_id,
+        )
+        .map_err(|e| e.to_string())?;
 
-    let task = download_service::start_download(
-        app_handle,
-        mod_id,
-        file_id,
-        mod_name.clone(),
-        file_name.clone(),
-        download_url,
-    )
-    .map_err(|e| e.to_string())?;
+        download_service::start_download(
+            app_handle,
+            mod_id,
+            file_id,
+            mod_name_clone,
+            file_name_clone,
+            download_url,
+        )
+        .map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))??;
 
     state.push_activity(ActivityLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -1919,8 +2059,12 @@ pub fn update_proxy_url(url: Option<String>, state: State<AppState>) -> Result<(
 }
 
 #[tauri::command]
-pub fn test_proxy(url: String) -> Result<bool, String> {
-    crate::integrations::nexus_client::test_proxy(&url).map_err(|e| e.to_string())
+pub async fn test_proxy(url: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::integrations::nexus_client::test_proxy(&url).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))?
 }
 
 #[tauri::command]
@@ -2006,48 +2150,52 @@ pub fn list_activity_logs(state: State<AppState>) -> Vec<ActivityLogEntry> {
 
 /// 通过 MyMemory API 翻译文本（走 Rust 后端避免 WebView CORS/403 问题）
 #[tauri::command]
-pub fn translate_text(text: String) -> Result<String, String> {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(15))
-        .build()
-        .map_err(|e| format!("HTTP 客户端构建失败: {}", e))?;
+pub async fn translate_text(text: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(15))
+            .build()
+            .map_err(|e| format!("HTTP 客户端构建失败: {}", e))?;
 
-    let url = reqwest::Url::parse_with_params(
-        "https://api.mymemory.translated.net/get",
-        &[("q", &text as &str), ("langpair", "en|zh-CN")],
-    )
-    .map_err(|e| format!("URL 构建失败: {}", e))?;
+        let url = reqwest::Url::parse_with_params(
+            "https://api.mymemory.translated.net/get",
+            &[("q", &text as &str), ("langpair", "en|zh-CN")],
+        )
+        .map_err(|e| format!("URL 构建失败: {}", e))?;
 
-    let resp = client
-        .get(url)
-        .send()
-        .map_err(|e| format!("翻译请求失败: {}", e))?;
+        let resp = client
+            .get(url)
+            .send()
+            .map_err(|e| format!("翻译请求失败: {}", e))?;
 
-    if !resp.status().is_success() {
-        let hints = match resp.status().as_u16() {
-            403 => "免费 API 频率超限，稍后再试".to_string(),
-            429 => "请求过于频繁，请稍候".to_string(),
-            503 => "翻译服务暂时不可用".to_string(),
-            code => format!("HTTP {}", code),
-        };
-        return Err(hints);
-    }
+        if !resp.status().is_success() {
+            let hints = match resp.status().as_u16() {
+                403 => "免费 API 频率超限，稍后再试".to_string(),
+                429 => "请求过于频繁，请稍候".to_string(),
+                503 => "翻译服务暂时不可用".to_string(),
+                code => format!("HTTP {}", code),
+            };
+            return Err(hints);
+        }
 
-    let data: serde_json::Value = resp
-        .json()
-        .map_err(|e| format!("响应解析失败: {}", e))?;
+        let data: serde_json::Value = resp
+            .json()
+            .map_err(|e| format!("响应解析失败: {}", e))?;
 
-    let status = data["responseStatus"].as_i64().unwrap_or(0);
-    if status != 200 {
-        let details = data["responseDetails"].as_str().unwrap_or("");
-        return Err(format!("翻译服务返回错误: {}", details));
-    }
+        let status = data["responseStatus"].as_i64().unwrap_or(0);
+        if status != 200 {
+            let details = data["responseDetails"].as_str().unwrap_or("");
+            return Err(format!("翻译服务返回错误: {}", details));
+        }
 
-    let translated = data["responseData"]["translatedText"]
-        .as_str()
-        .ok_or_else(|| "翻译结果为空".to_string())?;
+        let translated = data["responseData"]["translatedText"]
+            .as_str()
+            .ok_or_else(|| "翻译结果为空".to_string())?;
 
-    Ok(translated.to_string())
+        Ok(translated.to_string())
+    })
+    .await
+    .map_err(|e| format!("后台任务失败: {}", e))?
 }
 
 // --- 自定义背景壁纸管理 ---
@@ -2113,57 +2261,69 @@ pub async fn pick_custom_background() -> Result<Option<String>, String> {
         None => return Ok(None),
     };
 
-    let src_path = handle.path();
-    let ext = src_path
-        .extension()
-        .and_then(|s| s.to_str())
-        .unwrap_or("png")
-        .to_lowercase();
+    let src_path = handle.path().to_path_buf();
+    run_blocking(move || {
+        let ext = src_path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("png")
+            .to_lowercase();
 
-    let target_dir = bg_dir();
-    let _ = std::fs::create_dir_all(&target_dir);
+        let target_dir = bg_dir();
+        let _ = std::fs::create_dir_all(&target_dir);
 
-    // 清理旧背景文件
-    if let Ok(entries) = std::fs::read_dir(&target_dir) {
-        for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str()
-                && name.starts_with("custom_bg.") {
+        // 清理旧背景文件
+        if let Ok(entries) = std::fs::read_dir(&target_dir) {
+            for entry in entries.flatten() {
+                if let Some(name) = entry.file_name().to_str()
+                    && name.starts_with("custom_bg.")
+                {
                     let _ = std::fs::remove_file(entry.path());
                 }
+            }
         }
-    }
 
-    let target_path = target_dir.join(format!("custom_bg.{}", ext));
-    std::fs::copy(src_path, &target_path).map_err(|e| format!("保存背景图片失败: {}", e))?;
+        let target_path = target_dir.join(format!("custom_bg.{}", ext));
+        std::fs::copy(&src_path, &target_path).map_err(|e| format!("保存背景图片失败: {}", e))?;
 
-    let data_url = file_to_data_url(&target_path)?;
-    Ok(Some(data_url))
+        let data_url = file_to_data_url(&target_path)?;
+        Ok(Some(data_url))
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn get_custom_background() -> Result<Option<String>, String> {
-    let target_dir = bg_dir();
-    if let Ok(entries) = std::fs::read_dir(&target_dir) {
-        for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str()
-                && name.starts_with("custom_bg.") {
+pub async fn get_custom_background() -> Result<Option<String>, String> {
+    run_blocking(|| {
+        let target_dir = bg_dir();
+        if let Ok(entries) = std::fs::read_dir(&target_dir) {
+            for entry in entries.flatten() {
+                if let Some(name) = entry.file_name().to_str()
+                    && name.starts_with("custom_bg.")
+                {
                     return file_to_data_url(&entry.path()).map(Some);
                 }
+            }
         }
-    }
-    Ok(None)
+        Ok(None)
+    })
+    .await?
 }
 
 #[tauri::command]
-pub fn clear_custom_background() -> Result<(), String> {
-    let target_dir = bg_dir();
-    if let Ok(entries) = std::fs::read_dir(&target_dir) {
-        for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str()
-                && name.starts_with("custom_bg.") {
+pub async fn clear_custom_background() -> Result<(), String> {
+    run_blocking(|| {
+        let target_dir = bg_dir();
+        if let Ok(entries) = std::fs::read_dir(&target_dir) {
+            for entry in entries.flatten() {
+                if let Some(name) = entry.file_name().to_str()
+                    && name.starts_with("custom_bg.")
+                {
                     let _ = std::fs::remove_file(entry.path());
                 }
+            }
         }
-    }
-    Ok(())
+        Ok(())
+    })
+    .await?
 }

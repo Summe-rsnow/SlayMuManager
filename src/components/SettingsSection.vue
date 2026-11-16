@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Card } from "@miuui/vue"
+import { Card } from "@xcmm1543/miuui-vue"
 defineProps<{
   title: string
   id?: string

@@ -15,7 +15,7 @@ import {
   Select,
   Switch,
   useToast,
-} from "@miuui/vue"
+} from "@xcmm1543/miuui-vue"
 import SlotCard from "@/components/SlotCard.vue"
 import {
   HardDrive,
@@ -44,6 +44,7 @@ import type {
 import { useStorage } from "@/composables/useStorage"
 import { useIsActive } from "@/composables/useIsActive"
 import { kindLabel } from "@/utils/kindLabel"
+import { yieldToMain } from "@/utils/scheduler"
 import AppDialog from "@/components/AppDialog.vue"
 import FloatingTip from "@/components/FloatingTip.vue"
 
@@ -92,13 +93,17 @@ const totalBackupStats = computed(() => {
   return { manual, auto, limit: autoBackupKeepCount.value }
 })
 
+let backupCountsReqSeq = 0
+let slotsReqSeq = 0
+
 async function loadBackupCounts() {
+  const reqId = ++backupCountsReqSeq
   try {
     const [allBackups, bootstrap] = await Promise.all([
       invoke<SaveBackupEntry[]>("list_save_backups", {}),
       invoke<AppBootstrap>("get_app_bootstrap"),
     ])
-    if (!isActive.value) return
+    if (!isActive.value || reqId !== backupCountsReqSeq) return
     autoBackupKeepCount.value = bootstrap.autoBackupKeepCount ?? 5
     const counts: Record<string, { manual: number; auto: number; keepCount: number }> = {}
     for (const b of allBackups) {
@@ -171,19 +176,24 @@ function shortUserId(id: string): string {
 
 // --- 加载 ---
 async function loadSlots() {
+  const reqId = ++slotsReqSeq
   loading.value = true
   try {
     const data = await invoke<SaveSlot[]>("list_save_slots")
-    if (!isActive.value) return
+    if (!isActive.value || reqId !== slotsReqSeq) return
     slots.value = data
     if (slots.value.length > 0 && !activeUserId.value) {
       activeUserId.value = slots.value[0].steamUserId
     }
-    await loadBackupCounts()
+    void loadBackupCounts()
   } catch {
-    slots.value = []
+    if (isActive.value && reqId === slotsReqSeq) {
+      slots.value = []
+    }
   } finally {
-    loading.value = false
+    if (isActive.value && reqId === slotsReqSeq) {
+      loading.value = false
+    }
   }
 }
 
@@ -499,8 +509,9 @@ function mismatchLabel(s: CloudSaveStatus): string {
 }
 
 onMounted(async () => {
-  await loadSlots()
+  await yieldToMain()
   if (!isActive.value) return
+  void loadSlots()
   try {
     const bootstrap = await invoke<AppBootstrap>("get_app_bootstrap")
     if (!isActive.value) return
@@ -509,7 +520,6 @@ onMounted(async () => {
   } catch {
     /* ignore */
   }
-  await loadBackupCounts()
 })
 </script>
 

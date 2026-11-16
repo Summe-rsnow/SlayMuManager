@@ -11,27 +11,27 @@ importers:
       '@lucide/vue':
         specifier: ^1.72.0
         version: 1.72.0(vue@3.5.45(typescript@6.0.3))
-      '@miuui/core':
-        specifier: link:../../miuui/miuui/packages/core
-        version: link:../../miuui/miuui/packages/core
-      '@miuui/icons':
-        specifier: link:../../miuui/miuui/packages/icons
-        version: link:../../miuui/miuui/packages/icons
-      '@miuui/materials':
-        specifier: link:../../miuui/miuui/packages/materials
-        version: link:../../miuui/miuui/packages/materials
-      '@miuui/motions':
-        specifier: link:../../miuui/miuui/packages/motions
-        version: link:../../miuui/miuui/packages/motions
-      '@miuui/tokens':
-        specifier: link:../../miuui/miuui/packages/tokens
-        version: link:../../miuui/miuui/packages/tokens
-      '@miuui/vue':
-        specifier: link:../../miuui/miuui/packages/vue
-        version: link:../../miuui/miuui/packages/vue
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
+      '@xcmm1543/miuui-core':
+        specifier: ^0.5.6
+        version: 0.5.6
+      '@xcmm1543/miuui-icons':
+        specifier: ^0.5.6
+        version: 0.5.6
+      '@xcmm1543/miuui-materials':
+        specifier: ^0.5.6
+        version: 0.5.6
+      '@xcmm1543/miuui-motions':
+        specifier: ^0.5.6
+        version: 0.5.6
+      '@xcmm1543/miuui-tokens':
+        specifier: ^0.5.6
+        version: 0.5.6
+      '@xcmm1543/miuui-vue':
+        specifier: ^0.5.6
+        version: 0.5.6(reka-ui@2.11.0(vue@3.5.45(typescript@6.0.3)))(vue@3.5.45(typescript@6.0.3))
       pinia:
         specifier: ^4.1.0
         version: 4.1.0(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.45(typescript@6.0.3))
@@ -974,6 +974,27 @@ packages:
   '@vueuse/shared@14.4.0':
     resolution: {integrity: sha512-JRgY90Sz8DDtPMsaDflvPMp9xYk69JZAmbuDvAquUVXKr2gEjqtzGNTTthLfckH0BzBqvnu31gb4a8TGLRe79g==}
     peerDependencies:
+      vue: ^3.5.0
+
+  '@xcmm1543/miuui-core@0.5.6':
+    resolution: {integrity: sha512-tO0+T5YRAiU3aFfqRpvR0tbx3PBB2DlavcKlI63HLqf4Vfbm0y6wdl+j/ItTIDob/9woJxRyBWqdEyJ5R7wvOQ==}
+
+  '@xcmm1543/miuui-icons@0.5.6':
+    resolution: {integrity: sha512-DWGTz7fAlI4EB0dXYnMgGEw9zNUDC7eujl8d0gc4jHU4Lpga4Eofitmxlz5D+s1GQAW/W76smTlX0R6cyzUUfA==}
+
+  '@xcmm1543/miuui-materials@0.5.6':
+    resolution: {integrity: sha512-eUodT1BjAtxTsEnjAvsjc5htc/mjw2TTvYUJJaUk7uBbsUTP2fy6ip5sMslX26cRk7SaRLdLjaLUhAt8lh61ug==}
+
+  '@xcmm1543/miuui-motions@0.5.6':
+    resolution: {integrity: sha512-WSk/pDXdS3U50eSxpC+saEqDR0npDHvPIzntHfS5zobOVP4pvQjkTkXRiSZWdeHndPWxTZEEQbx6OJtqldng0g==}
+
+  '@xcmm1543/miuui-tokens@0.5.6':
+    resolution: {integrity: sha512-esgOKaIazSxXc8w+J2FcBRpOLYeII1uk+bodH6ih7zJZdUM9R0ve1whxIQ6PVnoBRwXWwM0nwwUI1SNTmPQINA==}
+
+  '@xcmm1543/miuui-vue@0.5.6':
+    resolution: {integrity: sha512-i1+S/IZqVCM2MkSbOyJdm3lgzSfkQRL4CGRXkrzyDJNyB5+VBq0pjMxxqeIM1B6XY0e7W9Y2WuDfTlaVvFt29w==}
+    peerDependencies:
+      reka-ui: '>=2.11.0 <3.0.0'
       vue: ^3.5.0
 
   acorn@8.17.0:
@@ -2320,6 +2341,31 @@ snapshots:
 
   '@vueuse/shared@14.4.0(vue@3.5.45(typescript@6.0.3))':
     dependencies:
+      vue: 3.5.45(typescript@6.0.3)
+
+  '@xcmm1543/miuui-core@0.5.6':
+    dependencies:
+      '@xcmm1543/miuui-tokens': 0.5.6
+
+  '@xcmm1543/miuui-icons@0.5.6': {}
+
+  '@xcmm1543/miuui-materials@0.5.6':
+    dependencies:
+      '@xcmm1543/miuui-core': 0.5.6
+      '@xcmm1543/miuui-tokens': 0.5.6
+
+  '@xcmm1543/miuui-motions@0.5.6':
+    dependencies:
+      '@xcmm1543/miuui-core': 0.5.6
+
+  '@xcmm1543/miuui-tokens@0.5.6': {}
+
+  '@xcmm1543/miuui-vue@0.5.6(reka-ui@2.11.0(vue@3.5.45(typescript@6.0.3)))(vue@3.5.45(typescript@6.0.3))':
+    dependencies:
+      '@xcmm1543/miuui-core': 0.5.6
+      '@xcmm1543/miuui-icons': 0.5.6
+      '@xcmm1543/miuui-tokens': 0.5.6
+      reka-ui: 2.11.0(vue@3.5.45(typescript@6.0.3))
       vue: 3.5.45(typescript@6.0.3)
 
   acorn@8.17.0: {}

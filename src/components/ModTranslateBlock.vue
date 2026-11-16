@@ -2,7 +2,7 @@
 import { ref } from "vue"
 import { storeToRefs } from "pinia"
 import { useI18n } from "vue-i18n"
-import { Tooltip } from "@miuui/vue"
+import { Tooltip } from "@xcmm1543/miuui-vue"
 import { Languages } from "@lucide/vue"
 import { translateText } from "@/utils/translate"
 import { currentLocale } from "@/i18n"

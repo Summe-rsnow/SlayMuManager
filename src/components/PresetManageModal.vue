@@ -14,7 +14,7 @@ import {
   LoadingOverlay,
   Textarea,
   useToast,
-} from "@miuui/vue"
+} from "@xcmm1543/miuui-vue"
 import { Plus, FolderHeart, Download, Search } from "@lucide/vue"
 import type {
   ModProfile,

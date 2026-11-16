@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue"
-import { Dialog, Button } from "@miuui/vue"
+import { Dialog, Button } from "@xcmm1543/miuui-vue"
 import { useI18n } from "vue-i18n"
 
 const { t } = useI18n()
