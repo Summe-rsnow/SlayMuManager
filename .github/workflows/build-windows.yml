@@ -1,16 +1,22 @@
 # ============================================================
-# SlayMuManager Windows 安装包构建工作流
-# 支持手动触发（workflow_dispatch），在 Windows Runner 上构建 NSIS 安装包
-# 构建产物通过 GitHub Actions Artifact 上传供下载
+# SlayMuManager Windows 安装包构建与发布工作流
+# 触发后在 Windows Runner 上构建 NSIS 安装包，
+# 上传至 Actions Artifact 并发布/附加到对应版本的 GitHub Release
 # ============================================================
 
 name: Build Windows Installer
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (optional, defaults to v<package.json version>)"
+        required: false
+        default: ""
+        type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-windows:
@@ -63,3 +69,40 @@ jobs:
           name: SlayMuManager-windows-nsis
           path: src-tauri/target/release/bundle/nsis/*.exe
           if-no-files-found: error
+
+      - name: Prepare release metadata
+        id: release_meta
+        shell: pwsh
+        run: |
+          $pkg = Get-Content package.json -Raw | ConvertFrom-Json
+          $ver = $pkg.version
+          $tag = "${{ inputs.tag }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $tag = "v$ver"
+          }
+          "tag=$tag" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+          $key = "v" + ($ver -replace '\.', '_')
+          $zh = Get-Content src/i18n/zh-CN.json -Raw -Encoding utf8 | ConvertFrom-Json
+          $note = $zh.releaseNotes.$key
+          $bodyPath = Join-Path $env:RUNNER_TEMP "release_body.md"
+          if ($note) {
+            $lines = @("release: $tag - $($note.title)", "")
+            if ($note.changes) {
+              foreach ($c in $note.changes) {
+                $lines += "- $c"
+              }
+            }
+            $lines | Out-File -FilePath $bodyPath -Encoding utf8
+          } else {
+            git log -1 --format="%B" | Out-File -FilePath $bodyPath -Encoding utf8
+          }
+
+      - name: Publish installer to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_meta.outputs.tag }}
+          name: ${{ steps.release_meta.outputs.tag }}
+          body_path: ${{ runner.temp }}/release_body.md
+          files: src-tauri/target/release/bundle/nsis/*.exe
+          draft: false
