@@ -713,7 +713,9 @@ onMounted(async () => {
                     class="w-28"
                     :placeholder="t('saves.pairSync.chooseSlot')"
                     @update:model-value="
-                      (v: string | number) => updatePair(i, Number(v) === -1 ? null : Number(v))
+                      (v) => {
+                        if (v != null) updatePair(i, Number(v) === -1 ? null : Number(v))
+                      }
                     "
                   />
                 </div>
@@ -913,7 +915,11 @@ onMounted(async () => {
               size="sm"
               class="w-32"
               :placeholder="t('saves.backups.chooseSlot')"
-              @update:model-value="(v: string | number) => setRestoreTargetSlot(Number(v))"
+              @update:model-value="
+                (v) => {
+                  if (v != null) setRestoreTargetSlot(Number(v))
+                }
+              "
             />
           </div>
         </div>

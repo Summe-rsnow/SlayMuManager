@@ -686,6 +686,18 @@
       "fix": "Fix",
       "opt": "Optimized"
     },
+    "v1_10_3": {
+      "title": "Fix Discover Split-View Scrolling, Full Dependency Upgrade & Windows CI Build",
+      "highlights": [
+        "Fixed the left mod list and right detail panel in Discover Split View failing to scroll vertically due to unconstrained Card body flex sizing",
+        "Upgraded all frontend and Rust backend dependencies to latest versions (miuui 0.7.0, Tauri 2.12.7, Notify 9.0, Rars 0.13, etc.) with full type adaptation"
+      ],
+      "changes": [
+        "Fixed DiscoverSplitView and split skeleton Card body flex constraints so both columns scroll cleanly, and added overscroll-contain to prevent scroll chaining",
+        "Updated frontend packages (miuui-* 0.7.0, Vue 3.5.46, Vue Router 5.5.1, Vue I18n 11.4.23, Tauri CLI/API, Lucide, UnoCSS, etc.) and Rust crates (Tauri 2.12.7, Zip 9.8, Dirs 7.0, Notify 9.0, Rars 0.13, etc.), adapting Select value handlers",
+        "Added a GitHub Actions workflow to build the Windows NSIS installer and upload artifacts on demand"
+      ]
+    },
     "v1_10_2": {
       "title": "Full Async IO Overhaul: Non-Blocking Discover & Saves, Remote miuui Packages",
       "highlights": [

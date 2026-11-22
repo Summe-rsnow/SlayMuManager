@@ -61,7 +61,8 @@ function onPresetLeave() {
   }, PRESET_HOVER_DELAY)
 }
 
-async function onPresetSelect(val: string | number) {
+async function onPresetSelect(val: string | number | undefined) {
+  if (val == null) return
   showPresetPanel.value = false
   const result = await handleQuickPreset(String(val))
   if (result.ok) {

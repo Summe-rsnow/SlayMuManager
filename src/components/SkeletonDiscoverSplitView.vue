@@ -8,6 +8,7 @@ import { Card, Skeleton } from "@xcmm1543/miuui-vue"
       material="glass"
       padding="none"
       class="w-80 md:w-96 flex-shrink-0 h-full min-h-0 overflow-hidden"
+      :class-names="{ body: 'flex-1 min-h-0 flex flex-col overflow-hidden' }"
     >
       <div class="flex-1 min-h-0 p-3.5 space-y-2.5 overflow-hidden pb-24">
         <Card v-for="i in 8" :key="'split-skel-left-' + i" material="glass" padding="sm">
@@ -26,7 +27,12 @@ import { Card, Skeleton } from "@xcmm1543/miuui-vue"
       </div>
     </Card>
 
-    <Card material="glass" padding="none" class="flex-1 min-w-0 h-full min-h-0 overflow-hidden">
+    <Card
+      material="glass"
+      padding="none"
+      class="flex-1 min-w-0 h-full min-h-0 overflow-hidden"
+      :class-names="{ body: 'flex-1 min-h-0 flex flex-col overflow-hidden' }"
+    >
       <div class="flex-1 min-h-0 flex flex-col p-6 space-y-4 overflow-hidden pb-24">
         <div class="flex items-start gap-5 pb-4 border-b border-c-default flex-shrink-0">
           <Skeleton variant="rect" width="160px" height="112px" radius="lg" class="flex-shrink-0" />

@@ -80,9 +80,10 @@ const validWorkshopTags = computed(() => {
       material="glass"
       padding="none"
       class="w-80 md:w-96 flex-shrink-0 h-full min-h-0 overflow-hidden"
+      :class-names="{ body: 'flex-1 min-h-0 flex flex-col overflow-hidden' }"
     >
       <div
-        class="flex-1 min-h-0 overflow-y-auto p-3.5 space-y-2.5 scrollbar-thin pb-24"
+        class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3.5 space-y-2.5 scrollbar-thin pb-24"
         @wheel.stop
       >
         <!-- Nexus 列表条目 -->
@@ -182,11 +183,16 @@ const validWorkshopTags = computed(() => {
     </Card>
 
     <!-- ================= 右侧详情面板 ================= -->
-    <Card material="glass" padding="none" class="flex-1 min-w-0 h-full min-h-0 overflow-hidden">
+    <Card
+      material="glass"
+      padding="none"
+      class="flex-1 min-w-0 h-full min-h-0 overflow-hidden"
+      :class-names="{ body: 'flex-1 min-h-0 flex flex-col overflow-hidden' }"
+    >
       <!-- Nexus 详情视图 -->
       <template v-if="type === 'nexus' && selectedNexus">
         <div
-          class="flex-1 min-h-0 flex flex-col p-6 scrollbar-thin space-y-4 overflow-y-auto pb-24"
+          class="flex-1 min-h-0 flex flex-col p-6 scrollbar-thin space-y-4 overflow-y-auto overscroll-contain pb-24"
           @wheel.stop
         >
           <!-- 顶部区域：左侧封面大图 + 右侧标题/作者/版本/统计/功能按钮 -->
@@ -271,7 +277,7 @@ const validWorkshopTags = computed(() => {
       <!-- Workshop 详情视图 -->
       <template v-else-if="type === 'workshop' && selectedWorkshop">
         <div
-          class="flex-1 min-h-0 flex flex-col p-6 scrollbar-thin space-y-4 overflow-y-auto pb-24"
+          class="flex-1 min-h-0 flex flex-col p-6 scrollbar-thin space-y-4 overflow-y-auto overscroll-contain pb-24"
           @wheel.stop
         >
           <!-- 顶部区域：左侧封面大图 + 右侧标题/作者/好评/差评/标签/功能按钮 -->

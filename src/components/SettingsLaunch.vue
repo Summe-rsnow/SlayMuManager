@@ -52,7 +52,11 @@ const pageOptions = computed(() => {
         :options="pageOptions"
         size="sm"
         class="w-50"
-        @update:model-value="(v: string | number) => (defaultPage = String(v))"
+        @update:model-value="
+          (v) => {
+            if (v != null) defaultPage = String(v)
+          }
+        "
       />
     </FormRow>
     <FormRow :label="t('settings.launch.autoCheck')">

@@ -55,7 +55,8 @@ const themeColorOptions = computed<{ label: string; value: ThemeColorKey }[]>(()
   { label: t("settings.appearance.themeColors.yellow"), value: "yellow" },
 ])
 
-async function updateLocale(val: string | number) {
+async function updateLocale(val: string | number | undefined) {
+  if (val == null) return
   const next = String(val)
   locale.value = next
   setLocale(next)

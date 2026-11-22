@@ -686,6 +686,18 @@
       "fix": "修复",
       "opt": "优化"
     },
+    "v1_10_3": {
+      "title": "修复发现页双栏视图滚动问题 & 全量升级前后端依赖与自动化构建",
+      "highlights": [
+        "修复发现页双栏（Split）视图左侧模组列表与右侧详情区域因 Card 内部容器高度未受限而无法纵向滚动的问题",
+        "全量升级前后端核心依赖库至最新版本（miuui 0.7.0、Tauri 2.12.7、Notify 9.0、Rars 0.13 等）并完成类型适配"
+      ],
+      "changes": [
+        "修复 DiscoverSplitView 与双栏骨架屏中 Card 内容区弹性布局约束缺失导致的列表无法滚动问题，并补充 overscroll-contain 防止滚动穿透",
+        "升级前端依赖（miuui-* 0.7.0、Vue 3.5.46、Vue Router 5.5.1、Vue I18n 11.4.23、Tauri CLI/API、Lucide、UnoCSS 等）与 Rust Crates（Tauri 2.12.7、Zip 9.8、Dirs 7.0、Notify 9.0、Rars 0.13 等），适配 Select 回调类型",
+        "新增 GitHub Actions Windows 安装包（NSIS）自动构建工作流，支持手动触发与构件上传"
+      ]
+    },
     "v1_10_2": {
       "title": "全链路异步化改造：消除发现页与 IO 操作卡顿，切换远程 miuui 包",
       "highlights": [

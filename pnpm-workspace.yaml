@@ -1,7 +1,7 @@
 minimumReleaseAgeExclude:
-  - '@xcmm1543/miuui-core@0.5.6'
-  - '@xcmm1543/miuui-icons@0.5.6'
-  - '@xcmm1543/miuui-materials@0.5.6'
-  - '@xcmm1543/miuui-motions@0.5.6'
-  - '@xcmm1543/miuui-tokens@0.5.6'
-  - '@xcmm1543/miuui-vue@0.5.6'
+  - '@xcmm1543/miuui-core@0.7.0'
+  - '@xcmm1543/miuui-icons@0.7.0'
+  - '@xcmm1543/miuui-materials@0.7.0'
+  - '@xcmm1543/miuui-motions@0.7.0'
+  - '@xcmm1543/miuui-tokens@0.7.0'
+  - '@xcmm1543/miuui-vue@0.7.0'

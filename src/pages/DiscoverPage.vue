@@ -478,7 +478,8 @@ function nexusPrefetchAdjacent(q: string, sb: string, currentPage: number, ps: n
   nexusCache.prefetchAdjacent(q, sb, currentPage, ps, nexusFetchSilent)
 }
 
-function onSortChange(val: string | number) {
+function onSortChange(val: string | number | undefined) {
+  if (val == null) return
   sortBy.value = String(val)
   searchNexus()
 }
@@ -504,7 +505,8 @@ function onWorkshopPageSizeChange(val: number) {
   searchWorkshop(1)
 }
 
-function onWorkshopSortChange(val: string | number) {
+function onWorkshopSortChange(val: string | number | undefined) {
+  if (val == null) return
   workshopSortBy.value = String(val)
   workshopPage.value = 1
   searchWorkshop(1)
@@ -880,7 +882,7 @@ function handleUserRefresh() {
         v-else-if="workshopResults.length > 0"
         class="flex-1 min-h-0 flex flex-col overflow-hidden"
       >
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center justify-between mb-3 flex-shrink-0">
           <span class="text-sm text-c-muted">{{
             t("discover.resultCount", { total: workshopTotalCount })
           }}</span>
